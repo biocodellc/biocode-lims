@@ -28,11 +28,16 @@ import org.jdom.output.XMLOutputter;
  */
 public class DisplayFieldsTemplate implements XMLSerializable{
     private List<DocumentField> displayedFields;
+    private DocumentField labelField = Reaction.WELL_DOCUMENT_FIELD;
     private String name;
     private Reaction.Type type;
     private Reaction.BackgroundColorer colorer;
 
     public DisplayFieldsTemplate(String name, Reaction.Type type, List<DocumentField> displayedFields, Reaction.BackgroundColorer colorer) {
+        this(name, type, displayedFields, colorer, null);
+    }
+
+    public DisplayFieldsTemplate(String name, Reaction.Type type, List<DocumentField> displayedFields, Reaction.BackgroundColorer colorer, DocumentField labelField) {
         this.displayedFields = displayedFields;
         this.name = name;
         this.type = type;
@@ -49,30 +54,13 @@ public class DisplayFieldsTemplate implements XMLSerializable{
             throw new IllegalArgumentException("Colorer cannot be null!");
         }
         this.colorer = colorer;
+        if(labelField != null) {
+            this.labelField = labelField;
+        }
     }
 
     public DisplayFieldsTemplate(Element e) throws XMLSerializationException  {
         fromXML(e);
-    }
-
-    public DisplayFieldsTemplate(ResultSet set) throws SQLException{
-        name = set.getString("name");
-        type = Reaction.Type.valueOf(set.getString("type"));
-        String fieldsElementString = set.getString("fields");
-        SAXBuilder builder = new SAXBuilder();
-        try {
-            Element fieldsElement = builder.build(new StringReader(fieldsElementString)).detachRootElement();
-            fieldsFromXML(fieldsElement);
-        } catch (JDOMException e) {
-            e.printStackTrace();
-            throw new SQLException("The document fields contained unparseable XML: "+fieldsElementString);
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Error reading from a string!");
-        } catch(XMLSerializationException e) {
-            e.printStackTrace();
-            throw new SQLException("The document fields contained invalid XML: "+fieldsElementString);
-        }
     }
 
     @Override
@@ -86,6 +74,7 @@ public class DisplayFieldsTemplate implements XMLSerializable{
         if (!fieldsMatch(that.displayedFields)) return false;
         if (!name.equals(that.name)) return false;
         if (type != that.type) return false;
+        if(!labelField.equals(that.getLabelField())) return false;
 
         return true;
     }
@@ -96,6 +85,7 @@ public class DisplayFieldsTemplate implements XMLSerializable{
         result = 31 * result + name.hashCode();
         result = 31 * result + type.hashCode();
         result = 31 * result + colorer.hashCode();
+        result = 31 * result + labelField.hashCode();
         return result;
     }
 
@@ -139,8 +129,11 @@ public class DisplayFieldsTemplate implements XMLSerializable{
         if(colorer != null) {
             e.addContent(XMLSerializer.classToXML("Colorer", colorer));
         }
+        e.addContent(XMLSerializer.classToXML(LABEL, labelField));
         return e;
     }
+
+    private static final String LABEL = "label";
 
     public void fromXML(Element element) throws XMLSerializationException {
         name = element.getChildText("Name");
@@ -153,6 +146,10 @@ public class DisplayFieldsTemplate implements XMLSerializable{
             colorer = BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(type).getColorer();
         }
         fieldsFromXML(element);
+        Element labelElement = element.getChild(LABEL);
+        if(labelElement != null) {
+            labelField = XMLSerializer.classFromXML(labelElement, DocumentField.class);
+        }
     }
 
     public Element fieldsToXML() {
@@ -186,4 +183,7 @@ public class DisplayFieldsTemplate implements XMLSerializable{
     }
 
 
+    public DocumentField getLabelField() {
+        return labelField;
+    }
 }

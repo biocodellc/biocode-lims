@@ -51,12 +51,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     private int[] fieldWidthCache = null;
     private GelImage gelImage = null;
     private BackgroundColorer backgroundColorer;
-    DisplayFieldsTemplate displayFieldsTemplate;
     private static final ImageObserver imageObserver = new ImageObserver(){
         public boolean imageUpdate(Image img, int infoflags, int x, int y, int width, int height) {
             return false;
         }
     };
+    private DocumentField labelFieldOverride;
 
     private static Preferences getPreferences() {
         return Preferences.userNodeForPackage(Reaction.class);
@@ -87,6 +87,17 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             }
         };
         ThreadUtilities.invokeNowOrLater(runnable);
+    }
+
+    public void setLabelField(DocumentField labelField) {
+        this.labelFieldOverride = labelField;
+    }
+
+    public DocumentField getLabelFieldToShow() {
+        if(labelFieldOverride != null) {
+            return labelFieldOverride;
+        }
+        return BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(getType()).getLabelField();
     }
 
 
@@ -678,10 +689,19 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             initFieldWidthCache();
         }
 
-        if(locationString != null && locationString.length() > 0) {
+        String label = this.locationString;
+        DocumentField labelField = getLabelFieldToShow();
+        if(labelField != null) {
+            Object fieldValue = getFieldValue(labelField.getCode());
+            if (fieldValue != null) {
+                label = fieldValue.toString();
+            }
+        }
+
+        if(label != null && label.length() > 0) {
             g.setColor(new Color(0,0,0,128));
             g.setFont(firstLabelFont.deriveFont(Font.PLAIN));
-            g.drawString(locationString, location.x+2, location.y+charHeight + 2);
+            g.drawString(label, location.x+2, location.y+charHeight + 2);
         }
 
         g.setColor(enabled ? Color.black : Color.gray);

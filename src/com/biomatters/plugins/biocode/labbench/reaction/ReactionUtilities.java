@@ -688,7 +688,7 @@ public class ReactionUtilities {
         JPanel fieldsPanel = new JPanel(new BorderLayout());
 
         Vector<DocumentField> selectedFieldsVector = new Vector<DocumentField>();
-        Vector<DocumentField> availableFieldsVector = new Vector<DocumentField>();
+        final Vector<DocumentField> availableFieldsVector = new Vector<DocumentField>();
         for(Reaction r : reactions) {//todo: may be slow
             List<DocumentField> displayableFields = r.getFieldsToDisplay();
             if(displayableFields == null || displayableFields.size() == 0) {
@@ -739,14 +739,17 @@ public class ReactionUtilities {
 
         final ColoringPanel colorPanel = getColoringPanel(availableFieldsVector, reactions);
 
+        final DocumentFieldSelectorPanel labelFieldPanel = new DocumentFieldSelectorPanel("Label wells by: ",availableFieldsVector);
+        fieldsPanel.add(labelFieldPanel, BorderLayout.NORTH);
 
-        final TemplateSelector templateSelectorPanel = new TemplateSelector(listSelector, colorPanel, reactions.get(0).getType());
+        final TemplateSelector templateSelectorPanel = new TemplateSelector(listSelector, colorPanel, labelFieldPanel, reactions.get(0).getType());
         final ChangeListener templateChangeListener = new ChangeListener() {
             public void stateChanged(ChangeEvent e) {
                 DisplayFieldsTemplate selectedTemplate = (DisplayFieldsTemplate) e.getSource();
                 if (selectedTemplate != null) {
                     listSelector.setSelectedFields(selectedTemplate.getDisplayedFields());
                     colorPanel.setColorer(selectedTemplate.getColorer());
+                    labelFieldPanel.setDocumentField(selectedTemplate.getLabelField());
                 }
             }
         };
@@ -775,6 +778,7 @@ public class ReactionUtilities {
             for(Reaction r : reactions) {
                 r.setFieldsToDisplay(new ArrayList<DocumentField>(listSelector.getSelectedFields()));
                 r.setBackgroundColorer(colorPanel.getColorer());
+                r.setLabelField(labelFieldPanel.getDocumentField());
             }
         }
     }
@@ -1017,14 +1021,16 @@ public class ReactionUtilities {
      * @param type
      * @param instruction
      * @param createNewEvenIfItMatchesExisting
+     * @param labelSelector
      * @return
      */
-    private static DisplayFieldsTemplate createNewTemplate(SplitPaneListSelector<DocumentField> listSelector, ColoringPanel colorSelector, Reaction.Type type, String instruction, boolean createNewEvenIfItMatchesExisting) {
+    private static DisplayFieldsTemplate createNewTemplate(SplitPaneListSelector<DocumentField> listSelector, ColoringPanel colorSelector, Reaction.Type type, String instruction, boolean createNewEvenIfItMatchesExisting, DocumentFieldSelectorPanel labelSelector) {
         DisplayFieldsTemplate newTemplate = null;
         BiocodeService.getInstance().updateDisplayFieldsTemplates();
         final Reaction.BackgroundColorer newColorer = colorSelector.getColorer();
         for(DisplayFieldsTemplate template : BiocodeService.getInstance().getDisplayedFieldTemplates(type)) {
-            if(template.fieldsMatch(listSelector.getSelectedFields()) && template.colourerMatches(newColorer)) {
+            if(template.fieldsMatch(listSelector.getSelectedFields()) && template.colourerMatches(newColorer) &&
+                    template.getLabelField().getCode().equals(labelSelector.getDocumentField().getCode())) {
                 BiocodeService.getInstance().setDefaultDisplayedFieldsTemplate(template);
                 if(!createNewEvenIfItMatchesExisting) {
                     return template;
@@ -1047,7 +1053,7 @@ public class ReactionUtilities {
                     continue aroundTheOutterLoop;
                 }
             }
-            newTemplate = new DisplayFieldsTemplate(inputTextfield.getText(), type, listSelector.getSelectedFields(), colorSelector.getColorer());
+            newTemplate = new DisplayFieldsTemplate(inputTextfield.getText(), type, listSelector.getSelectedFields(), colorSelector.getColorer(), labelSelector.getDocumentField());
             BiocodeService.getInstance().saveDisplayedFieldTemplate(newTemplate);
             break;
         }
@@ -1264,7 +1270,7 @@ public class ReactionUtilities {
         GeneiousAction.SubMenu templateSelectorDropdown;
         public boolean defaultTemplateSet = false;
 
-        public TemplateSelector(final SplitPaneListSelector listSelector, final ColoringPanel colorer, final Reaction.Type type) {
+        public TemplateSelector(final SplitPaneListSelector listSelector, final ColoringPanel colorer, final DocumentFieldSelectorPanel labelSelectotr, final Reaction.Type type) {
             changeListeners = new ArrayList<ChangeListener>();
             final List<DisplayFieldsTemplate> templateList = BiocodeService.getInstance().getDisplayedFieldTemplates(type);
             setOpaque(false);
@@ -1280,7 +1286,7 @@ public class ReactionUtilities {
 
             final Runnable newTemplateRunnable = new Runnable() {
                 public void run() {
-                    createNewTemplate(listSelector, colorer, type, "Please enter a name for your template", true);
+                    createNewTemplate(listSelector, colorer, type, "Please enter a name for your template", true, labelSelectotr);
                     List<GeneiousAction> templateActions = getTemplateActions(BiocodeService.getInstance().getDisplayedFieldTemplates(type), listSelector, this, type);
                     templateSelectorDropdown.setSubMenuActions(templateActions);
                 }
@@ -1290,7 +1296,7 @@ public class ReactionUtilities {
                 public void actionPerformed(ActionEvent e) {
                     DisplayFieldsTemplate newTemplate;
                     if(selectedTemplate == null) {
-                        newTemplate = createNewTemplate(listSelector, colorer, type, "You must save your settings as a template before making them the defaults", false);
+                        newTemplate = createNewTemplate(listSelector, colorer, type, "You must save your settings as a template before making them the defaults", false, labelSelectotr);
                     }
                     else {
                         newTemplate = selectedTemplate;
