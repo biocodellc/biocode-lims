@@ -2773,7 +2773,11 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                         if(option instanceof ButtonOption || option instanceof Options.LabelOption) {
                             continue;
                         }
-                        if(!Arrays.asList("id", "tissueId", "parentExtractionId").contains(option.getName())) {
+                        if(!Arrays.asList("id", "tissueId", "parentExtractionId",
+                                GelQuantificationOptions.ORIGINAL_PLATE,
+                                GelQuantificationOptions.ORIGINAL_PLATE_SIZE,
+                                GelQuantificationOptions.ORIGINAL_WELL
+                        ).contains(option.getName())) {
                             optionNames.add(option.getName());
                         }
                     }
