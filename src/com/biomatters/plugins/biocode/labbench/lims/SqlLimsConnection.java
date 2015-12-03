@@ -2782,13 +2782,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                             optionNames.add(option.getName());
                         }
                     }
-                    insertSQL  = "INSERT INTO " + GelQuantificationReaction.DB_TABLE_NAME + " (" + StringUtilities.join(",", optionNames) + ",plate,location) VALUES" + getQuestionMarksList(optionNames.size()+2);
+                    insertSQL  = "INSERT INTO " + GelQuantificationReaction.DB_TABLE_NAME + " (" + StringUtilities.join(",", optionNames) + ",plate,location,gelImage) VALUES" + getQuestionMarksList(optionNames.size()+3);
                     updateSQL  = "UPDATE " + GelQuantificationReaction.DB_TABLE_NAME + " SET ";
 
                     for (String optionName : optionNames) {
                         updateSQL += optionName + "=?,";
                     }
-                    updateSQL += "plate=?,location=? WHERE id=?";
+                    updateSQL += "plate=?,location=?,gelImage=? WHERE id=?";
 
                     insertStatement = connection.prepareStatement(insertSQL);
                     updateStatement = connection.prepareStatement(updateSQL);
@@ -2811,21 +2811,19 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                             int columnIndex = 1;
                             for (; columnIndex <= optionNames.size(); columnIndex++) {
                                 String optionName = optionNames.get(columnIndex-1);
-                                if("gelImage".equals(optionName)) {
-                                    GelImage image = reaction.getGelImage();
-                                    statement.setBytes(columnIndex, image != null ? image.getImageBytes() : null);
-                                } else {
-                                    Object value = options.getValue(optionName);
-                                    if (value instanceof Date) {
-                                        value = new java.sql.Date(((Date) value).getTime());
-                                    } else if(Reaction.EXTRACTION_FIELD.getCode().equals(optionName)) {
-                                        value = userIdToDatabaseId.get(value);
-                                    }
-                                    statement.setObject(columnIndex, value);
+                                Object value = options.getValue(optionName);
+                                if (value instanceof Date) {
+                                    value = new java.sql.Date(((Date) value).getTime());
+                                } else if(Reaction.EXTRACTION_FIELD.getCode().equals(optionName)) {
+                                    value = userIdToDatabaseId.get(value);
                                 }
+                                statement.setObject(columnIndex, value);
                             }
                             statement.setInt(columnIndex++, reaction.getPlateId());
                             statement.setInt(columnIndex++, reaction.getPosition());
+                            GelImage image = reaction.getGelImage();
+                            statement.setBytes(columnIndex++, image != null ? image.getImageBytes() : null);
+
                             if(isUpdateNotInsert) {
                                 statement.setInt(columnIndex++, reaction.getId());
                             }
