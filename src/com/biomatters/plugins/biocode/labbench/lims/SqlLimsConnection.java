@@ -1056,11 +1056,12 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
     private String constructPlateQuery(Collection<Integer> plateIds) {
         StringBuilder queryBuilder = new StringBuilder("SELECT E.id, E.extractionId, E.extractionBarcode, E.parent, " +
+                "plate.*, extraction.*, " + GelQuantificationReaction.DB_TABLE_NAME + ".*, workflow.*, pcr.*, cyclesequencing.*, " +
+                "assembly.id, assembly.progress, assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes," +
                 "EP.name AS " + GelQuantificationOptions.ORIGINAL_PLATE + ", " +
                 "EP.size AS " + GelQuantificationOptions.ORIGINAL_PLATE_SIZE + "," +
-                "E.location AS " + GelQuantificationOptions.ORIGINAL_WELL + ", " +
-                "plate.*, extraction.*, " + GelQuantificationReaction.DB_TABLE_NAME + ".*, workflow.*, pcr.*, cyclesequencing.*, " +
-                "assembly.id, assembly.progress, assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes FROM ");
+                "E.location AS " + GelQuantificationOptions.ORIGINAL_WELL +
+                " FROM ");
         // We join plate twice because HSQL doesn't let us use aliases.  The way the query is written means the select would produce a derived table.
         queryBuilder.append("(SELECT * FROM plate WHERE id IN ");
         appendSetOfQuestionMarks(queryBuilder, plateIds.size());
