@@ -7,6 +7,7 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 
@@ -44,7 +45,7 @@ public class GelQuantificationReaction extends Reaction<GelQuantificationReactio
         setPlateId(resultSet.getInt(DB_TABLE_NAME + ".plate"));
         options.setValue(GelQuantificationOptions.TISSUE_ID, resultSet.getString("sampleId"));
         options.setValue(EXTRACTION_FIELD.getCode(), resultSet.getString("extractionId"));
-        options.setValue(GelQuantificationOptions.EXTRACTION_BARCODE, resultSet.getString(GelQuantificationOptions.EXTRACTION_BARCODE));
+        extractionBarcode = resultSet.getString("extractionBarcode");
         String parent = resultSet.getString("parent");
         options.setValue("parentExtractionId", parent == null ? "" : parent);
 

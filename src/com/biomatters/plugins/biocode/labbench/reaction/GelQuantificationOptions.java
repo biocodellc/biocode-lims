@@ -22,13 +22,11 @@ public class GelQuantificationOptions extends ReactionOptions {
     public static final String ORIGINAL_PLATE = "originalPlate";
     public static final String ORIGINAL_PLATE_SIZE = "originalPlateSize";
     public static final String ORIGINAL_WELL = "originalWell";
-    public static final String EXTRACTION_BARCODE = "extractionBarcode";
 
     public GelQuantificationOptions() {
         addStringOption(Reaction.EXTRACTION_FIELD.getCode(), Reaction.EXTRACTION_FIELD.getName(), "");
         addStringOption(TISSUE_ID, "Tissue ID", "");
         addStringOption(PARENT_EXTRACTION_ID, "Parent Extraction ID", "");
-        addStringOption(EXTRACTION_BARCODE, "Extraction Barcode", "");
         addStringOption(ORIGINAL_PLATE, "Extraction Plate", "");
         addStringOption(ORIGINAL_WELL, "Extraction Well", "");
         addDateOption("date", "Date", new Date());
@@ -57,7 +55,7 @@ public class GelQuantificationOptions extends ReactionOptions {
     }
 
     private static final List<String> FINAL_FIELDS = Arrays.asList(TISSUE_ID, PARENT_EXTRACTION_ID,
-            EXTRACTION_BARCODE, ORIGINAL_WELL, ORIGINAL_PLATE);
+            ORIGINAL_WELL, ORIGINAL_PLATE);
 
 
     @Override
