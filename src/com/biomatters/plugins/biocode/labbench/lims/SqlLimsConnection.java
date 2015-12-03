@@ -1055,7 +1055,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     private String constructPlateQuery(Collection<Integer> plateIds) {
-        StringBuilder queryBuilder = new StringBuilder("SELECT E.id, E.extractionId, E.extractionBarcode, E.parent, " +
+        StringBuilder queryBuilder = new StringBuilder("SELECT E.id, E.extractionId, E.extractionBarcode, E.parent, E.sampleId," +
                 "plate.*, extraction.*, " + GelQuantificationReaction.DB_TABLE_NAME + ".*, workflow.*, pcr.*, cyclesequencing.*, " +
                 "assembly.id, assembly.progress, assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes," +
                 "EP.name AS " + GelQuantificationOptions.ORIGINAL_PLATE + ", " +

@@ -16,21 +16,22 @@ import java.util.List;
  */
 public class GelQuantificationOptions extends ReactionOptions {
 
-    private static final String TISSUE_ID = "tissueId";
+    public static final String TISSUE_ID = "tissueId";
     private static final String PARENT_EXTRACTION_ID = "parentExtractionId";
 
     public static final String ORIGINAL_PLATE = "originalPlate";
     public static final String ORIGINAL_PLATE_SIZE = "originalPlateSize";
     public static final String ORIGINAL_WELL = "originalWell";
+    public static final String EXTRACTION_BARCODE = "extractionBarcode";
 
     public GelQuantificationOptions() {
+        addStringOption(Reaction.EXTRACTION_FIELD.getCode(), Reaction.EXTRACTION_FIELD.getName(), "");
         addStringOption(TISSUE_ID, "Tissue ID", "");
         addStringOption(PARENT_EXTRACTION_ID, "Parent Extraction ID", "");
-        addStringOption(Reaction.EXTRACTION_FIELD.getCode(), Reaction.EXTRACTION_FIELD.getName(), "");
-        addDateOption("date", "Date", new Date());
-
+        addStringOption(EXTRACTION_BARCODE, "Extraction Barcode", "");
         addStringOption(ORIGINAL_PLATE, "Extraction Plate", "");
         addStringOption(ORIGINAL_WELL, "Extraction Well", "");
+        addDateOption("date", "Date", new Date());
 
         addStringOption("gelBuffer", "Gel Buffer", "");
         addDoubleOption("gelConc", "Gel Concentration", 0.0).setUnits("%");
@@ -55,7 +56,8 @@ public class GelQuantificationOptions extends ReactionOptions {
         super(e);
     }
 
-    private static final List<String> FINAL_FIELDS = Arrays.asList(TISSUE_ID, PARENT_EXTRACTION_ID);
+    private static final List<String> FINAL_FIELDS = Arrays.asList(TISSUE_ID, PARENT_EXTRACTION_ID,
+            EXTRACTION_BARCODE, ORIGINAL_WELL, ORIGINAL_PLATE);
 
 
     @Override

@@ -42,10 +42,11 @@ public class GelQuantificationReaction extends Reaction<GelQuantificationReactio
         setId(resultSet.getInt(DB_TABLE_NAME + ".id"));
         setPlateName(resultSet.getString("plate.name"));
         setPlateId(resultSet.getInt(DB_TABLE_NAME + ".plate"));
+        options.setValue(GelQuantificationOptions.TISSUE_ID, resultSet.getString("sampleId"));
         options.setValue(EXTRACTION_FIELD.getCode(), resultSet.getString("extractionId"));
+        options.setValue(GelQuantificationOptions.EXTRACTION_BARCODE, resultSet.getString(GelQuantificationOptions.EXTRACTION_BARCODE));
         String parent = resultSet.getString("parent");
         options.setValue("parentExtractionId", parent == null ? "" : parent);
-
 
         String originalPlate = resultSet.getString(GelQuantificationOptions.ORIGINAL_PLATE);
         if(originalPlate != null) {
