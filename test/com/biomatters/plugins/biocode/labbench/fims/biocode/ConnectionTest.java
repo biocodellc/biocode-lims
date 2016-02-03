@@ -19,14 +19,14 @@ public class ConnectionTest extends Assert {
 
     @Test
     public void getGraphs() throws DatabaseServiceException {
-        List<Graph> graphs = BiocodeFIMSUtils.getGraphsForProject("1");
+        List<Graph> graphs = BiocodeFIMSUtils.getGraphsForProject(BiocodeFIMSUtils.BISCICOL_URL, "1");
         assertNotNull(graphs);
         assertFalse(graphs.isEmpty());
     }
 
     @Test
     public void getFimsData() throws DatabaseServiceException {
-        BiocodeFimsData data = BiocodeFIMSUtils.getData("1", null, null, null);
+        BiocodeFimsData data = BiocodeFIMSUtils.getData(BiocodeFIMSUtils.BISCICOL_URL, "1", null, null, null);
 
         System.out.println(data.header);
         assertFalse(data.header.isEmpty());
@@ -35,7 +35,7 @@ public class ConnectionTest extends Assert {
     @Test
     public void checkLoginWorks() throws MalformedURLException, DatabaseServiceException, ConnectionException {
         BiocodeFIMSUtils.login(BiocodeFIMSUtils.BISCICOL_URL, "demo", "demo");
-        for (Project project : BiocodeFIMSUtils.getProjects()) {
+        for (Project project : BiocodeFIMSUtils.getProjects(BiocodeFIMSUtils.BISCICOL_URL)) {
             System.out.println(project);
         }
     }
@@ -49,7 +49,7 @@ public class ConnectionTest extends Assert {
     @Test
     public void getProjects() throws DatabaseServiceException, MalformedURLException {
         BiocodeFIMSUtils.login(BiocodeFIMSUtils.BISCICOL_URL, "demo", "demo");
-        List<Project> projects = BiocodeFIMSUtils.getProjects();
+        List<Project> projects = BiocodeFIMSUtils.getProjects(BiocodeFIMSUtils.BISCICOL_URL);
         assertFalse("There should be some projects", projects.isEmpty());
         for (Project project : projects) {
             assertNotNull(project.code);
@@ -61,7 +61,7 @@ public class ConnectionTest extends Assert {
 
     @Test(expected = DatabaseServiceException.class)
     public void checkProjectRetrievalWhenNotLoggedIn() throws DatabaseServiceException {
-        BiocodeFIMSUtils.getProjects();
+        BiocodeFIMSUtils.getProjects(BiocodeFIMSUtils.BISCICOL_URL);
     }
 
     @Before

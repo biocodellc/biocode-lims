@@ -1,3 +1,6 @@
+==Biocode Plugin 2.8.12 - TBD==
+* Updated to work with 2016 New Biocode FIMS changes
+
 ==Biocode Plugin 2.8.11 - 4 September 2015==
 * Fixed a crash that occurs when viewing the Reporting service in Geneious 8.1 or later.
 * Fixed a crash that occurs when using the Bulk Editor to fetch PCR or Cycle Sequencing reactions from extraction barcodes.
