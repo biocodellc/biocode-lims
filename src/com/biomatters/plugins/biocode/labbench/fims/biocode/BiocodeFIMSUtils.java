@@ -16,9 +16,7 @@ import javax.ws.rs.core.*;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Logger;
 
 /**
@@ -28,7 +26,16 @@ import java.util.logging.Logger;
 public class BiocodeFIMSUtils {
 
     static final String HOST = "biscicol.org";
-    static final int PORT = 80;
+    static final int PORT = serverProbablyDeployed() ? 80 : 8179;  // Should be reverted to 80 once the new server is deployed
+
+    private static boolean serverProbablyDeployed() {
+        GregorianCalendar cal = new GregorianCalendar();
+        cal.set(Calendar.YEAR, 2016);
+        cal.set(Calendar.MONTH, 2);
+        cal.set(Calendar.DAY_OF_MONTH, 1);
+        return new Date().after(cal.getTime());
+    }
+
     static final String BISCICOL_URL = "http://" + HOST + ":" + PORT;
 
     static WebTarget getFimsWebTarget(String hostname) {
