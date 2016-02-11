@@ -29,12 +29,13 @@ import java.util.prefs.Preferences;
  */public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
     ComboBoxOption<ProjectOptionValue> projectOption;
+    StringOption hostOption;
 
     private static final String DEFAULT_HOST = "http://biscicol.org";
 
     public BiocodeFIMSConnectionOptions() {
         super(BiocodePlugin.class);
-        final StringOption hostOption = addStringOption("host", "Host:", DEFAULT_HOST);
+        hostOption = addStringOption("host", "Host:", DEFAULT_HOST);
         final StringOption usernameOption = addStringOption("username", "Username:", "");
         final PasswordOption passwordOption = addCustomOption(new PasswordOption("password", "Password:", true));
         addButtonOption("authenticate", "", "Authenticate").addActionListener(new ActionListener() {
@@ -81,12 +82,12 @@ import java.util.prefs.Preferences;
         URL url = new URL(host);
         SharedCookieHandler.registerHost(url.getHost());
         BiocodeFIMSUtils.login(host, username, password);
-        loadProjectsFromServer();
+        loadProjectsFromServer(host);
     }
 
-    private void loadProjectsFromServer() {
+    private void loadProjectsFromServer(String host) {
         try {
-            List<Project> projects = BiocodeFIMSUtils.getProjects();
+            List<Project> projects = BiocodeFIMSUtils.getProjects(host);
             cacheProjects(projects);
 
             final List<ProjectOptionValue> optionValues = new ArrayList<ProjectOptionValue>();

@@ -105,7 +105,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             return samples;
 
         try {
-            BiocodeFimsData data = BiocodeFIMSUtils.getData("" + project.id, graph,
+            BiocodeFimsData data = BiocodeFIMSUtils.getData(host, "" + project.id, graph,
                     form, filterText == null || filterText.length() == 0 ? null : filterText.toString());
 
             if (data.data.size() == 0) {
@@ -278,6 +278,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return new BiocodeFIMSOptions();
     }
 
+    private String host;
     private Project project;
     private Map<String, Graph> graphs;
 
@@ -287,13 +288,14 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             throw new IllegalArgumentException("_connect() must be called with Options obtained from calling _getConnectionOptions()");
         }
         BiocodeFIMSOptions fimsOptions = (BiocodeFIMSOptions) options;
+        host = fimsOptions.getHost();
         project = fimsOptions.getProject();
         if (project == null) {
             throw new ConnectionException("You must select a project");
         }
         graphs = new HashMap<String, Graph>();
         try {
-            List<Graph> graphsForExpedition = BiocodeFIMSUtils.getGraphsForProject("" + project.id);
+            List<Graph> graphsForExpedition = BiocodeFIMSUtils.getGraphsForProject(host, "" + project.id);
             if (graphsForExpedition.isEmpty()) {
                 throw new ConnectionException("Project has no expeditions");
             }

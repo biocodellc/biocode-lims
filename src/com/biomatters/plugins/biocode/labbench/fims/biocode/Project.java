@@ -22,10 +22,10 @@ import java.util.concurrent.TimeUnit;
  */
 public class Project {
 
-    @XmlElement(name="project_id")public int id;
-    @XmlElement(name="project_code")public String code;
-    @XmlElement(name="project_title")public String title;
-    @XmlElement(name="biovalidator_validation_xml")public String xmlLocation;
+    @XmlElement(name="projectId")public int id;
+    @XmlElement(name="projectCode")public String code;
+    @XmlElement(name="projectTitle")public String title;
+    @XmlElement(name="validationXml")public String xmlLocation;
 
     private List<Field> fields;
 

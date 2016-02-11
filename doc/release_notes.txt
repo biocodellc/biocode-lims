@@ -1,6 +1,8 @@
 ==Biocode Plugin 2.9.0 - TBD==
-* Increased the maximum number of individual reactions from 26 to 30.
+* Increased the maximum number of individual reactions
 
+==Biocode Plugin 2.8.12 - TBD==
+* Updated to work with 2016 New Biocode FIMS changes
 
 ==Biocode Plugin 2.8.11 - 4 September 2015==
 * Fixed a crash that occurs when viewing the Reporting service in Geneious 8.1 or later.
