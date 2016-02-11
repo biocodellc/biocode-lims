@@ -1,5 +1,7 @@
-==Biocode Plugin 2.9.0 - TBD==
-* Increased the maximum number of individual reactions
+==Biocode Plugin 2.9.x - TBD==
+* Increased the maximum number of individual reactions to 30
+* Added advanded option to New Plate operation for copying reactions to a custom plate format (individual reactions only)
+* Added new Gel Quantification reaction type
 
 ==Biocode Plugin 2.8.12 - TBD==
 * Updated to work with 2016 New Biocode FIMS changes
