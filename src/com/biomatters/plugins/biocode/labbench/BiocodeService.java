@@ -917,8 +917,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
                         if (workflows != null) {
                             for (WorkflowDocument workflow : workflows) {
-                                if (workflow.getId() == seq.workflowId && workflow.getFimsSample() != null) {
-                                    return new FimsData(workflow, null, null);
+                                if (workflow.getId() == seq.workflowId) {
+                                    document.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, workflow.getName());
+                                    if(workflow.getFimsSample() != null) {
+                                        return new FimsData(workflow, null, null);
+                                    }
                                 }
                             }
                         }
@@ -988,8 +991,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    public DocumentField FWD_PLATE_FIELD = DocumentField.createStringField("Forward Plate", "", "forwardSeqPlate");
-    public DocumentField REV_PLATE_FIELD = DocumentField.createStringField("Reverse Plate", "", "reverseSeqPlate");
+    public static DocumentField FWD_PLATE_FIELD = DocumentField.createStringField("Forward Plate", "", "forwardSeqPlate");
+    public static DocumentField REV_PLATE_FIELD = DocumentField.createStringField("Reverse Plate", "", "reverseSeqPlate");
 
     private AnnotatedPluginDocument createAssemblyDocument(AssembledSequence seq) throws DatabaseServiceException {
         String qualities = seq.confidenceScore;
