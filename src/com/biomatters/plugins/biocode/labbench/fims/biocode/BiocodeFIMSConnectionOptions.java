@@ -29,14 +29,12 @@ import java.util.prefs.Preferences;
  *       Created on 1/02/14 10:50 AM
  */public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
-    ComboBoxOption<ProjectOptionValue> projectOption;
-    StringOption hostOption;
-
-    private static final String DEFAULT_HOST = "http://biscicol.org";
+    private StringOption hostOption;
+    private ComboBoxOption<ProjectOptionValue> projectOption;
 
     public BiocodeFIMSConnectionOptions() {
         super(BiocodePlugin.class);
-        hostOption = addStringOption("host", "Host:", DEFAULT_HOST);
+        hostOption = addStringOption("host", "Host:", BiocodeFIMSConnection.BISCICOL_URL);
         final StringOption usernameOption = addStringOption("username", "Username:", "");
         final PasswordOption passwordOption = addCustomOption(new PasswordOption("password", "Password:", true));
         addButtonOption("authenticate", "", "Authenticate").addActionListener(new ActionListener() {
@@ -83,13 +81,14 @@ import java.util.prefs.Preferences;
     public void login(String host, String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
         URL url = new URL(host);
         SharedCookieHandler.registerHost(url.getHost());
-        BiocodeFIMSUtils.login(host, username, password);
-        loadProjectsFromServer(host);
+        BiocodeFIMSClient client = new BiocodeFIMSClient(host, LoginOptions.DEFAULT_TIMEOUT);
+        client.login(username, password);
+        loadProjectsFromServer(client);
     }
 
-    private void loadProjectsFromServer(String host) {
+    private void loadProjectsFromServer(BiocodeFIMSClient client) {
         try {
-            List<Project> projects = BiocodeFIMSUtils.getProjects(host);
+            List<Project> projects = client.getProjects();
             cacheProjects(projects);
 
             final List<ProjectOptionValue> optionValues = new ArrayList<ProjectOptionValue>();
@@ -105,7 +104,7 @@ import java.util.prefs.Preferences;
 
         } catch (DatabaseServiceException e) {
             BiocodeUtilities.displayExceptionDialog("Failed to Load Projects",
-                    "Failed to load project list from " + BiocodeFIMSConnection.HOST + ": " + e.getMessage(), e, null);
+                    "Failed to load project list from " + BiocodeFIMSConnection.BISCICOL_URL + ": " + e.getMessage(), e, null);
         }
     }
 

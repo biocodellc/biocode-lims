@@ -34,7 +34,17 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     private static final DocumentField IDENTIFICATION_DATE_FIELD = new DocumentField("Identification Date", "",
                 "TABLEFIMS:urn:identificationDate", Date.class, true, false);
 
-    static final String HOST = "http://biscicol.org";
+    private static final String HOST = "biscicol.org";
+    private static final int PORT = serverProbablyDeployed() ? 80 : 8179;  // Should be reverted to 80 once the new server is deployed
+
+    private static boolean serverProbablyDeployed() {
+        GregorianCalendar cal = new GregorianCalendar();
+        cal.set(Calendar.YEAR, 2016);
+        cal.set(Calendar.MONTH, 2);
+        cal.set(Calendar.DAY_OF_MONTH, 1);
+        return new Date().after(cal.getTime());
+    }
+    static final String BISCICOL_URL = "http://" + HOST + ":" + PORT;
 
     @Override
     public String getLabel() {
@@ -111,7 +121,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             return samples;
 
         try {
-            BiocodeFimsData data = BiocodeFIMSUtils.getData(host, "" + project.id, graph,
+            BiocodeFimsData data = client.getData("" + project.id, graph,
                     form, filterText == null || filterText.length() == 0 ? null : filterText.toString());
 
             if (data.data.size() == 0) {
@@ -284,7 +294,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return new BiocodeFIMSOptions();
     }
 
-    private String host;
+    private BiocodeFIMSClient client;
     private Project project;
     private Map<String, Graph> graphs;
 
@@ -294,14 +304,15 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             throw new IllegalArgumentException("_connect() must be called with Options obtained from calling _getConnectionOptions()");
         }
         BiocodeFIMSOptions fimsOptions = (BiocodeFIMSOptions) options;
-        host = fimsOptions.getHost();
+        client = new BiocodeFIMSClient(fimsOptions.getHost(), requestTimeoutInSeconds);
+
         project = fimsOptions.getProject();
         if (project == null) {
             throw new ConnectionException("You must select a project");
         }
         graphs = new HashMap<String, Graph>();
         try {
-            List<Graph> graphsForExpedition = BiocodeFIMSUtils.getGraphsForProject(host, "" + project.id);
+            List<Graph> graphsForExpedition = client.getGraphsForProject("" + project.id);
             if (graphsForExpedition.isEmpty()) {
                 throw new ConnectionException("Project has no expeditions");
             }

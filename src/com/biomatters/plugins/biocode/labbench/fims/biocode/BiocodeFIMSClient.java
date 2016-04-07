@@ -26,27 +26,19 @@ import java.util.logging.Logger;
  *         Created on 7/02/14 5:51 AM
  */
 public class BiocodeFIMSClient {
+    private WebTarget target;
 
-    static final String HOST = "biscicol.org";
-    static final int PORT = serverProbablyDeployed() ? 80 : 8179;  // Should be reverted to 80 once the new server is deployed
-
-    private static boolean serverProbablyDeployed() {
-        GregorianCalendar cal = new GregorianCalendar();
-        cal.set(Calendar.YEAR, 2016);
-        cal.set(Calendar.MONTH, 2);
-        cal.set(Calendar.DAY_OF_MONTH, 1);
-        return new Date().after(cal.getTime());
+    public BiocodeFIMSClient(String hostname) {
+        this(hostname, 0);
     }
 
-    static final String BISCICOL_URL = "http://" + HOST + ":" + PORT;
-
-    static WebTarget getFimsWebTarget(String hostname) {
+    public BiocodeFIMSClient(String hostname, int timeout) {
         ClientConfig config = new ClientConfig()
                 .property(ClientProperties.CONNECT_TIMEOUT, timeout * 1000)
                 .property(ClientProperties.READ_TIMEOUT, timeout * 1000);
 
-        return ClientBuilder.newBuilder().withConfig(config).build().target(hostname)
-                            .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), true));
+        target = ClientBuilder.newBuilder().withConfig(config).build().target(hostname)
+                                    .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false));
     }
 
 
@@ -58,12 +50,12 @@ public class BiocodeFIMSClient {
      * @throws ProcessingException If a problem occurs accessing the webservice to login
      * @throws com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException If the server returned an error when we tried to authenticate
      */
-    static void login(String url, String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
-        WebTarget path = getFimsWebTarget(url).path("biocode-fims/rest/authenticationService/login");
+    void login(String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
+        WebTarget path = target.path("biocode-fims/rest/authenticationService/login");
         Invocation.Builder request = path.request();
         Form formToPost = new Form().param("username", username).param("password", password);
         Response response = request.post(
-                    Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
+                Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
         // Ignore the actual result.  It will be a redirection URL which is irrelevant for us
         getRestServiceResult(String.class, response);
     }
@@ -108,35 +100,33 @@ public class BiocodeFIMSClient {
         }
     }
 
-    static WebTarget getQueryTarget(String host) {
-        WebTarget target = getFimsWebTarget(host);
-        target = target.path("biocode-fims/rest/projects/query/json");
-        return target;
+    WebTarget getQueryTarget() {
+        return target.path("biocode-fims/rest/projects/query/json");
     }
 
-    static List<Project> getProjects(String host) throws DatabaseServiceException {
-        WebTarget target = getFimsWebTarget(host);
+    List<Project> getProjects() throws DatabaseServiceException {
         Invocation.Builder request = target.path("biocode-fims/rest/projects/user/list").request(MediaType.APPLICATION_JSON_TYPE);
         try {
             Response response = request.get();
-            List<Project> fromService = getRestServiceResult(new GenericType<List<Project>>(){}, response);
+            List<Project> fromService = getRestServiceResult(new GenericType<List<Project>>() {
+            }, response);
             List<Project> returnList = new ArrayList<Project>();
             for (Project project : fromService) {
-                if(project.code != null) {
+                if (project.code != null) {
                     returnList.add(project);
                 }
             }
             return returnList;
-        } catch(WebApplicationException e) {
-            throw new DatabaseServiceException(e, "Error message from server: " + target.getUri().getHost() + ": " + e.getMessage(), true);
-        } catch(ProcessingException e) {
+        } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, "Error message from server: " + target.getUri() + ": " + e.getMessage(), true);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), true);
+
         }
     }
 
-    static List<Graph> getGraphsForProject(String host, String id) throws DatabaseServiceException {
+    List<Graph> getGraphsForProject(String id) throws DatabaseServiceException {
         try {
-            WebTarget target = getFimsWebTarget(host);
             Invocation.Builder request = target.path("biocode-fims/rest/projects").path(id).path("graphs").request(MediaType.APPLICATION_JSON_TYPE);
             Response response = request.get();
             return getRestServiceResult(new GenericType<List<Graph>>(){}, response);
@@ -149,7 +139,7 @@ public class BiocodeFIMSClient {
 
     static final String EXPEDITION_NAME = "Expedition";
 
-    static BiocodeFimsData getData(String host, String project, Graph graph, Form searchTerms, String filter) throws DatabaseServiceException {
+    BiocodeFimsData getData(String project, Graph graph, Form searchTerms, String filter) throws DatabaseServiceException {
         if(filter != null && filter.contains(",")) {
             try {
                 filter = URLEncoder.encode(filter, "UTF-8");
@@ -163,12 +153,12 @@ public class BiocodeFIMSClient {
         if(graph != null) {
             graphsToSearch.add(graph.getGraphId());
         } else {
-            for (Graph g : getGraphsForProject(host, project)) {
+            for (Graph g : getGraphsForProject(project)) {
                 graphsToSearch.add(g.getGraphId());
             }
         }
 
-        BiocodeFimsData data = getBiocodeFimsData(host, project, graphsToSearch, searchTerms, filter);
+        BiocodeFimsData data = getBiocodeFimsData(project, graphsToSearch, searchTerms, filter);
         if(data.header == null)
             data.header = Collections.emptyList();
 
@@ -178,9 +168,9 @@ public class BiocodeFIMSClient {
         return data;
     }
 
-    private static BiocodeFimsData getBiocodeFimsData(String host, String project, List<String> graphs, Form searchTerms, String filter) throws DatabaseServiceException {
+    private BiocodeFimsData getBiocodeFimsData(String project, List<String> graphs, Form searchTerms, String filter) throws DatabaseServiceException {
         try {
-            WebTarget target = getQueryTarget(host);
+            WebTarget target = getQueryTarget();
 
             if(searchTerms == null || searchTerms.asMap().isEmpty()) {
                 target = target.queryParam("project_id", project);
@@ -209,7 +199,7 @@ public class BiocodeFIMSClient {
         } catch (NotFoundException e) {
             throw new DatabaseServiceException("No data found.", false);
         } catch (WebApplicationException e) {
-            throw new DatabaseServiceException(e, "Encountered an error communicating with " + BiocodeFIMSConnection.HOST, false);
+            throw new DatabaseServiceException(e, "Encountered an error communicating with " + BiocodeFIMSConnection.BISCICOL_URL, false);
         } catch(ProcessingException e) {
             throw new DatabaseServiceException(e, "Encountered an error connecting to server: " + e.getMessage(), true);
         }

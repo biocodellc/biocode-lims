@@ -224,7 +224,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
      * @param pluginDocument The trace sequence within an assembly
      * @param plateCache A cache of plates that can be used to avoid extra database searches
      */
-    private static List<CycleSequencingReaction> getReactionsForDoc(LIMSConnection limsConnection, final AnnotatedPluginDocument document, @Nullable final PluginDocument pluginDocument, Map<String, Plate> plateCache) throws CouldNotGetReactionException, DocumentOperationException {
+    private static List<CycleSequencingReaction> getReactionsForDoc(final AnnotatedPluginDocument document, @Nullable final PluginDocument pluginDocument, Map<String, Plate> plateCache) throws CouldNotGetReactionException, DocumentOperationException {
 
         ValueGetter getter = new ValueGetter() {
             @Override
@@ -249,9 +249,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
                 if(plate != null) {
                     if(well != null) {
-                        result.add(getReactionForPlateAndWell(limsConnection, plate, well, plateCache));
+                        result.add(getReactionForPlateAndWell(plate, well, plateCache));
                     } else if(workflow != null) {
-                        result.add(getReactionForPlateAndWorkflowName(limsConnection, plateCache, result, plate, workflow));
+                        result.add(getReactionForPlateAndWorkflowName(plateCache, result, plate, workflow));
                     }
                 }
             }
@@ -262,9 +262,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         return result;
     }
 
-    private static CycleSequencingReaction getReactionForPlateAndWorkflowName(LIMSConnection limsConnection, Map<String, Plate> plateCache, List<CycleSequencingReaction> result,
+    private static CycleSequencingReaction getReactionForPlateAndWorkflowName(Map<String, Plate> plateCache, List<CycleSequencingReaction> result,
                                                                               @Nonnull String plateName, @Nonnull String workflow) throws DocumentOperationException, CouldNotGetReactionException {
-        Plate plate = getPlateBySearch(limsConnection, plateName, plateCache);
+        Plate plate = getPlateBySearch(plateName, plateCache);
         if(plate == null) {
             throw new CouldNotGetReactionException("Cannot find sequencing plate \"" + plateName + "\"");
         }
@@ -277,13 +277,12 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         throw new CouldNotGetReactionException("No reaction found in plate " + plateName + " matching workflow " + workflow);
     }
 
-    private static CycleSequencingReaction getReactionForPlateAndWell(LIMSConnection limsConnection,
-                                                                      @Nonnull String plateName,
+    private static CycleSequencingReaction getReactionForPlateAndWell(@Nonnull String plateName,
                                                                       @Nonnull String wellName,
                                                                       Map<String, Plate> sequencingPlateCache
     ) throws CouldNotGetReactionException, DocumentOperationException {
 
-        Plate plate = getPlateBySearch(limsConnection, plateName, sequencingPlateCache);
+        Plate plate = getPlateBySearch(plateName, sequencingPlateCache);
         if (plate == null) {
             throw new CouldNotGetReactionException("Cannot find sequencing plate \"" + plateName + "\"");
         }
@@ -361,12 +360,12 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     if (referencedDocument != null && !NucleotideSequenceDocument.class.isAssignableFrom(referencedDocument.getDocumentClass())) {
                         throw new DocumentOperationException("Contig \"" + annotatedDocument.getName() + "\" contains a sequence which is not DNA");
                     }
-                    for (CycleSequencingReaction reaction : getReactionsForDoc(limsConnection, referencedDocument, sequence, sequencingPlateCache)) {
+                    for (CycleSequencingReaction reaction : getReactionsForDoc(referencedDocument, sequence, sequencingPlateCache)) {
                         reactionsToChromatograms.put(reaction, referencedDocument);
                     }
                 }
             } else {
-                for (CycleSequencingReaction reaction : getReactionsForDoc(limsConnection, annotatedDocument, null, sequencingPlateCache)) {
+                for (CycleSequencingReaction reaction : getReactionsForDoc(annotatedDocument, null, sequencingPlateCache)) {
                     reactionsToChromatograms.put(reaction, annotatedDocument);
                 }
             }
@@ -402,7 +401,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         return null;
     }
 
-    private static Plate getPlateBySearch(LIMSConnection limsConnection, String plateName, Map<String, Plate> sequencingPlateCache) throws DocumentOperationException, CouldNotGetReactionException {
+    private static Plate getPlateBySearch(String plateName, Map<String, Plate> sequencingPlateCache) throws DocumentOperationException, CouldNotGetReactionException {
         if (sequencingPlateCache.containsKey(plateName)) {
             return sequencingPlateCache.get(plateName);
         } else {
@@ -410,6 +409,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     BiocodeService.getSearchDownloadOptions(false, false, true, false));//Query.Factory.createQuery(plateName);
             List<Plate> plates;
             try {
+                LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
                 List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(q, null, ProgressListener.EMPTY).getPlateIds();
                 plates = limsConnection.getPlates(plateIds, ProgressListener.EMPTY);
             } catch (DatabaseServiceException e) {

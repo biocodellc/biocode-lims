@@ -928,17 +928,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         AnnotatedPluginDocument doc = createAssemblyDocument(seq, limsUrn);
                         FimsDataGetter getter = new FimsDataGetter() {
                             public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
-                                if (workflows != null) {
-                                    for (WorkflowDocument workflow : workflows) {
-                                        if (workflow.getId() == seq.workflowId) {
-                                            document.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, workflow.getName());
-                                            if(workflow.getFimsSample() != null) {
-                                                return new FimsData(workflow, null, null);
-                                            }
-                                        }
-                                    }
-                                }
-
                                 String tissueId = seq.sampleId;
                                 if (samples != null) {
                                     for (FimsSample sample : samples) {
@@ -963,6 +952,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
                         ArrayList<String> failBlog = new ArrayList<String>();
                         try {
+                            // todo workflow???
                             AnnotateUtilities.annotateDocument(getter, failBlog, doc, false);
                         } catch (DocumentOperationException e) {
                             exceptionDuringAnnotate.set(e);
