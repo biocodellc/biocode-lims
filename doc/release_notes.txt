@@ -19,7 +19,7 @@ LIMS plugin back to version 2.1.
 The schema upgrade script can be found at http://software.mooreabiocode.org
 
 
-==Biocode Plugin 2.8.12 - TBD==
+==Biocode Plugin 2.8.12 - Privately released ==
 * Updated to work with 2016 New Biocode FIMS changes
 
 ==Biocode Plugin 2.8.11 - 4 September 2015==
