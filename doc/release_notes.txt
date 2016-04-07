@@ -7,6 +7,8 @@
 * Added an operation to the plate bulk editor that allows for the importing of extraction barcodes from FIMS.
 * Added the ability to export tables to .xls, .csv and .tsv.
 * Increased the maximum number of individual reactions from 26 to 30.
+* Added advanded option to New Plate operation for copying reactions to a custom plate format (individual reactions only)
+* Added new Gel Quantification reaction type
 * Many other bug fixes and improvements.
 
 '''Additional Notes'''
@@ -16,6 +18,9 @@ LIMS plugin back to version 2.1.
 * Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
 The schema upgrade script can be found at http://software.mooreabiocode.org
 
+
+==Biocode Plugin 2.8.12 - TBD==
+* Updated to work with 2016 New Biocode FIMS changes
 
 ==Biocode Plugin 2.8.11 - 4 September 2015==
 * Fixed a crash that occurs when viewing the Reporting service in Geneious 8.1 or later.

@@ -29,8 +29,8 @@ import java.util.prefs.Preferences;
  *       Created on 1/02/14 10:50 AM
  */public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
-    private StringOption hostOption;
-    private ComboBoxOption<ProjectOptionValue> projectOption;
+    ComboBoxOption<ProjectOptionValue> projectOption;
+    StringOption hostOption;
 
     private static final String DEFAULT_HOST = "http://biscicol.org";
 
@@ -83,14 +83,13 @@ import java.util.prefs.Preferences;
     public void login(String host, String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
         URL url = new URL(host);
         SharedCookieHandler.registerHost(url.getHost());
-        BiocodeFIMSClient client = new BiocodeFIMSClient(host, LoginOptions.DEFAULT_TIMEOUT);
-        client.login(username, password);
-        loadProjectsFromServer(client);
+        BiocodeFIMSUtils.login(host, username, password);
+        loadProjectsFromServer(host);
     }
 
-    private void loadProjectsFromServer(BiocodeFIMSClient client) {
+    private void loadProjectsFromServer(String host) {
         try {
-            List<Project> projects = client.getProjects();
+            List<Project> projects = BiocodeFIMSUtils.getProjects(host);
             cacheProjects(projects);
 
             final List<ProjectOptionValue> optionValues = new ArrayList<ProjectOptionValue>();

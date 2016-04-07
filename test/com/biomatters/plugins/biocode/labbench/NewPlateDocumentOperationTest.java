@@ -1,17 +1,20 @@
 package com.biomatters.plugins.biocode.labbench;
 
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.lims.LimsTestCase;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
+import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import jebl.util.ProgressListener;
+import org.jdom.Element;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -33,7 +36,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     private static final String THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE = "384Plate";
 
     @Test
-    public void testCreateStripExtractionPlateFromStripExtractionPlate() throws DocumentOperationException {
+    public void testCreateStripExtractionPlateFromStripExtractionPlate() throws DocumentOperationException, DatabaseServiceException, BadDataException {
         for (int numberOfStrips = 1; numberOfStrips <= 6; numberOfStrips++) {
             Plate extractionPlate = createExtractionNonEmptyExtractionPlate(STRIPS_PLATE_TYPE_VALUE, numberOfStrips);
             for (Reaction.Type type : Reaction.Type.values()) {
@@ -43,7 +46,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     }
 
     @Test
-    public void testCreateIndividualReactionsPlateFromIndividualReactionsExtractionPlate() throws DocumentOperationException {
+    public void testCreateIndividualReactionsPlateFromIndividualReactionsExtractionPlate() throws DocumentOperationException, DatabaseServiceException, BadDataException {
         for (int numberOfIndividualReactions = 1; numberOfIndividualReactions <= Plate.MAX_INDIVIDUAL_REACTIONS; numberOfIndividualReactions++) {
             if(numberOfIndividualReactions % 8 == 0) {
                 continue;  // These sizes are reserved for strips
@@ -63,7 +66,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     }
 
     @Test
-    public void testCreate48PCRPlateFrom48ExtractionPlate() throws DocumentOperationException {
+    public void testCreate48PCRPlateFrom48ExtractionPlate() throws DocumentOperationException, DatabaseServiceException, BadDataException {
         Plate extractionPlate = createExtractionNonEmptyExtractionPlate(FOURTY_EIGHT_WELL_PLATE_TYPE_VALUE, 0);
         for (Reaction.Type type : Reaction.Type.values()) {
             createPlate(type.name, FOURTY_EIGHT_WELL_PLATE_TYPE_VALUE, 0, extractionPlate);
@@ -71,7 +74,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     }
 
     @Test
-    public void testCreate96PCRPlateFrom96ExtractionPlate() throws DocumentOperationException {
+    public void testCreate96PCRPlateFrom96ExtractionPlate() throws DocumentOperationException, DatabaseServiceException, BadDataException {
         Plate extractionPlate = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
         for (Reaction.Type type : Reaction.Type.values()) {
             createPlate(type.name, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0, extractionPlate);
@@ -79,7 +82,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     }
 
     @Test
-    public void testCreate384PCRPlateFrom384ExtractionPlate() throws DocumentOperationException {
+    public void testCreate384PCRPlateFrom384ExtractionPlate() throws DocumentOperationException, DatabaseServiceException, BadDataException {
         Plate extractionPlate = createExtractionNonEmptyExtractionPlate(THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0);
         for (Reaction.Type type : Reaction.Type.values()) {
             createPlate(type.name, THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0, extractionPlate);
@@ -87,7 +90,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     }
 
     @Test
-    public void testCreate384PCRPlateFromFour96ExtractionPlates() throws DocumentOperationException {
+    public void testCreate384PCRPlateFromFour96ExtractionPlates() throws DocumentOperationException, DatabaseServiceException, BadDataException {
         Plate ninetySixWellExtractionPlateOne = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
         Plate ninetySixWellExtractionPlateTwo = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
         Plate ninetySixWellExtractionPlateThree = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
@@ -98,7 +101,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     }
 
     @Test
-    public void testAlternatingCustomCopy() throws DocumentOperationException {
+    public void testAlternatingCustomCopy() throws DocumentOperationException, DatabaseServiceException, BadDataException {
         Plate extractionPlate = createExtractionNonEmptyExtractionPlate(STRIPS_PLATE_TYPE_VALUE, 5);
         Options.OptionValue method = NewPlateOptions.ALTERNATING;
         testCustomCopy(extractionPlate, method, 1, "1,2,3,4,5".split(","));
@@ -107,7 +110,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     }
 
     @Test
-    public void testSequentialCustomCopy() throws DocumentOperationException {
+    public void testSequentialCustomCopy() throws DocumentOperationException, DatabaseServiceException, BadDataException {
         Plate extractionPlate = createExtractionNonEmptyExtractionPlate(STRIPS_PLATE_TYPE_VALUE, 5);
         Options.OptionValue method = NewPlateOptions.SEQUENTIALLY;
         testCustomCopy(extractionPlate, method, 1, "1,2,3,4,5".split(","));
@@ -115,59 +118,100 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
         testCustomCopy(extractionPlate, method, 3, ("1,2,3,4,5,6,7,8,9,10,11,12,13,14,15").split(","));
     }
 
-    private void testCustomCopy(Plate extractionPlate, Options.OptionValue method, int rowsToCopy, String... expectedIds) throws DocumentOperationException {
-        AnnotatedPluginDocument annotatedPlate = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(extractionPlate));
-        NewPlateOptions options = createNewPlateOptions(Reaction.Type.GelQuantification.name, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, extractionPlate.getCols() * rowsToCopy, annotatedPlate);
-        options.setValue(NewPlateOptions.USE_CUSTOM_COPY, true);
-        options.setValue("customCopy.insertStart", 1);
-        options.setValue("customCopy.insertMethod", method);
-        Options customCopyOptions = options.getChildOptions().get("customCopy");
-        for (int i = 0; i < rowsToCopy; i++) {
-            customCopyOptions.setStringValue("rowOptions." + i + ".row", "" + i);
+    private void testCustomCopy(Plate extractionPlate, Options.OptionValue method, int numRowsToCopy, String... expectedIds) throws DocumentOperationException {
+        List<Integer> rows = new ArrayList<Integer>();
+        for (int i = 0; i < numRowsToCopy; i++) {
+            rows.add(i);
         }
+        testCustomCopy(extractionPlate, Arrays.asList(Reaction.Type.values()), method, 1, rows, expectedIds);
+    }
 
-        Plate plate = createPlateUsingOptions(false, options, annotatedPlate);
-        Reaction[] reactions = plate.getReactions();
-        List<String> actualIds = new ArrayList<String>();
-        for (int reactionIndex = 0; reactionIndex < reactions.length; reactionIndex++) {
-            Reaction reaction = reactions[reactionIndex];
-            actualIds.add(reaction.getExtractionId());
+    private List<Plate> testCustomCopy(Plate extractionPlate, List<Reaction.Type> destReactionTypes, Options.OptionValue method, int start,  List<Integer> rowsToCopy, String... expectedIds) throws DocumentOperationException {
+        List<Plate> results = new ArrayList<Plate>();
+        AnnotatedPluginDocument annotatedPlate = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(extractionPlate));
+        for (Reaction.Type type : destReactionTypes) {
+            NewPlateOptions options = createNewPlateOptions(type.name, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, extractionPlate.getCols() * rowsToCopy.size(), annotatedPlate);
+            options.setValue(NewPlateOptions.USE_CUSTOM_COPY, true);
+            options.setValue("customCopy.insertStart", start);
+            options.setValue("customCopy.insertMethod", method);
+            Options customCopyOptions = options.getChildOptions().get("customCopy");
+            for (int i = 0; i < rowsToCopy.size(); i++) {
+                Integer rowIndex = rowsToCopy.get(i);
+                customCopyOptions.setStringValue("rowOptions." + i + ".row", "" + rowIndex);
+            }
+
+            Plate plate = createPlateUsingOptions(false, options, annotatedPlate);
+            results.add(plate);
+            Reaction[] reactions = plate.getReactions();
+            List<String> actualIds = new ArrayList<String>();
+            for (int reactionIndex = 0; reactionIndex < reactions.length; reactionIndex++) {
+                Reaction reaction = reactions[reactionIndex];
+                int zeroBasedStart = start - 1;
+                boolean beforeStart = reactionIndex < zeroBasedStart;
+                boolean afterEnd = reactionIndex >= zeroBasedStart + rowsToCopy.size() * extractionPlate.getCols();
+                assertEquals(beforeStart || afterEnd, reaction.isEmpty());
+                if(!beforeStart && !afterEnd) {
+                    actualIds.add(reaction.getExtractionId());
+                }
+            }
+            if(expectedIds != null) {
+                if (type == Reaction.Type.Extraction) {
+                    // When copying to a new extraction plate, new IDs need to be generated
+                    String[] newExtractionIds = new String[expectedIds.length];
+                    for (int i = 0; i < expectedIds.length; i++) {
+                        newExtractionIds[i] = expectedIds[i] + ".1";
+                    }
+                    assertEquals(Arrays.asList(newExtractionIds), actualIds);
+                } else {
+                    assertEquals(Arrays.asList(expectedIds), actualIds);
+                }
+            }
         }
-        assertEquals(Arrays.asList(expectedIds), actualIds);
+        return results;
     }
 
     @Test
-    public void testCustomCopyInSmithsonianGelQuantificationFormat() throws DocumentOperationException {
+    public void testCustomCopyInSmithsonianGelQuantificationFormat() throws DocumentOperationException, DatabaseServiceException, BadDataException {
         Plate extractionPlate = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
         AnnotatedPluginDocument annotatedPlate = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(extractionPlate));
-        NewPlateOptions options = createNewPlateOptions(Reaction.Type.GelQuantification.name, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, 30, annotatedPlate);
-        options.setValue(NewPlateOptions.USE_CUSTOM_COPY, true);
-        options.setValue("customCopy.insertStart", 4);  // First three wells are the control
-        options.setValue("customCopy.insertMethod", NewPlateOptions.ALTERNATING);
         List<Plate> gelPlates = new ArrayList<Plate>();
         for(int rowIndex=0; rowIndex<extractionPlate.getRows();) {
-            Options customCopyOptions = options.getChildOptions().get("customCopy");
-            customCopyOptions.setStringValue("rowOptions.0.row", "" + rowIndex++);
-            customCopyOptions.setStringValue("rowOptions.1.row", "" + rowIndex++);
+            List<Integer> rows = new ArrayList<Integer>();
+            rows.add(rowIndex++);
+            rows.add(rowIndex++);
 
-            Plate plate = createPlateUsingOptions(false, options, annotatedPlate);
-            Reaction[] reactions = plate.getReactions();
-            for (int reactionIndex = 0; reactionIndex < reactions.length; reactionIndex++) {
-                Reaction reaction = reactions[reactionIndex];
-                assertEquals(reactionIndex < 3 || reactionIndex > reactions.length-4, reaction.isEmpty());
-            }
-            gelPlates.add(plate);
+            gelPlates.addAll(testCustomCopy(extractionPlate, Collections.singletonList(Reaction.Type.GelQuantification), NewPlateOptions.ALTERNATING, 4, rows, null));
         }
         assertEquals(4, gelPlates.size());  // There should be 4x 30-well gel quantification plates from a single 96-well plate.
     }
 
-    private static Plate createExtractionNonEmptyExtractionPlate(String plateType, int plateValue) throws DocumentOperationException {
+    @Test
+    public void testCustomCopyWhenSourceHasMoreWellsThanDestination() throws DocumentOperationException, DatabaseServiceException, BadDataException {
+        Plate extractionPlate = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
+        AnnotatedPluginDocument annotatedPlate = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(extractionPlate));
+        NewPlateOptions options = createNewPlateOptions(Reaction.Type.GelQuantification.name, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, 20, annotatedPlate);
+        options.setValue(NewPlateOptions.USE_CUSTOM_COPY, true);
+
+        for (int start : Arrays.asList(19, 20, 21)) {
+            for (Options.OptionValue insertMethod : Arrays.asList(NewPlateOptions.ALTERNATING, NewPlateOptions.SEQUENTIALLY)) {
+                testCustomCopy(extractionPlate, Arrays.asList(Reaction.Type.values()), insertMethod, start, Arrays.asList(1,2,3), null);
+            }
+        }
+    }
+
+    private static int extractionPlateCount = 1;
+    private static Plate createExtractionNonEmptyExtractionPlate(String plateType, int plateValue) throws DocumentOperationException, DatabaseServiceException, BadDataException {
         Plate plate = createPlate(false, EXTRACTION_REACTION_TYPE_VALUE, plateType, plateValue);
+        plate.setName("ExtractionPlate"+ extractionPlateCount++);
         Reaction[] reactions = plate.getReactions();
         for (int i = 0; i < reactions.length; i++) {
             Reaction reaction = reactions[i];
-            reaction.setExtractionId("" + (i+1));
+            final String id = "" + (i + 1);
+            reaction.setExtractionId(id);
+            reaction.getOptions().setValue(ExtractionOptions.TISSUE_ID, id);
         }
+        // Save the plate so that the extraction IDs cannot be re-used
+        BiocodeService.getInstance().savePlate(plate, ProgressListener.EMPTY);
         return plate;
     }
 

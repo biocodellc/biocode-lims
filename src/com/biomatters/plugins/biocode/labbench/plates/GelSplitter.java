@@ -353,7 +353,7 @@ public class GelSplitter {
                         Point p = getRowAndCol(i,j);
 
                         String wellName = Plate.getWellName(p.x, p.y);
-                        double scaleFactor = 40.0/Math.max(width,height);
+                        double scaleFactor = 40.0/ (rows == 1 ? width : cols == 1 ? height : Math.max(width,height));
                         int wellWidth = (int) (scaleFactor * width);
                         int wellHeight = (int) (scaleFactor * height);
                         if(wellWidth <= 0 || wellHeight <= 0) {

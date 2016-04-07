@@ -928,6 +928,17 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         AnnotatedPluginDocument doc = createAssemblyDocument(seq, limsUrn);
                         FimsDataGetter getter = new FimsDataGetter() {
                             public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
+                                if (workflows != null) {
+                                    for (WorkflowDocument workflow : workflows) {
+                                        if (workflow.getId() == seq.workflowId) {
+                                            document.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, workflow.getName());
+                                            if(workflow.getFimsSample() != null) {
+                                                return new FimsData(workflow, null, null);
+                                            }
+                                        }
+                                    }
+                                }
+
                                 String tissueId = seq.sampleId;
                                 if (samples != null) {
                                     for (FimsSample sample : samples) {
@@ -1002,8 +1013,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    public DocumentField FWD_PLATE_FIELD = DocumentField.createStringField("Forward Plate", "", "forwardSeqPlate");
-    public DocumentField REV_PLATE_FIELD = DocumentField.createStringField("Reverse Plate", "", "reverseSeqPlate");
+    public static DocumentField FWD_PLATE_FIELD = DocumentField.createStringField("Forward Plate", "", "forwardSeqPlate");
+    public static DocumentField REV_PLATE_FIELD = DocumentField.createStringField("Reverse Plate", "", "reverseSeqPlate");
 
     private AnnotatedPluginDocument createAssemblyDocument(AssembledSequence seq, String limsUrn) {
         String qualities = seq.confidenceScore;

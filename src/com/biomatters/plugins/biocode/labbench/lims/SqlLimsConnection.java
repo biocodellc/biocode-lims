@@ -1081,9 +1081,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     private String constructPlateQuery(Collection<Integer> plateIds) {
-        StringBuilder queryBuilder = new StringBuilder("SELECT E.id, E.extractionId, E.extractionBarcode, E.parent, " +
+        StringBuilder queryBuilder = new StringBuilder("SELECT E.id, E.extractionId, E.extractionBarcode, E.parent, E.sampleId," +
                 "plate.*, extraction.*, " + GelQuantificationReaction.DB_TABLE_NAME + ".*, workflow.*, pcr.*, cyclesequencing.*, " +
-                "assembly.id, assembly.progress, assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes FROM ");
+                "assembly.id, assembly.progress, assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes," +
+                "EP.name AS " + GelQuantificationOptions.ORIGINAL_PLATE + ", " +
+                "EP.size AS " + GelQuantificationOptions.ORIGINAL_PLATE_SIZE + "," +
+                "E.location AS " + GelQuantificationOptions.ORIGINAL_WELL +
+                " FROM ");
         // We join plate twice because HSQL doesn't let us use aliases.  The way the query is written means the select would produce a derived table.
         queryBuilder.append("(SELECT * FROM plate WHERE id IN ");
         appendSetOfQuestionMarks(queryBuilder, plateIds.size());
@@ -1107,6 +1111,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         queryBuilder.append("LEFT OUTER JOIN extraction E ON E.id = " +
                 "CASE WHEN " + GelQuantificationReaction.DB_TABLE_NAME + ".extractionId IS NOT NULL THEN " + GelQuantificationReaction.DB_TABLE_NAME + ".extractionId ELSE " +
                 "CASE WHEN extraction.id IS NULL THEN workflow.extractionId ELSE extraction.id END END ");  // So we get extraction ID for pcr and cyclesequencing reactions
+
+        queryBuilder.append("LEFT OUTER JOIN plate EP ON EP.id = E.plate");
 
         queryBuilder.append(" ORDER by plate.id, assembly.date desc");
         return queryBuilder.toString();
@@ -2838,17 +2844,18 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                         if(option instanceof ButtonOption || option instanceof Options.LabelOption) {
                             continue;
                         }
-                        if(!Arrays.asList("id", "tissueId", "parentExtractionId").contains(option.getName())) {
+                        if(!Arrays.asList("id", "tissueId", "parentExtractionId").contains(option.getName())
+                                && !optionsTemplate.fieldIsFinal(option.getName())) {
                             optionNames.add(option.getName());
                         }
                     }
-                    insertSQL  = "INSERT INTO " + GelQuantificationReaction.DB_TABLE_NAME + " (" + StringUtilities.join(",", optionNames) + ",plate,location) VALUES" + getQuestionMarksList(optionNames.size()+2);
+                    insertSQL  = "INSERT INTO " + GelQuantificationReaction.DB_TABLE_NAME + " (" + StringUtilities.join(",", optionNames) + ",plate,location,gelImage) VALUES" + getQuestionMarksList(optionNames.size()+3);
                     updateSQL  = "UPDATE " + GelQuantificationReaction.DB_TABLE_NAME + " SET ";
 
                     for (String optionName : optionNames) {
                         updateSQL += optionName + "=?,";
                     }
-                    updateSQL += "plate=?,location=? WHERE id=?";
+                    updateSQL += "plate=?,location=?,gelImage=? WHERE id=?";
 
                     insertStatement = connection.prepareStatement(insertSQL);
                     updateStatement = connection.prepareStatement(updateSQL);
@@ -2871,21 +2878,19 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                             int columnIndex = 1;
                             for (; columnIndex <= optionNames.size(); columnIndex++) {
                                 String optionName = optionNames.get(columnIndex-1);
-                                if("gelImage".equals(optionName)) {
-                                    GelImage image = reaction.getGelImage();
-                                    statement.setBytes(columnIndex, image != null ? image.getImageBytes() : null);
-                                } else {
-                                    Object value = options.getValue(optionName);
-                                    if (value instanceof Date) {
-                                        value = new java.sql.Date(((Date) value).getTime());
-                                    } else if(Reaction.EXTRACTION_FIELD.getCode().equals(optionName)) {
-                                        value = userIdToDatabaseId.get(value);
-                                    }
-                                    statement.setObject(columnIndex, value);
+                                Object value = options.getValue(optionName);
+                                if (value instanceof Date) {
+                                    value = new java.sql.Date(((Date) value).getTime());
+                                } else if(Reaction.EXTRACTION_FIELD.getCode().equals(optionName)) {
+                                    value = userIdToDatabaseId.get(value);
                                 }
+                                statement.setObject(columnIndex, value);
                             }
                             statement.setInt(columnIndex++, reaction.getPlateId());
                             statement.setInt(columnIndex++, reaction.getPosition());
+                            GelImage image = reaction.getGelImage();
+                            statement.setBytes(columnIndex++, image != null ? image.getImageBytes() : null);
+
                             if(isUpdateNotInsert) {
                                 statement.setInt(columnIndex++, reaction.getId());
                             }
