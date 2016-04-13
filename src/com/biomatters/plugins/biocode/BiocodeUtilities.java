@@ -287,7 +287,10 @@ public class BiocodeUtilities {
         if (extensionIndex != -1) { //the extensions can end up in the middle of the name if renaming has occurred
             fileName = fileName.substring(0, extensionIndex) + fileName.substring(extensionIndex + extensionLower.length());
         }
-        fileName += suffix + extension;
+        if(suffix != null) {
+            fileName += suffix;
+        }
+        fileName += extension;
         fileName = fileName.replace(' ', '_');
         return fileName;
     }
