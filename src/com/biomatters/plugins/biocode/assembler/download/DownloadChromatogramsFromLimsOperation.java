@@ -73,11 +73,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             progress.setIndeterminateProgress();
             progress.beginSubtask("Getting reactions");
 
-            List<String> plateNames = ((DownloadChromatogramsFromLimsOptions)options).getPlateNames();
-            Map<String, List<String>> toRetrieve = new HashMap<String, List<String>>();
-            for (String plateName : plateNames) {
-                toRetrieve.put(plateName, null);
-            }
+            Map<String, List<String>> toRetrieve = ((DownloadChromatogramsFromLimsOptions)options).getPlatesAndWorkflowsToRetrieve(annotatedDocuments);
             Map<CycleSequencingReaction, FimsData> fimsDataForReactions = getReactionsForPlateNames(toRetrieve, progress);
             if (fimsDataForReactions == null) return null;
             Set<CycleSequencingReaction> reactions = fimsDataForReactions.keySet();
@@ -176,10 +172,12 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                 throw new DocumentOperationException("Plate \"" + plateName + "\" is not a sequencing plate");
             }
 
-            List<String> workflowNames = new ArrayList<String>();
-            for (Reaction reaction : plate.getReactions()) {
-                if(!reaction.isEmpty() && reaction.getWorkflow() != null) {
-                    workflowNames.add(reaction.getWorkflow().getName());
+            List<String> workflowNames = entry.getValue();
+            if(workflowNames == null) {
+                for (Reaction reaction : plate.getReactions()) {
+                    if (!reaction.isEmpty() && reaction.getWorkflow() != null) {
+                        workflowNames.add(reaction.getWorkflow().getName());
+                    }
                 }
             }
 
@@ -193,20 +191,22 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             for (Reaction reaction : plate.getReactions()) {
                 if (reactionsProgress.isCanceled()) return null;
                 if (!reaction.isEmpty()) {
-                    fimsDataForReactions.put((CycleSequencingReaction) reaction, null);
+                    FimsData fimsData = null;
                     BiocodeUtilities.Well well = Plate.getWell(reaction.getPosition(), plate.getPlateSize());
                     if (reaction.getWorkflow() != null) {
-                        WorkflowDocument workflow = findWorkflow(workflows, reaction.getWorkflow().getId());
-                        if (workflow != null) {
-                            fimsDataForReactions.put((CycleSequencingReaction) reaction, new FimsData(workflow, plate.getName(), well));
+                        if(!workflowNames.contains(reaction.getWorkflow().getName())) {
                             continue;
                         }
+                        WorkflowDocument workflow = findWorkflow(workflows, reaction.getWorkflow().getId());
+                        if (workflow != null) {
+                            fimsData = new FimsData(workflow, plate.getName(), well);
+                        }
                     }
-
                     FimsSample fimsSample = reaction.getFimsSample();
-                    if(fimsSample != null) {
-                        fimsDataForReactions.put((CycleSequencingReaction) reaction, new FimsData(fimsSample, plate.getName(), well));
+                    if(fimsData == null && fimsSample != null) {
+                        fimsData = new FimsData(fimsSample, plate.getName(), well);
                     }
+                    fimsDataForReactions.put((CycleSequencingReaction) reaction, fimsData);
                 }
             }
         }

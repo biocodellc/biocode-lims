@@ -242,8 +242,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
         List<CycleSequencingReaction> result = new ArrayList<CycleSequencingReaction>();
         if(document != null) {
-            List<DocumentField> plateFields = Arrays.asList(BiocodeUtilities.SEQUENCING_PLATE_FIELD, BiocodeService.FWD_PLATE_FIELD, BiocodeService.REV_PLATE_FIELD);
-            for (DocumentField plateField : plateFields) {
+            for (DocumentField plateField : BiocodeUtilities.PLATE_FIELDS) {
                 String plate = getStringOrNull(getter.get(plateField.getCode()));
                 String well = getStringOrNull(getter.get(BiocodeUtilities.SEQUENCING_WELL_FIELD.getCode()));
                 String workflow = getStringOrNull(getter.get(BiocodeUtilities.WORKFLOW_NAME_FIELD.getCode()));

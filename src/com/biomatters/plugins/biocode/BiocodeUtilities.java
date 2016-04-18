@@ -60,6 +60,12 @@ public class BiocodeUtilities {
             "subgenus", "sub genus", "sub-genus", "specificepithet", "specific epithet", "subspecificepithet",
             "subspecific epithet", "scientificname", "scientific name"};
 
+    public static final List<DocumentField> PLATE_FIELDS = Arrays.asList(
+            BiocodeUtilities.SEQUENCING_PLATE_FIELD,
+            BiocodeService.FWD_PLATE_FIELD,
+            BiocodeService.REV_PLATE_FIELD
+    );
+
     public static Options getConsensusOptions(AnnotatedPluginDocument[] selectedDocuments) throws DocumentOperationException {
         DocumentOperation consensusOperation = PluginUtilities.getDocumentOperation("Generate_Consensus");
         if (consensusOperation == null) {
