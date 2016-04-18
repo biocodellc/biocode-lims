@@ -1073,6 +1073,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             options.downloadMethodOption.setValue(options.SELECTED_SEQUENCES);
             options.assembleTracesOption.setValue(true);
             List<AnnotatedPluginDocument> downloaded = downloadAssembly.performOperation(docs, progressListener, options);
+            if(downloaded == null) {
+                return Collections.emptyList();
+            }
             for (AnnotatedPluginDocument annotatedPluginDocument : downloaded) {
                 if(SequenceAlignmentDocument.class.isAssignableFrom(annotatedPluginDocument.getDocumentClass())) {
                     results.add(annotatedPluginDocument);
