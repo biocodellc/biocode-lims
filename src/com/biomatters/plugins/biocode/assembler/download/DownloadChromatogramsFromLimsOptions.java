@@ -101,7 +101,9 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
                         List<String> workflows = plates.get(plateValue);
                         if(workflows == null) {
                             workflows = new ArrayList<String>();
-                            plates.put(plateValue.toString(), workflows);
+                            for (String plate : plateValue.toString().split(",")) {
+                                plates.put(plate, workflows);
+                            }
                         }
                         workflows.add(workflowValue.toString());
                     }
