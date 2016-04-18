@@ -126,7 +126,7 @@ public class BiocodeUtilities {
     }
 
 
-    public static void downloadTracesForReactions(List<CycleSequencingReaction> reactions_a, ProgressListener progressListener) throws DatabaseServiceException, IOException, DocumentImportException{
+    public static void downloadTracesForReactions(Collection<CycleSequencingReaction> reactions_a, ProgressListener progressListener) throws DatabaseServiceException, IOException, DocumentImportException{
         List<CycleSequencingReaction> reactions = new ArrayList<CycleSequencingReaction>();
         for(CycleSequencingReaction reaction : reactions_a) { //try not to download if we've already downloaded!
             if(!reaction.hasDownloadedChromats()) {
