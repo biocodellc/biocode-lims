@@ -22,6 +22,7 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
     private final OptionValue SELECTED_SEQUENCES = new OptionValue("selectedSequences", "selected sequences");
 
     private RadioOption<OptionValue> downloadMethodOption;
+    private BooleanOption assembleTracesOption;
     private MultipleOptions plateNamesMultipleOptions;
     private static final String PLATE_NAME = "plateName";
 
@@ -33,6 +34,8 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
         Options plateSectionOptions = new Options(DownloadChromatogramsFromLimsOptions.class);
         addChildOptions("plates", "", null, plateSectionOptions);
         downloadMethodOption.addChildOptionsDependent(plateSectionOptions, SPECIFY_PLATES, true);
+        assembleTracesOption = addBooleanOption("assemble", "Assemble Traces to Sequences", false);
+        downloadMethodOption.addDependent(assembleTracesOption, SELECTED_SEQUENCES);
 
         Options plateNameOptions = new Options(DownloadChromatogramsFromLimsOptions.class);
         StringOption plateNameOption = plateNameOptions.addStringOption(PLATE_NAME, "Sequencing Plate Name:", "");
@@ -106,5 +109,9 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
             }
         }
         return plates;
+    }
+
+    public boolean isAssembleTraces() {
+        return assembleTracesOption.getValue();
     }
 }

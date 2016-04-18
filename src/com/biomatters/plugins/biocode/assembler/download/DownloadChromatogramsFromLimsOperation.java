@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.assembler.download;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
@@ -19,6 +20,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Trace;
+import com.google.common.collect.ArrayListMultimap;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
@@ -62,10 +64,15 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
     }
 
     @Override
-    public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
+    public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options _options) throws DocumentOperationException {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
+        if(!(_options instanceof DownloadChromatogramsFromLimsOptions)) {
+            throw new IllegalArgumentException("Options must be obtained by calling getOptions()");
+        }
+        DownloadChromatogramsFromLimsOptions options = (DownloadChromatogramsFromLimsOptions)_options;
+
         BiocodeCallback callback = new BiocodeCallback(progressListener);
         BiocodeService.getInstance().registerCallback(callback);
         try {
@@ -73,7 +80,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             progress.setIndeterminateProgress();
             progress.beginSubtask("Getting reactions");
 
-            Map<String, List<String>> toRetrieve = ((DownloadChromatogramsFromLimsOptions)options).getPlatesAndWorkflowsToRetrieve(annotatedDocuments);
+            Map<String, List<String>> toRetrieve = options.getPlatesAndWorkflowsToRetrieve(annotatedDocuments);
             Map<CycleSequencingReaction, FimsData> fimsDataForReactions = getReactionsForPlateNames(toRetrieve, progress);
             if (fimsDataForReactions == null) return null;
             Set<CycleSequencingReaction> reactions = fimsDataForReactions.keySet();
@@ -138,6 +145,17 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                 }
             }
             if (progress.isCanceled()) return null;
+
+            if(options.isAssembleTraces()) {
+                DocumentOperation assemblyOperation = PluginUtilities.getDocumentOperation("com.biomatters.plugins.alignment.AssemblyOperation");
+                if(assemblyOperation == null) {
+                    Dialogs.showMessageDialog("Could not assemble traces because could not find assembly operation. " +
+                            "Please make sure the Alignmnet plugin is installed and enabled by going to Tools menu -> Plugins...");
+                } else {
+                    chromatogramDocuments.addAll(assembleTraces(assemblyOperation, annotatedDocuments, chromatogramDocuments));
+                }
+            }
+
             return chromatogramDocuments;
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
@@ -145,6 +163,77 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         }
         finally {
             BiocodeService.getInstance().unregisterCallback(callback);
+        }
+    }
+
+    private Collection<? extends AnnotatedPluginDocument> assembleTraces(DocumentOperation assemblyOperation, AnnotatedPluginDocument[] annotatedDocuments, List<AnnotatedPluginDocument> chromatogramDocuments) throws DocumentOperationException {
+        List<AnnotatedPluginDocument> results = new ArrayList<AnnotatedPluginDocument>();
+
+        ArrayListMultimap<AnnotatedPluginDocument, AnnotatedPluginDocument> refToTraces = ArrayListMultimap.create();
+
+        ArrayListMultimap<String, AnnotatedPluginDocument> tracesByWorkflow = ArrayListMultimap.create();
+        for (AnnotatedPluginDocument trace : chromatogramDocuments) {
+            Object workflow = trace.getFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD);
+            if(workflow != null) {
+                tracesByWorkflow.put(workflow.toString(), trace);
+            }
+        }
+
+        for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
+            Set<Object> validPlates = new HashSet<Object>();
+            for (DocumentField plateField : BiocodeUtilities.PLATE_FIELDS) {
+                Object plateValue = annotatedDocument.getFieldValue(plateField);
+                if(plateValue != null) {
+                    validPlates.add(plateValue);
+                }
+            }
+
+            Object workflowName = annotatedDocument.getFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD);
+            if(workflowName != null) {
+                List<AnnotatedPluginDocument> traces = tracesByWorkflow.get(workflowName.toString());
+                for (AnnotatedPluginDocument trace : traces) {
+                    Object plateName = trace.getFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD);
+                    if(validPlates.contains(plateName)) {
+                        refToTraces.put(annotatedDocument, trace);
+                    }
+                }
+            }
+        }
+
+
+        for (Map.Entry<AnnotatedPluginDocument, Collection<AnnotatedPluginDocument>> entry : refToTraces.asMap().entrySet()) {
+            AnnotatedPluginDocument assembly = assembleTracesToRef(assemblyOperation, entry.getKey(), entry.getValue());
+            if(assembly != null) {
+                results.add(assembly);
+            }
+        }
+
+        return results;
+    }
+
+    private AnnotatedPluginDocument assembleTracesToRef(DocumentOperation assemblyOperation, AnnotatedPluginDocument reference, Collection<AnnotatedPluginDocument> traces) throws DocumentOperationException {
+        List<AnnotatedPluginDocument> input = new ArrayList<AnnotatedPluginDocument>();
+        input.add(reference);
+        input.addAll(traces);
+        Options assemblyOptions = assemblyOperation.getOptions(input);
+        assemblyOptions.setValue("data.useReferenceSequence", true);
+        assemblyOptions.setValue("data.referenceSequenceName", new DocumentSelectionOption.FolderOrDocuments(reference));
+        assemblyOptions.setValue("data.groupAssemblies", false);
+        assemblyOptions.setValue("data.assembleListsSeparately", false);
+        assemblyOptions.setValue("method.algorithm.referenceAssembly", "Geneious.reference");
+        assemblyOptions.setValue("trimOptions.method", "noTrim");
+        assemblyOptions.setValue("results.saveReport", false);
+        assemblyOptions.setValue("results.resultsInSubfolder", false);
+        assemblyOptions.setValue("results.generateContigs", true);
+        assemblyOptions.setValue("results.generateConsensusSequencesReference", false);
+        assemblyOptions.setValue("results.saveUnusedReads", false);
+
+        List<AnnotatedPluginDocument> annotatedPluginDocuments = assemblyOperation.performOperation(input, ProgressListener.EMPTY, assemblyOptions);
+        if(annotatedPluginDocuments.isEmpty()) {
+            return null;
+        } else {
+            assert annotatedPluginDocuments.size() == 1;
+            return annotatedPluginDocuments.get(0);
         }
     }
 
@@ -174,6 +263,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
 
             List<String> workflowNames = entry.getValue();
             if(workflowNames == null) {
+                workflowNames = new ArrayList<String>();
                 for (Reaction reaction : plate.getReactions()) {
                     if (!reaction.isEmpty() && reaction.getWorkflow() != null) {
                         workflowNames.add(reaction.getWorkflow().getName());
