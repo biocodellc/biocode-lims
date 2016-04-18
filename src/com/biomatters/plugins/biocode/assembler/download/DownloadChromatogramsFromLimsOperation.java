@@ -76,7 +76,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         BiocodeCallback callback = new BiocodeCallback(progressListener);
         BiocodeService.getInstance().registerCallback(callback);
         try {
-            CompositeProgressListener progress = new CompositeProgressListener(callback, 0.2, 0.5, 0.2);
+            CompositeProgressListener progress = new CompositeProgressListener(callback, 0.2, 0.4, 0.2, 0.2);
             progress.setIndeterminateProgress();
             progress.beginSubtask("Getting reactions");
 
@@ -147,12 +147,13 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             if (progress.isCanceled()) return null;
 
             if(options.isAssembleTraces()) {
+                progress.beginSubtask("Assembling Traces...");
                 DocumentOperation assemblyOperation = PluginUtilities.getDocumentOperation("com.biomatters.plugins.alignment.AssemblyOperation");
                 if(assemblyOperation == null) {
                     Dialogs.showMessageDialog("Could not assemble traces because could not find assembly operation. " +
                             "Please make sure the Alignmnet plugin is installed and enabled by going to Tools menu -> Plugins...");
                 } else {
-                    chromatogramDocuments.addAll(assembleTraces(assemblyOperation, annotatedDocuments, chromatogramDocuments));
+                    chromatogramDocuments.addAll(assembleTraces(assemblyOperation, annotatedDocuments, chromatogramDocuments, progress));
                 }
             }
 
@@ -166,7 +167,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         }
     }
 
-    private Collection<? extends AnnotatedPluginDocument> assembleTraces(DocumentOperation assemblyOperation, AnnotatedPluginDocument[] annotatedDocuments, List<AnnotatedPluginDocument> chromatogramDocuments) throws DocumentOperationException {
+    private Collection<? extends AnnotatedPluginDocument> assembleTraces(DocumentOperation assemblyOperation, AnnotatedPluginDocument[] annotatedDocuments, List<AnnotatedPluginDocument> chromatogramDocuments, ProgressListener progress) throws DocumentOperationException {
         List<AnnotatedPluginDocument> results = new ArrayList<AnnotatedPluginDocument>();
 
         ArrayListMultimap<AnnotatedPluginDocument, AnnotatedPluginDocument> refToTraces = ArrayListMultimap.create();
@@ -201,9 +202,21 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         }
 
 
+        CompositeProgressListener compositeProgress = new CompositeProgressListener(progress, refToTraces.keySet().size());
         for (Map.Entry<AnnotatedPluginDocument, Collection<AnnotatedPluginDocument>> entry : refToTraces.asMap().entrySet()) {
-            AnnotatedPluginDocument assembly = assembleTracesToRef(assemblyOperation, entry.getKey(), entry.getValue());
+            compositeProgress.beginSubtask();
+            if(compositeProgress.isCanceled()) {
+                throw new DocumentOperationException.Canceled();
+            }
+            AnnotatedPluginDocument reference = entry.getKey();
+            AnnotatedPluginDocument assembly = assembleTracesToRef(assemblyOperation, reference, entry.getValue(), compositeProgress);
             if(assembly != null) {
+                assembly.setName(reference.getName());
+                for (DocumentField field : reference.getDisplayableFields()) {
+                    if(!AnnotateUtilities.FIELDS_TO_NOT_COPY.contains(field.getCode()) && assembly.getFieldValue(field) == null) {
+                        assembly.setFieldValue(field, reference.getFieldValue(field));
+                    }
+                }
                 results.add(assembly);
             }
         }
@@ -211,7 +224,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         return results;
     }
 
-    private AnnotatedPluginDocument assembleTracesToRef(DocumentOperation assemblyOperation, AnnotatedPluginDocument reference, Collection<AnnotatedPluginDocument> traces) throws DocumentOperationException {
+    private AnnotatedPluginDocument assembleTracesToRef(DocumentOperation assemblyOperation, AnnotatedPluginDocument reference, Collection<AnnotatedPluginDocument> traces, ProgressListener progress) throws DocumentOperationException {
         List<AnnotatedPluginDocument> input = new ArrayList<AnnotatedPluginDocument>();
         input.add(reference);
         input.addAll(traces);
@@ -228,7 +241,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         assemblyOptions.setValue("results.generateConsensusSequencesReference", false);
         assemblyOptions.setValue("results.saveUnusedReads", false);
 
-        List<AnnotatedPluginDocument> annotatedPluginDocuments = assemblyOperation.performOperation(input, ProgressListener.EMPTY, assemblyOptions);
+        List<AnnotatedPluginDocument> annotatedPluginDocuments = assemblyOperation.performOperation(input, progress, assemblyOptions);
         if(annotatedPluginDocuments.isEmpty()) {
             return null;
         } else {

@@ -954,11 +954,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 ArrayList<String> failBlog = new ArrayList<String>();
                 AnnotateUtilities.annotateDocument(getter, failBlog, doc, false);
                 if (failBlog.size() == 0) {
-                    AnnotatedPluginDocument assemblyForLimsSequence = getAssemblyForLimsSequence(doc);
-                    if(assemblyForLimsSequence != null) {
-                        doc = assemblyForLimsSequence;
-                    }
-
                     resultDocuments.add(doc);
                     if (callback != null) {
                         callback.add(doc, Collections.<String, Object>emptyMap());
@@ -991,6 +986,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     callback.add(doc, Collections.<String, Object>emptyMap());
                 }
             }
+            callback.setMessage("Re-assembling traces to sequences...");
+            List<AnnotatedPluginDocument> assemblies = getAssemblyForLimsSequence(resultDocuments, callback);
+            for (AnnotatedPluginDocument assembly : assemblies) {
+                callback.add(assembly, Collections.<String, Object>emptyMap());
+            }
+
             return resultDocuments;
         } catch (DocumentOperationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
@@ -1060,27 +1061,27 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return doc;
     }
 
-    private AnnotatedPluginDocument getAssemblyForLimsSequence(AnnotatedPluginDocument doc) throws DatabaseServiceException {
+    private List<AnnotatedPluginDocument> getAssemblyForLimsSequence(List<AnnotatedPluginDocument> docs, ProgressListener progressListener) throws DatabaseServiceException {
+        List<AnnotatedPluginDocument> results = new ArrayList<AnnotatedPluginDocument>();
         DownloadChromatogramsFromLimsOperation downloadAssembly = new DownloadChromatogramsFromLimsOperation(true);
         try {
-            Options _options = downloadAssembly.getOptions(doc);
+            Options _options = downloadAssembly.getOptions(docs);
             if(!(_options instanceof DownloadChromatogramsFromLimsOptions)) {
                 throw new IllegalStateException("");
             }
             DownloadChromatogramsFromLimsOptions options = (DownloadChromatogramsFromLimsOptions)_options;
             options.downloadMethodOption.setValue(options.SELECTED_SEQUENCES);
             options.assembleTracesOption.setValue(true);
-            List<AnnotatedPluginDocument> downloaded = downloadAssembly.performOperation(ProgressListener.EMPTY, options, doc);
+            List<AnnotatedPluginDocument> downloaded = downloadAssembly.performOperation(docs, progressListener, options);
             for (AnnotatedPluginDocument annotatedPluginDocument : downloaded) {
                 if(SequenceAlignmentDocument.class.isAssignableFrom(annotatedPluginDocument.getDocumentClass())) {
-                    annotatedPluginDocument.setName(doc.getName());
-                    return annotatedPluginDocument;
+                    results.add(annotatedPluginDocument);
                 }
             }
+            return results;
         } catch (DocumentOperationException e) {
             throw new DatabaseServiceException(e, "Couldn't download traces: " + e.getMessage(), false);
         }
-        return null;
     }
 
     private int[] qualitiesFromString(String qualString) {

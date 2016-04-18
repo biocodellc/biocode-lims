@@ -33,9 +33,9 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
 
         Options plateSectionOptions = new Options(DownloadChromatogramsFromLimsOptions.class);
         addChildOptions("plates", "", null, plateSectionOptions);
-        downloadMethodOption.addChildOptionsDependent(plateSectionOptions, SPECIFY_PLATES, true);
+        downloadMethodOption.addChildOptionsDependent(plateSectionOptions, SPECIFY_PLATES, false);
         assembleTracesOption = addBooleanOption("assemble", "Assemble Traces to Sequences", false);
-        downloadMethodOption.addDependent(assembleTracesOption, SELECTED_SEQUENCES);
+        downloadMethodOption.addDependent(SELECTED_SEQUENCES, assembleTracesOption, true);
 
         Options plateNameOptions = new Options(DownloadChromatogramsFromLimsOptions.class);
         StringOption plateNameOption = plateNameOptions.addStringOption(PLATE_NAME, "Sequencing Plate Name:", "");
