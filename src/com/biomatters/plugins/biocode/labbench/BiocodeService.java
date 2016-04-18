@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultNucleotideGraph;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraph;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
@@ -18,6 +19,8 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
+import com.biomatters.plugins.biocode.assembler.download.DownloadChromatogramsFromLimsOperation;
+import com.biomatters.plugins.biocode.assembler.download.DownloadChromatogramsFromLimsOptions;
 import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.*;
@@ -951,6 +954,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 ArrayList<String> failBlog = new ArrayList<String>();
                 AnnotateUtilities.annotateDocument(getter, failBlog, doc, false);
                 if (failBlog.size() == 0) {
+                    AnnotatedPluginDocument assemblyForLimsSequence = getAssemblyForLimsSequence(doc);
+                    if(assemblyForLimsSequence != null) {
+                        doc = assemblyForLimsSequence;
+                    }
+
                     resultDocuments.add(doc);
                     if (callback != null) {
                         callback.add(doc, Collections.<String, Object>emptyMap());
@@ -1050,6 +1058,29 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         doc.setFieldValue(FWD_PLATE_FIELD, seq.forwardPlate);
         doc.setFieldValue(REV_PLATE_FIELD, seq.reversePlate);
         return doc;
+    }
+
+    private AnnotatedPluginDocument getAssemblyForLimsSequence(AnnotatedPluginDocument doc) throws DatabaseServiceException {
+        DownloadChromatogramsFromLimsOperation downloadAssembly = new DownloadChromatogramsFromLimsOperation(true);
+        try {
+            Options _options = downloadAssembly.getOptions(doc);
+            if(!(_options instanceof DownloadChromatogramsFromLimsOptions)) {
+                throw new IllegalStateException("");
+            }
+            DownloadChromatogramsFromLimsOptions options = (DownloadChromatogramsFromLimsOptions)_options;
+            options.downloadMethodOption.setValue(options.SELECTED_SEQUENCES);
+            options.assembleTracesOption.setValue(true);
+            List<AnnotatedPluginDocument> downloaded = downloadAssembly.performOperation(ProgressListener.EMPTY, options, doc);
+            for (AnnotatedPluginDocument annotatedPluginDocument : downloaded) {
+                if(SequenceAlignmentDocument.class.isAssignableFrom(annotatedPluginDocument.getDocumentClass())) {
+                    annotatedPluginDocument.setName(doc.getName());
+                    return annotatedPluginDocument;
+                }
+            }
+        } catch (DocumentOperationException e) {
+            throw new DatabaseServiceException(e, "Couldn't download traces: " + e.getMessage(), false);
+        }
+        return null;
     }
 
     private int[] qualitiesFromString(String qualString) {

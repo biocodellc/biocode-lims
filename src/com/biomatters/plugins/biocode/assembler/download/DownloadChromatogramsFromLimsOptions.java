@@ -18,11 +18,11 @@ import java.util.*;
  */
 public class DownloadChromatogramsFromLimsOptions extends Options {
 
-    private final OptionValue SPECIFY_PLATES = new OptionValue("byPlate", "specified plates");
-    private final OptionValue SELECTED_SEQUENCES = new OptionValue("selectedSequences", "selected sequences");
+    public final OptionValue SPECIFY_PLATES = new OptionValue("byPlate", "specified plates");
+    public final OptionValue SELECTED_SEQUENCES = new OptionValue("selectedSequences", "selected sequences");
 
-    private RadioOption<OptionValue> downloadMethodOption;
-    private BooleanOption assembleTracesOption;
+    public RadioOption<OptionValue> downloadMethodOption;
+    public BooleanOption assembleTracesOption;
     private MultipleOptions plateNamesMultipleOptions;
     private static final String PLATE_NAME = "plateName";
 
