@@ -227,7 +227,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
      */
     private static List<CycleSequencingReaction> getReactionsForDoc(LIMSConnection limsConnection, final AnnotatedPluginDocument document, @Nullable final PluginDocument pluginDocument, Map<String, Plate> plateCache) throws CouldNotGetReactionException, DocumentOperationException {
 
-        ValueGetter getter = new ValueGetter() {
+        BiocodeUtilities.ValueGetter getter = new BiocodeUtilities.ValueGetter() {
             @Override
             public Object get(String key) {
                 Object fromApd = document.getFieldValue(key);
@@ -242,17 +242,13 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
         List<CycleSequencingReaction> result = new ArrayList<CycleSequencingReaction>();
         if(document != null) {
-            for (DocumentField plateField : BiocodeUtilities.PLATE_FIELDS) {
-                String plate = getStringOrNull(getter.get(plateField.getCode()));
-                String well = getStringOrNull(getter.get(BiocodeUtilities.SEQUENCING_WELL_FIELD.getCode()));
-                String workflow = getStringOrNull(getter.get(BiocodeUtilities.WORKFLOW_NAME_FIELD.getCode()));
-
-                if(plate != null) {
-                    if(well != null) {
-                        result.add(getReactionForPlateAndWell(limsConnection, plate, well, plateCache));
-                    } else if(workflow != null) {
-                        result.add(getReactionForPlateAndWorkflowName(limsConnection, plateCache, result, plate, workflow));
-                    }
+            String well = getStringOrNull(getter.get(BiocodeUtilities.SEQUENCING_WELL_FIELD.getCode()));
+            String workflow = getStringOrNull(getter.get(BiocodeUtilities.WORKFLOW_NAME_FIELD.getCode()));
+            for (String plate : BiocodeUtilities.getPlatesFromGetter(getter)) {
+                if(well != null) {
+                    result.add(getReactionForPlateAndWell(limsConnection, plate, well, plateCache));
+                } else if(workflow != null) {
+                    result.add(getReactionForPlateAndWorkflowName(limsConnection, plateCache, result, plate, workflow));
                 }
             }
         }
@@ -318,10 +314,6 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         public CouldNotGetReactionException(String message) {
             super(message);
         }
-    }
-
-    private interface ValueGetter {
-        Object get(String key);
     }
 
     private static String getStringOrNull(Object obj) {

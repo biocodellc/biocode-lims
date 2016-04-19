@@ -332,6 +332,32 @@ public class BiocodeUtilities {
         return noReadDirectionValue;
     }
 
+    public interface ValueGetter {
+        Object get(String key);
+    }
+
+    public static List<String> getPlatesFromGetter(ValueGetter getter) {
+        List<String> results = new ArrayList<String>();
+        for (DocumentField plateField : PLATE_FIELDS) {
+            Object value = getter.get(plateField.getCode());
+            if(value != null) {
+                for (String plate : value.toString().split(",")) {  // Forward and Reverse plate fields can contain a comma separated list
+                    results.add(plate);
+                }
+            }
+        }
+        return results;
+    }
+
+    public static List<String> getPlatesAnnotatedOnDocument(final AnnotatedPluginDocument doc) {
+        return getPlatesFromGetter(new ValueGetter() {
+            @Override
+            public Object get(String key) {
+                return doc.getFieldValue(key);
+            }
+        });
+    }
+
     public static final class Well {
         public final char letter;
         public final int number;

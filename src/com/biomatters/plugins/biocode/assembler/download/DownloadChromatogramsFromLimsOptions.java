@@ -51,14 +51,14 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
                     plateNames.add(plateDoc.getName());
                 }
             } else {
-                for (DocumentField plateField : BiocodeUtilities.PLATE_FIELDS) {
-                    Object plateValue = doc.getFieldValue(plateField);
-                    Object workflowValue = doc.getFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD);
-                    if(plateValue != null && workflowValue != null) {
-                        plateNames.add(plateValue.toString());
+                Object workflowValue = doc.getFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD);
+                for (String plate : BiocodeUtilities.getPlatesAnnotatedOnDocument(doc)) {
+                    if(workflowValue != null) {
+                        plateNames.add(plate);
                         hasPlateField = true;
                     }
                 }
+
             }
         }
         if(!hasPlateField) {
@@ -94,20 +94,18 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
             }
         } else {
             for (AnnotatedPluginDocument doc : documents) {
-                for (DocumentField plateField : BiocodeUtilities.PLATE_FIELDS) {
-                    Object plateValue = doc.getFieldValue(plateField);
-                    Object workflowValue = doc.getFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD);
-                    if(plateValue != null && workflowValue != null) {
+                Object workflowValue = doc.getFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD);
+                if(workflowValue != null) {
+                    for (String plateValue : BiocodeUtilities.getPlatesAnnotatedOnDocument(doc)) {
                         List<String> workflows = plates.get(plateValue);
                         if(workflows == null) {
                             workflows = new ArrayList<String>();
-                            for (String plate : plateValue.toString().split(",")) {
-                                plates.put(plate, workflows);
-                            }
+                            plates.put(plateValue, workflows);
                         }
                         workflows.add(workflowValue.toString());
                     }
                 }
+
             }
         }
         return plates;

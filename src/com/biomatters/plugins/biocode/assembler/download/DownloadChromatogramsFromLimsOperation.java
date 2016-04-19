@@ -181,13 +181,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         }
 
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
-            Set<Object> validPlates = new HashSet<Object>();
-            for (DocumentField plateField : BiocodeUtilities.PLATE_FIELDS) {
-                Object plateValue = annotatedDocument.getFieldValue(plateField);
-                if(plateValue != null) {
-                    validPlates.add(plateValue);
-                }
-            }
+            Set<Object> validPlates = new HashSet<Object>(BiocodeUtilities.getPlatesAnnotatedOnDocument(annotatedDocument));
 
             Object workflowName = annotatedDocument.getFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD);
             if(workflowName != null) {
