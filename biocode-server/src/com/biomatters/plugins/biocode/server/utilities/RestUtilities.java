@@ -35,7 +35,7 @@ public class RestUtilities {
         Map<String, Object> TISSUES_WORKFLOWS_PLATES_SEQUENCES = BiocodeService.getSearchDownloadOptions(retrieveTissues,
                                                                                                          retrieveWorkflows,
                                                                                                          retrievePlates,
-                                                                                                         retrieveSequenceIds);
+                                                                                                         retrieveSequenceIds, false);
 
         List<DocumentField> searchAttributes = new ArrayList<DocumentField>(LIMSConnection.getSearchAttributes());
         searchAttributes.addAll(BiocodeService.getInstance().getActiveFIMSConnection().getSearchAttributes());

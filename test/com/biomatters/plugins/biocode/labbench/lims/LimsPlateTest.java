@@ -29,7 +29,7 @@ public class LimsPlateTest extends LimsTestCase {
         savePcrPlate(pcrPlateName, initialLocus, service, extractionID);
 
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[] { pcrPlateName },
-                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
 
         Plate pcrPlate = ((PlateDocument)service.retrieve(query, ProgressListener.EMPTY).get(0).getDocument()).getPlate();
 
@@ -50,7 +50,7 @@ public class LimsPlateTest extends LimsTestCase {
         savePcrPlate(pcrPlateName, initialLocus, service, extractionIDs);
 
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[] { pcrPlateName },
-                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
 
         Plate pcrPlate = ((PlateDocument)service.retrieve(query, ProgressListener.EMPTY).get(0).getDocument()).getPlate();
 

@@ -64,7 +64,10 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
     }
 
     @Override
-    public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options _options) throws DocumentOperationException {
+    public void performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener,
+                                 Options _options, SequenceSelection sequenceSelection, OperationCallback operationCallback
+    ) throws DocumentOperationException {
+
         if(!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
@@ -82,7 +85,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
 
             Map<String, List<String>> toRetrieve = options.getPlatesAndWorkflowsToRetrieve(annotatedDocuments);
             Map<CycleSequencingReaction, FimsData> fimsDataForReactions = getReactionsForPlateNames(toRetrieve, progress);
-            if (fimsDataForReactions == null) return null;
+            if (fimsDataForReactions == null) return;
             Set<CycleSequencingReaction> reactions = fimsDataForReactions.keySet();
             progress.beginSubtask("Downloading Traces");
             try {
@@ -103,7 +106,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             CompositeProgressListener tracesProgress = new CompositeProgressListener(progress, reactions.size());
             for (CycleSequencingReaction reaction : reactions) {
                 tracesProgress.beginSubtask();
-                if (tracesProgress.isCanceled()) return null;
+                if (tracesProgress.isCanceled()) return;
                 CycleSequencingOptions sequencingOptions = (CycleSequencingOptions) reaction.getOptions();
                 boolean isForward = sequencingOptions.getValueAsString(CycleSequencingOptions.DIRECTION).equals(CycleSequencingOptions.FORWARD_VALUE);
                 List<Trace> traces = reaction.getTraces();
@@ -125,7 +128,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                 }
                 reaction.purgeChromats();
             }
-            if (progress.isCanceled()) return null;
+            if (progress.isCanceled()) return;
             FimsDataGetter fimsDataGetter = new FimsDataGetter() {
                 public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
                     return fimsData.get(document);
@@ -140,11 +143,14 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                     Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {continueButton, "Cancel"}, "Some FIMS Data Not Found");
                     Object choice = Dialogs.showDialog(dialogOptions, e.getMessage());
                     if (!choice.equals(continueButton)) {
-                        return null;
+                        return;
                     }
                 }
             }
-            if (progress.isCanceled()) return null;
+            if (progress.isCanceled()) return;
+            for (AnnotatedPluginDocument chromatogramDocument : chromatogramDocuments) {
+                operationCallback.addDocument(chromatogramDocument, false, ProgressListener.EMPTY);
+            }
 
             if(options.isAssembleTraces()) {
                 progress.beginSubtask("Assembling Traces...");
@@ -153,11 +159,9 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                     Dialogs.showMessageDialog("Could not assemble traces because could not find assembly operation. " +
                             "Please make sure the Alignmnet plugin is installed and enabled by going to Tools menu -> Plugins...");
                 } else {
-                    chromatogramDocuments.addAll(assembleTraces(assemblyOperation, annotatedDocuments, chromatogramDocuments, progress));
+                    assembleTraces(assemblyOperation, annotatedDocuments, chromatogramDocuments, progress, operationCallback);
                 }
             }
-
-            return chromatogramDocuments;
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
             throw new DocumentOperationException("Could not retrieve active LIMS connection: " + e.getMessage(), e);
@@ -167,9 +171,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         }
     }
 
-    private Collection<? extends AnnotatedPluginDocument> assembleTraces(DocumentOperation assemblyOperation, AnnotatedPluginDocument[] annotatedDocuments, List<AnnotatedPluginDocument> chromatogramDocuments, ProgressListener progress) throws DocumentOperationException {
-        List<AnnotatedPluginDocument> results = new ArrayList<AnnotatedPluginDocument>();
-
+    private void assembleTraces(DocumentOperation assemblyOperation, AnnotatedPluginDocument[] annotatedDocuments, List<AnnotatedPluginDocument> chromatogramDocuments, ProgressListener progress, OperationCallback operationCallback) throws DocumentOperationException {
         ArrayListMultimap<AnnotatedPluginDocument, AnnotatedPluginDocument> refToTraces = ArrayListMultimap.create();
 
         ArrayListMultimap<String, AnnotatedPluginDocument> tracesByWorkflow = ArrayListMultimap.create();
@@ -211,11 +213,10 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                         assembly.setFieldValue(field, reference.getFieldValue(field));
                     }
                 }
-                results.add(assembly);
+                operationCallback.addDocument(assembly, false, ProgressListener.EMPTY);
             }
         }
 
-        return results;
     }
 
     private AnnotatedPluginDocument assembleTracesToRef(DocumentOperation assemblyOperation, AnnotatedPluginDocument reference, Collection<AnnotatedPluginDocument> traces, ProgressListener progress) throws DocumentOperationException {

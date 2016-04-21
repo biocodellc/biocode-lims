@@ -91,7 +91,7 @@ public class Workflows {
     private static void checkAccessForWorkflowId(int id, Role role) throws DatabaseServiceException {
         LimsSearchResult result = LIMSInitializationListener.getLimsConnection().getMatchingDocumentsFromLims(
                 Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_ID_FIELD, Condition.EQUAL, new Object[]{id},
-                        BiocodeService.getSearchDownloadOptions(false, true, false, false)), null, ProgressListener.EMPTY
+                        BiocodeService.getSearchDownloadOptions(false, true, false, false, false)), null, ProgressListener.EMPTY
         );
         Map<Integer, String> extractionIdsForWorkflows = QueryService.getExtractionIdsForWorkflows(result.getWorkflowIds());
         String extractionId = extractionIdsForWorkflows.get(id);

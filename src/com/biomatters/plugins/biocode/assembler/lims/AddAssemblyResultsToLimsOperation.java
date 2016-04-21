@@ -399,7 +399,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             return sequencingPlateCache.get(plateName);
         } else {
             Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
-                    BiocodeService.getSearchDownloadOptions(false, false, true, false));//Query.Factory.createQuery(plateName);
+                    BiocodeService.getSearchDownloadOptions(false, false, true, false, false));//Query.Factory.createQuery(plateName);
             List<Plate> plates;
             try {
                 List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(q, null, ProgressListener.EMPTY).getPlateIds();
