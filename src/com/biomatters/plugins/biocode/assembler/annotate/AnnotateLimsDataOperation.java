@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.assembler.annotate;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.geneious.publicapi.databaseservice.QueryField;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
@@ -150,7 +149,7 @@ public class AnnotateLimsDataOperation extends DocumentOperation {
         try {
             workflowDocs = BiocodeService.getInstance().retrieve(Query.Factory.createOrQuery(
                     queries.toArray(new Query[queries.size()]),
-                    BiocodeService.getSearchDownloadOptions(false, true, false, false)
+                    BiocodeService.getSearchDownloadOptions(false, true, false, false, false)
                     ), ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("Unable to load workflows for documents", e);

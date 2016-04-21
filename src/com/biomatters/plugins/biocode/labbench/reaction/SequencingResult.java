@@ -331,7 +331,7 @@ public class SequencingResult implements XMLSerializable {
                                 protected void _add(AnnotatedPluginDocument annotatedPluginDocument, Map<String, Object> searchResultProperties) {
                                     add(annotatedPluginDocument.getDocumentOrNull(), searchResultProperties);
                                 }
-                            }, false);
+                            }, false, true, false);
                 } catch (DatabaseServiceException e) {
                     error.set(e);
                 }

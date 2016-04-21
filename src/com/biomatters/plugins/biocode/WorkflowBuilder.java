@@ -465,7 +465,7 @@ public class WorkflowBuilder extends DocumentOperation {
 
             // Get the plate and annotate the workflow onto sequences
             Query plateQuery = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{pcrPlateName},
-                    BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                    BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
             List<AnnotatedPluginDocument> plateDoc = BiocodeService.getInstance().retrieve(plateQuery, ProgressListener.EMPTY);
             if(plateDoc.isEmpty()) {
                 throw new DocumentOperationException("Failed to retrieve PCR plate after creating it");
@@ -655,13 +655,13 @@ public class WorkflowBuilder extends DocumentOperation {
             }
             Query fieldQuery = Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL,
                     new Object[]{reaction.getWorkflow().getName()},
-                            BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                            BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
             queries.add(fieldQuery);
         }
 
         List<Integer> plateIds = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
                 Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]),
-                        BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, ProgressListener.EMPTY
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false, false)), null, ProgressListener.EMPTY
         ).getPlateIds();
         List<Plate> platesWithMatchingWorkflows = BiocodeService.getInstance().getActiveLIMSConnection().getPlates(plateIds, ProgressListener.EMPTY);
 

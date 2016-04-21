@@ -56,7 +56,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         List<AnnotatedPluginDocument> searchResults = service.retrieve(Query.Factory.createFieldQuery(
                 LIMSConnection.EXTRACTION_ID_FIELD, Condition.EQUAL, new Object[]{extractionIdToFind},
-                BiocodeService.getSearchDownloadOptions(false, false, true, false)
+                BiocodeService.getSearchDownloadOptions(false, false, true, false, false)
         ), ProgressListener.EMPTY);
         assertEquals(1, searchResults.size());
         AnnotatedPluginDocument doc = searchResults.get(0);
@@ -355,7 +355,7 @@ public class LimsSearchTest extends LimsTestCase {
         saveCyclesequencingPlate(seqFName, "COI", CycleSequencingOptions.FORWARD_VALUE, null, service, pcrPlate, extractionId);
 
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{seqFName},
-                BiocodeService.getSearchDownloadOptions(false, true, false, false));
+                BiocodeService.getSearchDownloadOptions(false, true, false, false, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(1, searchResults.size());
         for (AnnotatedPluginDocument result : searchResults) {
@@ -392,7 +392,7 @@ public class LimsSearchTest extends LimsTestCase {
         saveExtractionPlate("MyPlate", service, values);
 
         Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_ID_FIELD, Condition.EQUAL, new Object[]{toSearchFor},
-                        BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(1, searchResults.size());
 
@@ -425,7 +425,7 @@ public class LimsSearchTest extends LimsTestCase {
         saveExtractionPlate(plateName, tissue, extractionId, service);
 
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
-                                BiocodeService.getSearchDownloadOptions(true, false, false, false));
+                                BiocodeService.getSearchDownloadOptions(true, false, false, false, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
 
         assertEquals(1, searchResults.size());
@@ -462,7 +462,7 @@ public class LimsSearchTest extends LimsTestCase {
         Calendar cal = new GregorianCalendar();
         cal.add(GregorianCalendar.DAY_OF_MONTH, 1);
         Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_DATE_FIELD, Condition.DATE_BEFORE, new Object[] { cal.getTime() },
-                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
     }
@@ -486,7 +486,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         cal.add(GregorianCalendar.DAY_OF_MONTH, 1);
         Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_DATE_FIELD, Condition.DATE_BEFORE_OR_ON, new Object[] { cal.getTime() },
-                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
     }
@@ -509,7 +509,7 @@ public class LimsSearchTest extends LimsTestCase {
         saveExtractionPlate("Plate_M038", tissue2, extractionId2, service, cal.getTime());
 
         Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_DATE_FIELD, Condition.DATE_AFTER_OR_ON, new Object[] { cal.getTime() },
-                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
     }
@@ -530,7 +530,7 @@ public class LimsSearchTest extends LimsTestCase {
         Calendar cal = new GregorianCalendar();
         cal.add(GregorianCalendar.DAY_OF_MONTH, -1);
         Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_DATE_FIELD, Condition.DATE_AFTER, new Object[] { cal.getTime() },
-                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
     }
@@ -581,7 +581,7 @@ public class LimsSearchTest extends LimsTestCase {
         Calendar cal = new GregorianCalendar();
         cal.add(GregorianCalendar.DAY_OF_MONTH, 1);
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_DATE_FIELD, Condition.DATE_BEFORE, new Object[] { cal.getTime() },
-                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
     }
@@ -605,7 +605,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         cal.add(GregorianCalendar.DAY_OF_MONTH, 1);
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_DATE_FIELD, Condition.DATE_BEFORE_OR_ON, new Object[] { cal.getTime() },
-                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
     }
@@ -628,7 +628,7 @@ public class LimsSearchTest extends LimsTestCase {
         saveExtractionPlate("Plate_M038", tissue2, extractionId2, service, cal.getTime());
 
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_DATE_FIELD, Condition.DATE_AFTER_OR_ON, new Object[] { cal.getTime() },
-                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
     }
@@ -649,7 +649,7 @@ public class LimsSearchTest extends LimsTestCase {
         Calendar cal = new GregorianCalendar();
         cal.add(GregorianCalendar.DAY_OF_MONTH, -1);
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_DATE_FIELD, Condition.DATE_AFTER, new Object[] { cal.getTime() },
-                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
     }
@@ -670,7 +670,7 @@ public class LimsSearchTest extends LimsTestCase {
         Calendar cal = new GregorianCalendar();
         cal.add(GregorianCalendar.DAY_OF_MONTH, -1);
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_DATE_FIELD, Condition.DATE_AFTER, new Object[] { cal.getTime() },
-                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
 
         for (int i = 0; i < 30; i++) {
             List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
@@ -691,7 +691,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         List<AnnotatedPluginDocument> results = service.retrieve(
                 Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL,
-                        new Object[]{pcrPlate.getName()}, BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                        new Object[]{pcrPlate.getName()}, BiocodeService.getSearchDownloadOptions(false, false, true, false, false)),
                 ProgressListener.EMPTY);
         assertEquals(1, results.size());
         Plate plateFromSearch = getPlateFromDocument(results.get(0), pcrPlate.getName(), Reaction.Type.PCR);
@@ -712,7 +712,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         List<AnnotatedPluginDocument> results = service.retrieve(
                 Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL,
-                        new Object[]{seqPlate.getName()}, BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                        new Object[]{seqPlate.getName()}, BiocodeService.getSearchDownloadOptions(false, false, true, false, false)),
                 ProgressListener.EMPTY);
         assertEquals(1, results.size());
         Plate plateFromSearch = getPlateFromDocument(results.get(0), seqPlate.getName(), Reaction.Type.CycleSequencing);
@@ -727,7 +727,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         List<AnnotatedPluginDocument> results = service.retrieve(
                 Query.Factory.createFieldQuery(service.getActiveFIMSConnection().getPlateDocumentField(), Condition.CONTAINS,
-                        new Object[]{"M037"}, BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                        new Object[]{"M037"}, BiocodeService.getSearchDownloadOptions(false, false, true, false, false)),
                 ProgressListener.EMPTY);
         assertEquals(1, results.size());
         Plate plateFromSearch = getPlateFromDocument(results.get(0), plateName, Reaction.Type.Extraction, "1");
@@ -742,7 +742,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         List<AnnotatedPluginDocument> results = service.retrieve(
                 Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.CONTAINS,
-                        new Object[]{"M037"}, BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                        new Object[]{"M037"}, BiocodeService.getSearchDownloadOptions(false, false, true, false, false)),
                 ProgressListener.EMPTY);
         assertEquals(1, results.size());
         Plate plateFromSearch = getPlateFromDocument(results.get(0), plateName, Reaction.Type.Extraction, "1");
@@ -759,7 +759,7 @@ public class LimsSearchTest extends LimsTestCase {
         saveExtractionPlate(m038Plate, "MBIO819375.1", "2", service);
 
 
-        Map<String, Object> searchOptions = BiocodeService.getSearchDownloadOptions(false, false, true, false);
+        Map<String, Object> searchOptions = BiocodeService.getSearchDownloadOptions(false, false, true, false, false);
         Query containsFimsPlate = Query.Factory.createFieldQuery(service.getActiveFIMSConnection().getPlateDocumentField(), Condition.CONTAINS,
                 new Object[]{"M037"}, searchOptions);
         Query containsLimsPlate = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.CONTAINS,

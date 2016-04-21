@@ -366,7 +366,7 @@ public class FimsToLims {
             };
 
             BiocodeService.getInstance().retrieve(Query.Factory.createExtendedQuery("",
-                    BiocodeService.getSearchDownloadOptions(true, false, false, false)), callback, new URN[0], false, true);
+                    BiocodeService.getSearchDownloadOptions(true, false, false, false, false)), callback, new URN[0]);
             try {
                 copyFimsSet(fimsSamples, lims, fields);
                 fimsSamples.clear();

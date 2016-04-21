@@ -64,6 +64,12 @@ public class BiocodeUtilities {
     public static final DocumentField IS_FORWARD_FIELD = DocumentField.createBooleanField("Is Forward Read",
             "Whether this read is in the forward direction", "isForwardRead", true, false);
 
+    public static final List<DocumentField> PLATE_FIELDS = Arrays.asList(
+            BiocodeUtilities.SEQUENCING_PLATE_FIELD,
+            BiocodeService.FWD_PLATE_FIELD,
+            BiocodeService.REV_PLATE_FIELD
+    );
+
     public static Options getConsensusOptions(AnnotatedPluginDocument[] selectedDocuments) throws DocumentOperationException {
         DocumentOperation consensusOperation = PluginUtilities.getDocumentOperation("Generate_Consensus");
         if (consensusOperation == null) {
@@ -130,7 +136,7 @@ public class BiocodeUtilities {
     }
 
 
-    public static void downloadTracesForReactions(List<CycleSequencingReaction> reactions_a, ProgressListener progressListener) throws DatabaseServiceException, IOException, DocumentImportException{
+    public static void downloadTracesForReactions(Collection<CycleSequencingReaction> reactions_a, ProgressListener progressListener) throws DatabaseServiceException, IOException, DocumentImportException{
         List<CycleSequencingReaction> reactions = new ArrayList<CycleSequencingReaction>();
         for(CycleSequencingReaction reaction : reactions_a) { //try not to download if we've already downloaded!
             if(!reaction.hasDownloadedChromats()) {
@@ -400,6 +406,32 @@ public class BiocodeUtilities {
             }
         }
         return noReadDirectionValue;
+    }
+
+    public interface ValueGetter {
+        Object get(String key);
+    }
+
+    public static List<String> getPlatesFromGetter(ValueGetter getter) {
+        List<String> results = new ArrayList<String>();
+        for (DocumentField plateField : PLATE_FIELDS) {
+            Object value = getter.get(plateField.getCode());
+            if(value != null) {
+                for (String plate : value.toString().split(",")) {  // Forward and Reverse plate fields can contain a comma separated list
+                    results.add(plate);
+                }
+            }
+        }
+        return results;
+    }
+
+    public static List<String> getPlatesAnnotatedOnDocument(final AnnotatedPluginDocument doc) {
+        return getPlatesFromGetter(new ValueGetter() {
+            @Override
+            public Object get(String key) {
+                return doc.getFieldValue(key);
+            }
+        });
     }
 
     public static final class Well {

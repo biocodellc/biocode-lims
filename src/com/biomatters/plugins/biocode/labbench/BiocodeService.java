@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultNucleotideGraph;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraph;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
@@ -18,6 +19,8 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
+import com.biomatters.plugins.biocode.assembler.download.DownloadChromatogramsFromLimsOperation;
+import com.biomatters.plugins.biocode.assembler.download.DownloadChromatogramsFromLimsOptions;
 import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.*;
@@ -28,6 +31,8 @@ import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.reporting.ReportingService;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.base.Function;
 import jebl.util.ProgressListener;
 import org.jdom.Element;
@@ -68,6 +73,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private static final String DOWNLOAD_WORKFLOWS = "workflowDocuments";
     private static final String DOWNLOAD_PLATES = "plateDocuments";
     private static final String DOWNLOAD_SEQS = "sequenceDocuments";
+    private static final String DOWNLOAD_ASSEMBLIES = "re-assemble";
     private boolean isLoggedIn = false;
     private FIMSConnection activeFIMSConnection;
     private LIMSConnection limsConnection;
@@ -260,7 +266,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 new CheckboxSearchOption(DOWNLOAD_TISSUES, "Tissues", true),
                 new CheckboxSearchOption(DOWNLOAD_WORKFLOWS, "Workflows", true),
                 new CheckboxSearchOption(DOWNLOAD_PLATES, "Plates", true),
-                new CheckboxSearchOption(DOWNLOAD_SEQS, "Sequences", false)
+                new CheckboxSearchOption(DOWNLOAD_SEQS, "Sequences", false),
+                new CheckboxSearchOption(DOWNLOAD_ASSEMBLIES, "Ref assemblies", false),
         };
     }
 
@@ -274,19 +281,20 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return isDownloadTypeQuery(query, DOWNLOAD_PLATES);
     }
     public static boolean isDownloadSequences(Query query) {
-        return isDownloadTypeQuery(query, DOWNLOAD_SEQS);
+        return isDownloadTypeQuery(query, DOWNLOAD_SEQS) || isDownloadTypeQuery(query, DOWNLOAD_ASSEMBLIES);
     }
 
     private static boolean isDownloadTypeQuery(Query query, String type) {
         return !Boolean.FALSE.equals(query.getExtendedOptionValue(type));
     }
 
-    public static Map<String, Object> getSearchDownloadOptions(boolean tissues, boolean workflows, boolean plates, boolean sequences) {
+    public static Map<String, Object> getSearchDownloadOptions(boolean tissues, boolean workflows, boolean plates, boolean sequences, boolean assemblies) {
         Map<String, Object> searchOptions = new HashMap<String, Object>();
         searchOptions.put(DOWNLOAD_TISSUES, tissues);
         searchOptions.put(DOWNLOAD_WORKFLOWS, workflows);
         searchOptions.put(DOWNLOAD_PLATES, plates);
         searchOptions.put(DOWNLOAD_SEQS, sequences);
+        searchOptions.put(DOWNLOAD_ASSEMBLIES, assemblies);
         return searchOptions;
     }
 
@@ -860,7 +868,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
                 if(isDownloadSequences(query)) {
                     callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching sequence", limsResult.getSequenceIds().size()) + "...");
-                    retrieveMatchingAssemblyDocumentsForIds(tissueSamples, limsResult.getSequenceIds(), callback, true);
+                    retrieveMatchingAssemblyDocumentsForIds(tissueSamples, limsResult.getSequenceIds(), callback, true,
+                            isDownloadTypeQuery(query, DOWNLOAD_SEQS),
+                            isDownloadTypeQuery(query, DOWNLOAD_ASSEMBLIES));
                 }
 
             } catch (DatabaseServiceException e) {
@@ -898,13 +908,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
      * @param sequenceIds   The sequences to retrieve
      * @param callback      To add documents to.  Must not be null
      * @param includeFailed true to included empty sequences for failed results
+     * @param addSequences
+     * @param reassemble  @return A list of the documents found/added
      *
      * @throws SQLException if anything goes wrong
      */
     public void retrieveMatchingAssemblyDocumentsForIds(final List<FimsSample> samples,
                                                         List<Integer> sequenceIds,
                                                         RetrieveCallback callback,
-                                                        boolean includeFailed)
+                                                        boolean includeFailed,
+                                                        boolean addSequences, boolean reassemble)
             throws DatabaseServiceException {
         if (!BiocodeService.getInstance().isLoggedIn() || sequenceIds.isEmpty()) {
             return;
@@ -994,8 +1007,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             };
             for (AnnotatedPluginDocument doc : documentsWithoutFimsData) {
                 AnnotateUtilities.annotateDocument(fimsDataGetter, new ArrayList<String>(), doc, false);
-                callback.add(doc, Collections.<String, Object>emptyMap());
+                if (addSequences) {
+                    callback.add(doc, Collections.<String, Object>emptyMap());
+                }
             }
+            callback.setMessage("Re-assembling traces to sequences...");
+            if(reassemble) {
+                resultDocuments.addAll(reassembleLimsSequences(resultDocuments, callback));
+            }
+
+            return resultDocuments;
         } catch (DocumentOperationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ConnectionException e) {
@@ -1066,6 +1087,49 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         doc.setFieldValue(REV_PLATE_FIELD, seq.reversePlate);
 
         return doc;
+    }
+
+    private List<AnnotatedPluginDocument> reassembleLimsSequences(List<AnnotatedPluginDocument> docs, final RetrieveCallback callback) throws DatabaseServiceException {
+        DownloadChromatogramsFromLimsOperation downloadAssembly = new DownloadChromatogramsFromLimsOperation(true);
+        final List<AnnotatedPluginDocument> results = new ArrayList<AnnotatedPluginDocument>();
+
+        Multimap<String, AnnotatedPluginDocument> batches = ArrayListMultimap.create();
+        for (AnnotatedPluginDocument doc : docs) {
+            String key = String.valueOf(doc.getFieldValue(FWD_PLATE_FIELD)) + String.valueOf(doc.getFieldValue(REV_PLATE_FIELD));
+            batches.put(key, doc);
+        }
+
+        try {
+            Options _options = downloadAssembly.getOptions(docs);
+            if(!(_options instanceof DownloadChromatogramsFromLimsOptions)) {
+                throw new IllegalStateException("");
+            }
+            DownloadChromatogramsFromLimsOptions options = (DownloadChromatogramsFromLimsOptions)_options;
+            options.downloadMethodOption.setValue(options.SELECTED_SEQUENCES);
+            options.assembleTracesOption.setValue(true);
+
+            for (Collection<AnnotatedPluginDocument> batch : batches.asMap().values()) {
+                downloadAssembly.performOperation(
+                        new ArrayList<AnnotatedPluginDocument>(batch).toArray(new AnnotatedPluginDocument[batch.size()]),
+                        callback, options, new SequenceSelection(), new DocumentOperation.OperationCallback() {
+                            @Override
+                            public AnnotatedPluginDocument addDocument(AnnotatedPluginDocument annotatedPluginDocument, boolean b, ProgressListener progressListener) throws DocumentOperationException {
+                                if(SequenceAlignmentDocument.class.isAssignableFrom(annotatedPluginDocument.getDocumentClass())) {
+                                    results.add(annotatedPluginDocument);
+                                    if(callback != null) {
+                                        callback.add(annotatedPluginDocument, Collections.<String, Object>emptyMap());
+                                    }
+                                }
+                                return annotatedPluginDocument;
+                            }
+                        }
+                );
+            }
+
+            return results;
+        } catch (DocumentOperationException e) {
+            throw new DatabaseServiceException(e, "Couldn't download traces: " + e.getMessage(), false);
+        }
     }
 
     private int[] qualitiesFromString(String qualString) {
@@ -1683,7 +1747,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws DocumentOperationException, DatabaseServiceException {
         List<Integer> plateIds = getActiveLIMSConnection().getMatchingDocumentsFromLims(
                 Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
-                        BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, ProgressListener.EMPTY
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false, false)), null, ProgressListener.EMPTY
         ).getPlateIds();
         List<Plate> plates = getActiveLIMSConnection().getPlates(plateIds, ProgressListener.EMPTY);
         if(plates.size() == 0) {
@@ -1748,7 +1812,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
         Query workflowQuery;
-        Map<String, Object> options = BiocodeService.getSearchDownloadOptions(false, true, false, false);
+        Map<String, Object> options = BiocodeService.getSearchDownloadOptions(false, true, false, false, false);
 
         if (workflowNames.size() == 1) {
             workflowQuery = Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, new Object[]{workflowNames.get(0)}, options);
@@ -1800,7 +1864,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     public Plate getPlateForName(String plateName) throws DatabaseServiceException {
         Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
-                                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+                                BiocodeService.getSearchDownloadOptions(false, false, true, false, false));
         try {
             List<Integer> plateIds = getActiveLIMSConnection().getMatchingDocumentsFromLims(q, null, ProgressListener.EMPTY).getPlateIds();
             if(plateIds.isEmpty()) {
