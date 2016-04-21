@@ -10,6 +10,8 @@
 * Added advanded option to New Plate operation for copying reactions to a custom plate format (individual reactions only)
 * Added new Gel Quantification reaction type
 * Download Traces from LIMS can now work on a selection of passed sequences
+* Download Traces from LIMS can now re-assemble traces to selected sequences
+* You can now search for reference assemblies of traces to passed sequences in the Biocode service.
 * Many other bug fixes and improvements.
 
 '''Additional Notes'''
