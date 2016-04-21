@@ -245,9 +245,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             String workflow = getStringOrNull(getter.get(BiocodeUtilities.WORKFLOW_NAME_FIELD.getCode()));
             for (String plate : BiocodeUtilities.getPlatesFromGetter(getter)) {
                 if(well != null) {
-                    result.add(getReactionForPlateAndWell(limsConnection, plate, well, plateCache));
+                    result.add(getReactionForPlateAndWell(plate, well, plateCache));
                 } else if(workflow != null) {
-                    result.add(getReactionForPlateAndWorkflowName(limsConnection, plateCache, result, plate, workflow));
+                    result.add(getReactionForPlateAndWorkflowName(plateCache, result, plate, workflow));
                 }
             }
         }

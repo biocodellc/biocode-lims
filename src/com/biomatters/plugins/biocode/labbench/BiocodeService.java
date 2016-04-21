@@ -34,6 +34,8 @@ import com.biomatters.plugins.biocode.labbench.reporting.ReportingService;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.base.Function;
+import jebl.util.Cancelable;
+import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -915,9 +917,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
      */
     public void retrieveMatchingAssemblyDocumentsForIds(final List<FimsSample> samples,
                                                         List<Integer> sequenceIds,
-                                                        RetrieveCallback callback,
+                                                        final RetrieveCallback callback,
                                                         boolean includeFailed,
-                                                        boolean addSequences, boolean reassemble)
+                                                        final boolean addSequences, final boolean reassemble)
             throws DatabaseServiceException {
         if (!BiocodeService.getInstance().isLoggedIn() || sequenceIds.isEmpty()) {
             return;
@@ -928,7 +930,27 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         final List<AnnotatedPluginDocument> documentsWithoutFimsData = new ArrayList<AnnotatedPluginDocument>();
         final AtomicReference<DocumentOperationException> exceptionDuringAnnotate = new AtomicReference<DocumentOperationException>();
 
-        LimsSearchCallback<AssembledSequence> limsCallback = LimsSearchCallback.forRetrieveAnnotatedPluginDocumentCallback(callback,
+        final List<AnnotatedPluginDocument> toAssemble = new ArrayList<AnnotatedPluginDocument>();
+
+        RetrieveCallback downloadCallbackThatCanAssemble = new RetrieveCallback() {
+
+            @Override
+            protected void _add(PluginDocument pluginDocument, Map<String, Object> map) {
+                throw new IllegalStateException("Should only be returning APDs");
+            }
+
+            @Override
+            protected void _add(AnnotatedPluginDocument annotatedPluginDocument, Map<String, Object> map) {
+                if (addSequences) {
+                    callback.add(annotatedPluginDocument, map);
+                }
+                if (reassemble) {
+                    toAssemble.add(annotatedPluginDocument);
+                }
+            }
+        };
+
+        LimsSearchCallback<AssembledSequence> limsCallback = LimsSearchCallback.forRetrieveAnnotatedPluginDocumentCallback(downloadCallbackThatCanAssemble,
                 new Function<AssembledSequence, AnnotatedPluginDocument>() {
                     @Nullable
                     @Override
@@ -979,7 +1001,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                             return null;
                         }
                     }
-                });
+                }
+        );
 
         getActiveLIMSConnection().retrieveAssembledSequences(sequenceIds, limsCallback, includeFailed);
 
@@ -1007,16 +1030,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             };
             for (AnnotatedPluginDocument doc : documentsWithoutFimsData) {
                 AnnotateUtilities.annotateDocument(fimsDataGetter, new ArrayList<String>(), doc, false);
-                if (addSequences) {
-                    callback.add(doc, Collections.<String, Object>emptyMap());
-                }
+                downloadCallbackThatCanAssemble.add(doc, Collections.<String, Object>emptyMap());
             }
-            callback.setMessage("Re-assembling traces to sequences...");
-            if(reassemble) {
-                resultDocuments.addAll(reassembleLimsSequences(resultDocuments, callback));
+            if(!toAssemble.isEmpty()) {
+                reassembleLimsSequences(toAssemble, callback);
             }
-
-            return resultDocuments;
         } catch (DocumentOperationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ConnectionException e) {
@@ -1089,7 +1107,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return doc;
     }
 
-    private List<AnnotatedPluginDocument> reassembleLimsSequences(List<AnnotatedPluginDocument> docs, final RetrieveCallback callback) throws DatabaseServiceException {
+    private void reassembleLimsSequences(List<AnnotatedPluginDocument> docs, final RetrieveCallback callback) throws DatabaseServiceException {
         DownloadChromatogramsFromLimsOperation downloadAssembly = new DownloadChromatogramsFromLimsOperation(true);
         final List<AnnotatedPluginDocument> results = new ArrayList<AnnotatedPluginDocument>();
 
@@ -1108,27 +1126,68 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             options.downloadMethodOption.setValue(options.SELECTED_SEQUENCES);
             options.assembleTracesOption.setValue(true);
 
+            int currentSeqIndex = 1;
+            final int numSeqs = batches.size();
+            final CompositeProgressListener compositeProgressListener = new CompositeProgressListener(callback, numSeqs);
+            DocumentOperation.OperationCallback operationCallback = new DocumentOperation.OperationCallback() {
+                int count = 1;
+                @Override
+                public AnnotatedPluginDocument addDocument(AnnotatedPluginDocument annotatedPluginDocument, boolean b, ProgressListener progressListener) throws DocumentOperationException {
+                    if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedPluginDocument.getDocumentClass())) {
+                        if (!callback.isCanceled()) {
+                            callback.add(annotatedPluginDocument, Collections.<String, Object>emptyMap());
+                            compositeProgressListener.beginSubtask("Assembled " + annotatedPluginDocument.getName() + " (" + count++ + " of " + numSeqs + ")");
+                        }
+                    }
+                    return annotatedPluginDocument;
+                }
+            };
+
+
             for (Collection<AnnotatedPluginDocument> batch : batches.asMap().values()) {
+                int startIndex = currentSeqIndex;
+                currentSeqIndex = currentSeqIndex + batch.size();
+                String message = "Downloading original traces";
+                if(numSeqs > 1) {
+                    message += " for sequences " + startIndex + " to " + (currentSeqIndex - 1) + " (of " + numSeqs + ")";
+                }
+                callback.setMessage(message + "...");
                 downloadAssembly.performOperation(
                         new ArrayList<AnnotatedPluginDocument>(batch).toArray(new AnnotatedPluginDocument[batch.size()]),
-                        callback, options, new SequenceSelection(), new DocumentOperation.OperationCallback() {
-                            @Override
-                            public AnnotatedPluginDocument addDocument(AnnotatedPluginDocument annotatedPluginDocument, boolean b, ProgressListener progressListener) throws DocumentOperationException {
-                                if(SequenceAlignmentDocument.class.isAssignableFrom(annotatedPluginDocument.getDocumentClass())) {
-                                    results.add(annotatedPluginDocument);
-                                    if(callback != null) {
-                                        callback.add(annotatedPluginDocument, Collections.<String, Object>emptyMap());
-                                    }
-                                }
-                                return annotatedPluginDocument;
-                            }
-                        }
+                        new ProgressListenerThatOnlyRespectsCancel(callback), options, new SequenceSelection(), operationCallback
                 );
             }
-
-            return results;
         } catch (DocumentOperationException e) {
             throw new DatabaseServiceException(e, "Couldn't download traces: " + e.getMessage(), false);
+        }
+    }
+
+    private static class ProgressListenerThatOnlyRespectsCancel extends ProgressListener {
+
+        private Cancelable cancelable;
+
+        public ProgressListenerThatOnlyRespectsCancel(Cancelable cancelable) {
+            this.cancelable = cancelable;
+        }
+
+        @Override
+        protected void _setProgress(double v) {
+
+        }
+
+        @Override
+        protected void _setIndeterminateProgress() {
+
+        }
+
+        @Override
+        protected void _setMessage(String s) {
+
+        }
+
+        @Override
+        public boolean isCanceled() {
+            return cancelable.isCanceled();
         }
     }
 

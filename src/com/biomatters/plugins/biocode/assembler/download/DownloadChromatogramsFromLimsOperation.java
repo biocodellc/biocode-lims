@@ -152,7 +152,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             }
 
             if(options.isAssembleTraces()) {
-                progress.beginSubtask("Assembling Traces...");
+                progress.beginSubtask("Assembling Traces");
                 DocumentOperation assemblyOperation = PluginUtilities.getDocumentOperation("com.biomatters.plugins.alignment.AssemblyOperation");
                 if(assemblyOperation == null) {
                     Dialogs.showMessageDialog("Could not assemble traces because could not find assembly operation. " +
@@ -199,12 +199,12 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
 
         CompositeProgressListener compositeProgress = new CompositeProgressListener(progress, refToTraces.keySet().size());
         for (Map.Entry<AnnotatedPluginDocument, Collection<AnnotatedPluginDocument>> entry : refToTraces.asMap().entrySet()) {
-            compositeProgress.beginSubtask();
+            AnnotatedPluginDocument reference = entry.getKey();
+            compositeProgress.beginSubtask("Re-assembling " + reference.getName() + "...");
             if(compositeProgress.isCanceled()) {
                 throw new DocumentOperationException.Canceled();
             }
-            AnnotatedPluginDocument reference = entry.getKey();
-            AnnotatedPluginDocument assembly = assembleTracesToRef(assemblyOperation, reference, entry.getValue(), compositeProgress);
+            AnnotatedPluginDocument assembly = assembleTracesToRef(assemblyOperation, reference, entry.getValue(), compositeProgress.EMPTY);
             if(assembly != null) {
                 assembly.setName(reference.getName());
                 for (DocumentField field : reference.getDisplayableFields()) {

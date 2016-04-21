@@ -26,7 +26,7 @@ public abstract class LIMSConnection {
     @SuppressWarnings({"ConstantConditions"})
     public static final int EXPECTED_SERVER_MAJOR_VERSION = 9;
     public static final String EXPECTED_SERVER_FULL_VERSION = "9.2";
-    public static final int BATCH_SIZE = 200;
+    public static final int BATCH_SIZE = 192;  // 2 x 96-well plates
 
     public int requestTimeout = LoginOptions.DEFAULT_TIMEOUT;
 
