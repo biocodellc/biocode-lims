@@ -1113,6 +1113,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         Multimap<String, AnnotatedPluginDocument> batches = ArrayListMultimap.create();
         for (AnnotatedPluginDocument doc : docs) {
+            if("failed".equals(doc.getFieldValue(AnnotateUtilities.PROGRESS_FIELD))) {
+                continue;  // We only want to download passed sequences
+            }
             String key = String.valueOf(doc.getFieldValue(FWD_PLATE_FIELD)) + String.valueOf(doc.getFieldValue(REV_PLATE_FIELD));
             batches.put(key, doc);
         }
