@@ -9,6 +9,7 @@
 * Increased the maximum number of individual reactions from 26 to 30.
 * Added advanded option to New Plate operation for copying reactions to a custom plate format (individual reactions only)
 * Added new Gel Quantification reaction type
+* Download Traces from LIMS can now work on a selection of passed sequences
 * Many other bug fixes and improvements.
 
 '''Additional Notes'''
