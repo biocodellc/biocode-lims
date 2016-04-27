@@ -48,8 +48,9 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
         plateNamesMultipleOptions = plateSectionOptions.addMultipleOptions("plateNames", plateNameOptions, false);
 
         Set<String> plateNames = new LinkedHashSet<String>();
-        int validSequences = 0;
+        int validDocuments = 0;
         for(AnnotatedPluginDocument doc : documents) {
+            boolean valid = false;
             if(PlateDocument.class.isAssignableFrom(doc.getDocumentClass())) {
                 PlateDocument plateDoc = (PlateDocument)doc.getDocument();
                 if(plateDoc.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
@@ -60,13 +61,14 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
                 Object progressValue = doc.getFieldValue(AnnotateUtilities.PROGRESS_FIELD);
                 for (String plate : BiocodeUtilities.getPlatesAnnotatedOnDocument(doc)) {
                     plateNames.add(plate);
-                    if(progressValue != null && workflowValue != null && NucleotideSequenceDocument.class.isAssignableFrom(doc.getDocumentClass())) {
-                        validSequences++;
-                    }
+                    valid |= progressValue != null && workflowValue != null && NucleotideSequenceDocument.class.isAssignableFrom(doc.getDocumentClass());
                 }
             }
+            if(valid) {
+                validDocuments++;
+            }
         }
-        if(documents.length == 0 || validSequences != documents.length) {
+        if(documents.length == 0 || validDocuments != documents.length) {
             SELECTED_SEQUENCES.setEnabled(false);
         }
 
