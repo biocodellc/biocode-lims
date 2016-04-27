@@ -66,7 +66,7 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
                 }
             }
         }
-        if(validSequences != documents.length) {
+        if(validSequences == 0 || validSequences != documents.length) {
             SELECTED_SEQUENCES.setEnabled(false);
         }
 
