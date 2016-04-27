@@ -1,12 +1,15 @@
 package com.biomatters.plugins.biocode.assembler.download;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.PlateDocument;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
 import javax.swing.*;
@@ -18,8 +21,8 @@ import java.util.*;
  */
 public class DownloadChromatogramsFromLimsOptions extends Options {
 
-    public final OptionValue SPECIFY_PLATES = new OptionValue("byPlate", "specified plates");
-    public final OptionValue SELECTED_SEQUENCES = new OptionValue("selectedSequences", "selected sequences");
+    public final OptionValue SPECIFY_PLATES = new OptionValue("byPlate", "From specified plates:");
+    public final OptionValue SELECTED_SEQUENCES = new OptionValue("selectedSequences", "Matching selected LIMS sequences");
 
     public RadioOption<OptionValue> downloadMethodOption;
     public BooleanOption assembleTracesOption;
@@ -28,14 +31,16 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
 
     public DownloadChromatogramsFromLimsOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
         super(DownloadChromatogramsFromLimsOptions.class);
-        downloadMethodOption = addRadioOption("method", "Download traces matching: ",
+        downloadMethodOption = addRadioOption("method", "",
                 Arrays.asList(SELECTED_SEQUENCES, SPECIFY_PLATES), SELECTED_SEQUENCES, Alignment.VERTICAL_ALIGN);
+
 
         Options plateSectionOptions = new Options(DownloadChromatogramsFromLimsOptions.class);
         addChildOptions("plates", "", null, plateSectionOptions);
         downloadMethodOption.addChildOptionsDependent(plateSectionOptions, SPECIFY_PLATES, false);
-        assembleTracesOption = addBooleanOption("assemble", "Assemble Traces to Sequences", false);
+        assembleTracesOption = addBooleanOption("assemble", "Assemble Traces to Selected Sequences", false);
         downloadMethodOption.addDependent(SELECTED_SEQUENCES, assembleTracesOption, true);
+        downloadMethodOption.addDependent(SPECIFY_PLATES, addLabel(""), true);  // Add a blank label option to get the radio buttons to align
 
         Options plateNameOptions = new Options(DownloadChromatogramsFromLimsOptions.class);
         StringOption plateNameOption = plateNameOptions.addStringOption(PLATE_NAME, "Sequencing Plate Name:", "");
@@ -43,7 +48,7 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
         plateNamesMultipleOptions = plateSectionOptions.addMultipleOptions("plateNames", plateNameOptions, false);
 
         Set<String> plateNames = new LinkedHashSet<String>();
-        boolean hasPlateField = false;
+        int validSequences = 0;
         for(AnnotatedPluginDocument doc : documents) {
             if(PlateDocument.class.isAssignableFrom(doc.getDocumentClass())) {
                 PlateDocument plateDoc = (PlateDocument)doc.getDocument();
@@ -52,16 +57,16 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
                 }
             } else {
                 Object workflowValue = doc.getFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD);
+                Object progressValue = doc.getFieldValue(AnnotateUtilities.PROGRESS_FIELD);
                 for (String plate : BiocodeUtilities.getPlatesAnnotatedOnDocument(doc)) {
-                    if(workflowValue != null) {
-                        plateNames.add(plate);
-                        hasPlateField = true;
+                    plateNames.add(plate);
+                    if(progressValue != null && workflowValue != null && NucleotideSequenceDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                        validSequences++;
                     }
                 }
-
             }
         }
-        if(!hasPlateField) {
+        if(validSequences != documents.length) {
             SELECTED_SEQUENCES.setEnabled(false);
         }
 
