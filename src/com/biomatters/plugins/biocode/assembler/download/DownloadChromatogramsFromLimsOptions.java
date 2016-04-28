@@ -39,6 +39,7 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
         addChildOptions("plates", "", null, plateSectionOptions);
         downloadMethodOption.addChildOptionsDependent(plateSectionOptions, SPECIFY_PLATES, false);
         assembleTracesOption = addBooleanOption("assemble", "Assemble Traces to Selected Sequences", false);
+        assembleTracesOption.setDisabledValue(false);
         downloadMethodOption.addDependent(SELECTED_SEQUENCES, assembleTracesOption, true);
         downloadMethodOption.addDependent(SPECIFY_PLATES, addLabel(""), true);  // Add a blank label option to get the radio buttons to align
 
