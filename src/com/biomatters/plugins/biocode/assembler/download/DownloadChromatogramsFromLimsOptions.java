@@ -122,4 +122,20 @@ public class DownloadChromatogramsFromLimsOptions extends Options {
     public boolean isAssembleTraces() {
         return assembleTracesOption.getValue();
     }
+
+    @Override
+    public String verifyOptionsAreValid() {
+        String error = super.verifyOptionsAreValid();
+        if(error != null) {
+            return error;
+        }
+        if(downloadMethodOption.getValue() == SPECIFY_PLATES) {
+            for (String name : getPlateNames()) {
+                if(name.trim().length() == 0) {
+                    return "Cannot use blank sequencing plate name.";
+                }
+            }
+        }
+        return null;
+    }
 }
