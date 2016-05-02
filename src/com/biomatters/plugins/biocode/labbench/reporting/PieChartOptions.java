@@ -18,7 +18,6 @@ import java.util.ArrayList;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class PieChartOptions extends Options {
     protected static String FIMS_FIELD = "fimsField";

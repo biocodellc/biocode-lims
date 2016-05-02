@@ -7,7 +7,6 @@ import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 17/04/13 2:50 PM
  */

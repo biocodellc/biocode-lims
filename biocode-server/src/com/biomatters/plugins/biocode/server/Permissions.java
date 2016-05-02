@@ -7,7 +7,6 @@ import javax.ws.rs.Produces;
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 6/04/14 11:11 PM
  */

@@ -8,7 +8,6 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 
 /**
 * @author Matthew Cheung
-* @version $Id$
 *          <p/>
 *          Created on 12/11/13 11:32 AM
 */

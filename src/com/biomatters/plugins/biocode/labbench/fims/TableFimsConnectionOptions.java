@@ -22,7 +22,6 @@ import java.util.List;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public abstract class TableFimsConnectionOptions extends PasswordOptions {
     static final List<OptionValue> NO_FIELDS = Arrays.asList(new Options.OptionValue("None", "None"));

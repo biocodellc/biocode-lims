@@ -17,7 +17,6 @@ import java.util.*;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class DownloadChromatogramsFromLimsOptions extends Options {
 

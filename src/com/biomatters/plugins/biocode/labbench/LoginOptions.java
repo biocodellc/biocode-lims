@@ -12,7 +12,6 @@ import java.util.Collections;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class LoginOptions extends Options {
     public static final String FIMS_REQUEST_TIMEOUT_OPTION_NAME = "fimsRequestTimeout";

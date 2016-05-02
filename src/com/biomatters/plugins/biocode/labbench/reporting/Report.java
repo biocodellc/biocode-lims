@@ -14,7 +14,6 @@ import javax.swing.*;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public abstract class Report implements XMLSerializable {
 

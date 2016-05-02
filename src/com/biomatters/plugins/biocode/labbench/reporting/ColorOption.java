@@ -16,7 +16,6 @@ import org.jdom.Element;
  * An option for use with {@link com.biomatters.geneious.publicapi.plugin.Options} that lets the user choose a Color.
  * stolen from PrivateAPI
  * @author Matt Kearse
- * @version $Id$
  */
 public class ColorOption extends Options.Option<Color, JPanel> {
     protected ColorOption(Element element) throws XMLSerializationException {

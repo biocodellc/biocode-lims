@@ -23,7 +23,6 @@ import java.util.*;
  * Main endpoint for querying the FIMS/LIMS as a whole.  Returns tissues, workflows, plates and sequences
  *
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 23/03/14 5:21 PM
  */

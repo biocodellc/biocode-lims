@@ -29,7 +29,6 @@ import java.util.Set;
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 8/05/14 1:56 PM
  */

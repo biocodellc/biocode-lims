@@ -6,7 +6,6 @@ import org.jdom.Element;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 14/07/2009 7:15:35 PM
  */

@@ -11,7 +11,6 @@ import java.util.ArrayList;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class FimsMultiOptions extends Options {
     private static final String ALL_OR_ANY = "allOrAny";

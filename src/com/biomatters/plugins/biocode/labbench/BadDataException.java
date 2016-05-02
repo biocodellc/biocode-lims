@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.labbench;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 7/07/2009 11:02:05 AM
  */

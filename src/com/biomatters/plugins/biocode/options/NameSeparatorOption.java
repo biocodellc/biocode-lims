@@ -7,7 +7,6 @@ import com.biomatters.geneious.publicapi.plugin.Options;
  * require a new release of Geneious.
  *
  * @author Richard
- * @version $Id$
  */
 public class NameSeparatorOption extends Options.ComboBoxOption<Options.OptionValue> {
 

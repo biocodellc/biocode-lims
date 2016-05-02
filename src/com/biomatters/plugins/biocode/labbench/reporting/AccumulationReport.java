@@ -30,7 +30,6 @@ import javax.swing.*;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class AccumulationReport extends Report{
 

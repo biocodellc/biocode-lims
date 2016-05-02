@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Responsible for making the various LIMS connections on start up
  *
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 20/03/14 3:18 PM
  */

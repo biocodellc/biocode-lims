@@ -22,7 +22,6 @@ import java.util.List;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 9/06/2009 11:17:43 AM
  */

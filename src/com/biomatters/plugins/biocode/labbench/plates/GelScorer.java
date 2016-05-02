@@ -5,7 +5,6 @@ import java.awt.image.*;
 
 /**
  * @author Steve
- * @version $Id: 27/08/2010 6:08:05 AM steve $
  */
 public class GelScorer {
     @SuppressWarnings({"UnusedDeclaration"})

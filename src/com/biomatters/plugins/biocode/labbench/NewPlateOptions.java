@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 28/09/2009 10:49:11 PM
  */

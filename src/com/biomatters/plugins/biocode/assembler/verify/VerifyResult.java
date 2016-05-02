@@ -8,7 +8,6 @@ import java.util.List;
 
 /**
  * @author Richard
-* @version $Id$
 */
 class VerifyResult implements XMLSerializable {
 

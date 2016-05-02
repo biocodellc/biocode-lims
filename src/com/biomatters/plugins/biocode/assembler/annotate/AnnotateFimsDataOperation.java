@@ -20,7 +20,6 @@ import java.util.List;
 
 /**
  * @author Steve
- * @version $Id: AnnotateFimsDataOptions.java 36017 2010-08-30 19:32:39Z steve $
  */
 public class AnnotateFimsDataOperation extends DocumentOperation {
     public GeneiousActionOptions getActionOptions() {

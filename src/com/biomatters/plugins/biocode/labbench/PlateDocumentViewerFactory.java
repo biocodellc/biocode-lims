@@ -7,7 +7,6 @@ import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 2/07/2009 11:21:20 AM
  */

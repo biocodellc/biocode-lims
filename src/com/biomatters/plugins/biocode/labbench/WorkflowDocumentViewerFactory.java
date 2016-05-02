@@ -4,7 +4,6 @@ import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 2/07/2009 11:20:31 AM
  */

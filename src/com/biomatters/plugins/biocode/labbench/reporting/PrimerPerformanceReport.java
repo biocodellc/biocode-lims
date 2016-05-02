@@ -29,7 +29,6 @@ import javax.swing.table.AbstractTableModel;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 28/10/2011 4:30:35 PM
  */

@@ -4,7 +4,6 @@ import org.springframework.security.web.context.AbstractSecurityWebApplicationIn
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 8/05/14 2:11 PM
  */

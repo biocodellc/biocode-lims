@@ -25,7 +25,6 @@ import javax.swing.*;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 1/09/2011 9:18:14 PM
  */

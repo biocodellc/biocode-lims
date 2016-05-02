@@ -15,7 +15,6 @@ import jebl.util.CompositeProgressListener;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class FillInTaxonomyOperation extends DocumentOperation {
 

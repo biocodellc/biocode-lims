@@ -7,7 +7,6 @@ import java.util.List;
 
 /**
  * @author steve
- * @version $Id: 11/05/2009 6:31:47 PM steve $
  */
 public interface FimsSample extends XMLSerializable {
 

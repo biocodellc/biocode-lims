@@ -13,7 +13,6 @@ import jxl.Sheet;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 9/09/2009 6:41:55 PM
  */

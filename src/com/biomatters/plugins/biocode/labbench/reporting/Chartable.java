@@ -6,7 +6,6 @@ import javax.swing.*;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public interface Chartable {
 

@@ -29,7 +29,6 @@ import java.util.*;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 

@@ -13,7 +13,6 @@ import java.awt.*;
 
 /**
  * @author Steve
- * @version $Id: 14/01/2010 1:57:43 PM steve $
  */
 public class ColoringPanel extends DocumentFieldSelectorPanel {
     final List<Reaction> reactions;

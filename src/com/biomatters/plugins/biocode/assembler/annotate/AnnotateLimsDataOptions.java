@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class AnnotateLimsDataOptions extends Options {
 

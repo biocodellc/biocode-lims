@@ -21,7 +21,6 @@ import java.util.*;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class ExportForBarstoolOptions extends Options {
 

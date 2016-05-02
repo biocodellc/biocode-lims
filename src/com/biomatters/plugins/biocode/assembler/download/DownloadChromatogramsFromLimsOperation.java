@@ -28,7 +28,6 @@ import java.util.*;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
 

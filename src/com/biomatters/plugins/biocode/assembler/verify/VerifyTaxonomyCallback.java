@@ -14,7 +14,6 @@ import java.util.Stack;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class VerifyTaxonomyCallback extends RetrieveCallback {
 

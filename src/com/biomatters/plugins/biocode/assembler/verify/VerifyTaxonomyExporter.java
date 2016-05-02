@@ -17,7 +17,6 @@ import jxl.Workbook;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 5/07/2010 1:55:24 PM
  */

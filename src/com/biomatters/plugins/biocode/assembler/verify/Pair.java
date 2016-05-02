@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.assembler.verify;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class Pair<A, B> {
 

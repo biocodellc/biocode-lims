@@ -19,7 +19,6 @@ import java.sql.*;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class MySQLFimsConnection extends TableFimsConnection {
     private Connection connection;

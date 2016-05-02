@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 7/07/2010 3:36:37 PM
  */

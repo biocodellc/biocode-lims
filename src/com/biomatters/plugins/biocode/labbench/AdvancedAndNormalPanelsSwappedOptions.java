@@ -8,7 +8,6 @@ import javax.swing.*;
 
 /**
  * @author steve
- * @version $Id: 14/05/2009 6:07:19 PM steve $
  */
 public class AdvancedAndNormalPanelsSwappedOptions extends Options {
 

@@ -4,7 +4,6 @@ import java.awt.*;
 
 /**
 * @author Steve (Matt moved this out of the public api where it lived as an inner class of GuiUtilities during 5.1 development)
-* @version $Id: ObjectAndColor.java 38998 2011-02-01 05:10:46Z steve $
 *          <p/>
 *          Created on 6/09/2010 12:43:30 PM
 */

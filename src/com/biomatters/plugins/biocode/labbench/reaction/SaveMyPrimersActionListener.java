@@ -15,7 +15,6 @@ import java.util.List;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public abstract class SaveMyPrimersActionListener implements ActionListener {
 

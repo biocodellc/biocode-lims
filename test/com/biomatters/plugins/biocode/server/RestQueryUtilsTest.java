@@ -17,7 +17,6 @@ import java.util.GregorianCalendar;
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 8/04/14 12:06 PM
  */

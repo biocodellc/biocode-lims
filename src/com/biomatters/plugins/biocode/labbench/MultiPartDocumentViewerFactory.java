@@ -8,7 +8,6 @@ import java.awt.*;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 18/06/2009 7:09:36 PM
  */

@@ -32,7 +32,6 @@ import java.util.prefs.Preferences;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class ConnectionManager implements XMLSerializable{
 

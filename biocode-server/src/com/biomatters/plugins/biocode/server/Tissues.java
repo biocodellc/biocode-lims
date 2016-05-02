@@ -11,7 +11,6 @@ import java.util.Arrays;
  * A tissue entry
  *
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 23/03/14 4:57 PM
  */

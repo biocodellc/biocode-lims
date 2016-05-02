@@ -10,7 +10,6 @@ import java.util.Collection;
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 6/04/14 11:29 PM
  */

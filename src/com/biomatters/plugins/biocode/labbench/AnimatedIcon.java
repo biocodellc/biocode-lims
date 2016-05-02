@@ -11,7 +11,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  * Created on Aug 11, 2008 2:58:11 PM by Steve
  */
 public class AnimatedIcon implements Icon {

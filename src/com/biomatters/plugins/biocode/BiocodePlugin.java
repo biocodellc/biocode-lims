@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.prefs.Preferences;
 
 /**
- * @version $Id: BiocodePlugin.java 22212 2008-09-17 02:57:52Z richard $
  */
 public class BiocodePlugin extends GeneiousPlugin {
 

@@ -31,7 +31,6 @@ import java.util.zip.ZipOutputStream;
 
 /**
  * @author Richard
- * @version $Id$
  */
 @SuppressWarnings({"ConstantConditions"})
 public class BarstoolExportHandler {

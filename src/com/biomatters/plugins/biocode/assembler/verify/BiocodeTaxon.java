@@ -10,7 +10,6 @@ import java.util.List;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class BiocodeTaxon implements XMLSerializable {
 

@@ -15,7 +15,6 @@ import java.util.List;
  * Used to wrap a collection of {@link XMLSerializable} objects
  *
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 25/03/14 11:44 AM
  */

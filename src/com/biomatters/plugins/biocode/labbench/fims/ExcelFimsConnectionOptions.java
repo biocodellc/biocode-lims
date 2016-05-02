@@ -21,7 +21,6 @@ import jxl.Cell;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class ExcelFimsConnectionOptions extends TableFimsConnectionOptions{
     public static final String FILE_LOCATION = "excelFile";

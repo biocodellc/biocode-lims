@@ -12,7 +12,6 @@ import java.awt.event.ActionListener;
 
 /**
  * @author steve
- * @version $Id: 14/05/2009 5:56:05 PM steve $
  */
 public class HiddenOptionsPopupButton extends Options.Option<String, JPanel>{
     private String childOptionsName;

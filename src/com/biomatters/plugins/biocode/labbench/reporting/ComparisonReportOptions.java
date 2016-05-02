@@ -11,7 +11,6 @@ import java.util.*;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class ComparisonReportOptions extends Options{
 

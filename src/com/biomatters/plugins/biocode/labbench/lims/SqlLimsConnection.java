@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * An SQL based {@link LIMSConnection}
  *
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 1/04/14 4:45 PM
  */

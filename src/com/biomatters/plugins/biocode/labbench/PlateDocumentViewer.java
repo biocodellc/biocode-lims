@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 2/07/2009 11:30:04 AM
  */

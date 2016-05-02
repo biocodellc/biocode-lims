@@ -7,7 +7,6 @@ import java.util.Collections;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class LimsConnectionOptions extends PasswordOptions{
 

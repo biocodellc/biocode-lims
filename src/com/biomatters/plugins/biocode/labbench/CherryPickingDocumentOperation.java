@@ -27,7 +27,6 @@ import javax.swing.*;
 
 /**
  * @author Steve
- * @version $Id: 22/12/2009 7:04:21 PM steve $
  */
 public class CherryPickingDocumentOperation extends DocumentOperation {
     protected DocumentSelectionSignature PLATE_DOCUMENT_SELECTION_SIGNATURE = new DocumentSelectionSignature(PlateDocument.class, 1, Integer.MAX_VALUE);

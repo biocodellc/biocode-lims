@@ -6,7 +6,6 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 
 /**
  * @author steve
- * @version $Id: 13/05/2009 3:26:05 PM steve $
  */
 public class SourceAwareQueryField extends QueryField{
     private String sourceId;

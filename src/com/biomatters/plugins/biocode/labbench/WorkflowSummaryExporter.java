@@ -18,7 +18,6 @@ import jxl.Workbook;
 
 /**
  * @author Steve
- * @version $Id: 19/05/2010 8:38:02 PM steve $
  */
 public class WorkflowSummaryExporter extends DocumentFileExporter{
 

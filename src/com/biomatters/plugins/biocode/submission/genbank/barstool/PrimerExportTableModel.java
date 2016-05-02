@@ -25,7 +25,6 @@ import java.sql.SQLException;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class PrimerExportTableModel extends TabDelimitedExport.ExportTableModel {
 

@@ -24,7 +24,6 @@ import java.util.prefs.Preferences;
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *       <p />
  *       Created on 1/02/14 10:50 AM
  */public class BiocodeFIMSConnectionOptions extends PasswordOptions {

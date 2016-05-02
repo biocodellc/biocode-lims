@@ -8,7 +8,6 @@ import java.util.ArrayList;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 1/09/2011 9:19:40 PM
  */

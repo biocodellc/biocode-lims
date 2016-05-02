@@ -8,7 +8,6 @@ import java.util.List;
 
 /**
  * @author steve
- * @version $Id: 13/05/2009 8:03:12 AM steve $
  */
 public class TissueDocument implements PluginDocument, FimsSample {
     private FimsSample fimsResults;

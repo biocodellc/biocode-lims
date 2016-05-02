@@ -20,7 +20,6 @@ import java.text.ParseException;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class FusionTablesFimsConnection extends TableFimsConnection{
 

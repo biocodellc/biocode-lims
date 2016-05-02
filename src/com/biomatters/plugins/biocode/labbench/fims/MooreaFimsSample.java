@@ -13,7 +13,6 @@ import java.util.*;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 3/06/2009 10:51:53 AM
  */

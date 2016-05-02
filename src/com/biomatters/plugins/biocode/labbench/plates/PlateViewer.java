@@ -30,7 +30,6 @@ import java.util.prefs.Preferences;
 
 /**
  * @author steve
- * @version $Id: 21/05/2009 6:36:46 AM steve $
  */
 public class PlateViewer extends JPanel {
 

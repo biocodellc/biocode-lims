@@ -19,7 +19,6 @@ import java.util.Date;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 10/06/2009 11:38:24 AM
  */

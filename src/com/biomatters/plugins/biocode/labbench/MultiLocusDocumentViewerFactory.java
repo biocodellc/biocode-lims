@@ -18,7 +18,6 @@ import java.awt.*;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class MultiLocusDocumentViewerFactory extends TableDocumentViewerFactory{
 

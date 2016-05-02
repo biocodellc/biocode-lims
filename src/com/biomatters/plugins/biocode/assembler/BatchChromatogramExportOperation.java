@@ -23,7 +23,6 @@ import java.util.Map;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class BatchChromatogramExportOperation extends DocumentOperation {
 

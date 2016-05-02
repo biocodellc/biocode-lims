@@ -33,7 +33,6 @@ import java.util.Date;
 
 /**
  * @author steve
- * @version $Id: 12/05/2009 5:51:15 AM steve $
  */
 @SuppressWarnings({"ConstantConditions"})
 public class MooreaFimsConnection extends FIMSConnection{

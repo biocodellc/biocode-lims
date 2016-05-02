@@ -16,7 +16,6 @@ import java.util.ArrayList;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class TabularPlateDocumentViewerFactory extends TableDocumentViewerFactory {
 

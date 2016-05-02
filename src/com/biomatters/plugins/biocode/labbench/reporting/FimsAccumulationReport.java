@@ -20,7 +20,6 @@ import org.jfree.data.xy.XYSeries;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 18/08/2011 5:25:21 PM
  */

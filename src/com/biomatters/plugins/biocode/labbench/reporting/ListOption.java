@@ -17,7 +17,6 @@ import org.jdom.Element;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 15/12/2011 10:55:14 AM
  */

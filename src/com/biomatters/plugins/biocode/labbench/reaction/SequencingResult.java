@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicReference;
  * If it is a pass, then it will include the ID of the consensus sequence in the database.
  *
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 13/09/13 11:24 AM
  */

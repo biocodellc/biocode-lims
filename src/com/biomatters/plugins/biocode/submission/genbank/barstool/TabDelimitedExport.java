@@ -16,7 +16,6 @@ import java.util.List;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class TabDelimitedExport {
 

@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author steve
- * @version $Id: 14/05/2009 1:04:57 PM steve $
  */
 public class ThermocycleEditor extends JPanel {
 

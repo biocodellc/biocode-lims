@@ -31,7 +31,6 @@ import java.util.Date;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class FimsToLims {
 

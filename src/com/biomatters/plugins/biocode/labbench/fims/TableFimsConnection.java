@@ -25,7 +25,6 @@ import org.jdom.output.Format;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public abstract class TableFimsConnection extends FIMSConnection{
 

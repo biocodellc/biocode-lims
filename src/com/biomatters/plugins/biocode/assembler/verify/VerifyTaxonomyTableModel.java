@@ -36,7 +36,6 @@ import java.util.prefs.Preferences;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class VerifyTaxonomyTableModel implements TableModel {
 

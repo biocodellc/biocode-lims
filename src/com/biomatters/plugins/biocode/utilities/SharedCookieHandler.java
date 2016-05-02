@@ -13,7 +13,6 @@ import java.util.*;
  * to be shared between any HTTP connections.</p>
  *
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 16/04/14 9:42 AM
  */

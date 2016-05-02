@@ -15,7 +15,6 @@ import java.sql.SQLException;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class AccumulationOptions extends Options {
     private static final String COUNT_OPTIONS = "countOptions";

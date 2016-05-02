@@ -18,7 +18,6 @@ import java.util.*;
 
 /**
  * @author Steve
- * @version $Id: 25/08/2010 2:38:08 AM steve $
  */
 public class OneOffHackOperation extends DocumentOperation{
 

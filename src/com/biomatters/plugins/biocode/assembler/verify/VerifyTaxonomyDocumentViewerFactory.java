@@ -16,7 +16,6 @@ import java.awt.event.MouseEvent;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFactory {
 

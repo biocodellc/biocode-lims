@@ -14,7 +14,6 @@ import jebl.util.ProgressListener;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 23/01/2012 4:22:07 PM
  */

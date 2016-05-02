@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 7/07/2009 7:36:04 PM
  */

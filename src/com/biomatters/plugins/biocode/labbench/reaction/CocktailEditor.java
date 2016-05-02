@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class CocktailEditor<T extends Cocktail> {
     private List<T> newCocktails = new ArrayList<T>();

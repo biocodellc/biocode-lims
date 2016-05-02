@@ -10,7 +10,6 @@ import java.util.Arrays;
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 7/04/14 1:16 AM
  */

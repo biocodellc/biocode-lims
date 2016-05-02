@@ -17,7 +17,6 @@ import jebl.util.ProgressListener;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class Trace implements XMLSerializable {
     private List<NucleotideSequenceDocument> sequences;

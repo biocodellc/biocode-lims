@@ -33,7 +33,6 @@ import java.util.regex.Pattern;
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 4/04/14 1:00 PM
  */

@@ -18,7 +18,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 4/06/2009 4:53:15 PM
  */

@@ -25,7 +25,6 @@ import org.jdom.Element;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class WorkflowReport extends Report{
 

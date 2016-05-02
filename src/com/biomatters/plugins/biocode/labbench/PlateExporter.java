@@ -24,7 +24,6 @@ import javax.swing.event.TableModelListener;
 
 /**
  * @author Steve
- * @version $Id: 20/05/2010 12:49:42 PM steve $
  */
 public class PlateExporter extends DocumentFileExporter{
 

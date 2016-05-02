@@ -4,7 +4,6 @@ package com.biomatters.plugins.biocode.labbench.fims.tapir;
  * Represents a TAPIR schema.  Provides information about the mapping from Geneious concepts to TAPIR ones.
  *
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 27/05/13 3:42 PM
  */

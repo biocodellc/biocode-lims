@@ -8,7 +8,6 @@ import java.util.*;
 
 /**
  * @author steve
- * @version $Id: 21/04/2010 7:11:54 AM steve $
  */
 public class CherryPickingDocument implements PluginDocument {
     private String name;

@@ -8,7 +8,6 @@ import javax.swing.*;
  * Combo box contain 1st, 2nd, 3rd etc
  *
  * @author Richard
- * @version $Id$
  */
 public class NamePartOption extends Options.ComboBoxOption<Options.OptionValue> {
 

@@ -8,7 +8,6 @@ import org.jdom.Element;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class MooreaFimsConnectionOptions extends PasswordOptions{
     private PasswordOption passwordOption;

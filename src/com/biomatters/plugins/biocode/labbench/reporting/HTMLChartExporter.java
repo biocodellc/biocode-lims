@@ -12,7 +12,6 @@ import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 15/12/2011 12:01:32 PM
  */

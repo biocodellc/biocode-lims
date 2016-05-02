@@ -8,7 +8,6 @@ import java.net.URL;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 14/12/2011 4:18:35 PM
  */

@@ -19,7 +19,6 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 10/08/2011 7:59:49 PM
  */

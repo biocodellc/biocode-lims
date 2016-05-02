@@ -8,7 +8,6 @@ import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
 
 /**
  * @author Steve
- * @version $Id: FimsData.java 36017 2010-08-30 19:32:39Z steve $
  */
 public class FimsData {
 

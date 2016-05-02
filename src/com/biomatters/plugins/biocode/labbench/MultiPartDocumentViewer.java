@@ -21,7 +21,6 @@ import java.sql.Savepoint;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 2/07/2009 11:24:44 AM
  */

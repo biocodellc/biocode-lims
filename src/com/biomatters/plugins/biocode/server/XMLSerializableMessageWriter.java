@@ -20,7 +20,6 @@ import java.lang.reflect.Type;
  * Can be used to write an XMLSerializable to a response
  *
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 25/03/14 9:51 AM
  */

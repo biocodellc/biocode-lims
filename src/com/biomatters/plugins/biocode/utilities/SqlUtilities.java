@@ -16,7 +16,6 @@ import java.util.Date;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class SqlUtilities {
     public static String getQuerySQLString(Query query, List<DocumentField> searchAttributes, boolean specialCaseForBiocode) {

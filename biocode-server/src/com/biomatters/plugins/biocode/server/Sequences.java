@@ -13,7 +13,6 @@ import java.util.*;
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 23/03/14 5:20 PM
  */

@@ -14,7 +14,6 @@ import org.jdom.Element;
 
 /**
  * @author steve
- * @version $Id: 14/05/2009 12:58:02 PM steve $
  */
 public class Thermocycle implements XMLSerializable {
 

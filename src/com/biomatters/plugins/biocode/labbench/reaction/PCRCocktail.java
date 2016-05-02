@@ -8,7 +8,6 @@ import java.sql.SQLException;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 9/06/2009 11:18:12 AM
  */

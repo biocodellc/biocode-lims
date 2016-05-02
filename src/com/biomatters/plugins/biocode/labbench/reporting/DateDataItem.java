@@ -7,7 +7,6 @@ import java.text.DateFormat;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class DateDataItem extends XYDataItem{
     private Date date;

@@ -17,7 +17,6 @@ import java.util.LinkedHashSet;
 
 /**
  * @author steve
- * @version $Id: 21/04/2010 7:35:00 AM steve $
  */
 public class CherryPickingDocumentViewerFactory extends TableDocumentViewerFactory {
 

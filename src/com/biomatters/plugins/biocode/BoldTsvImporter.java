@@ -21,7 +21,6 @@ import jebl.util.ProgressListener;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class BoldTsvImporter extends DocumentFileImporter{
 

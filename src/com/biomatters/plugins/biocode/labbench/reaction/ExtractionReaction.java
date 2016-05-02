@@ -21,7 +21,6 @@ import java.sql.*;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 12/06/2009 5:27:29 PM
  */

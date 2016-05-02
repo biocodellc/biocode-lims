@@ -10,7 +10,6 @@ import java.sql.SQLException;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 16/06/2009 3:12:41 PM
  */

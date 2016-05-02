@@ -18,7 +18,6 @@ import java.util.List;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class ButtonMultipleOptions extends Options {
     private Options masterOptions;

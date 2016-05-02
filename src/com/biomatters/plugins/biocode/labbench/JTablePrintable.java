@@ -11,7 +11,6 @@ import java.awt.print.Printable;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 27/07/2009 3:49:27 PM
  */

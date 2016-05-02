@@ -15,7 +15,6 @@ import java.util.Arrays;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class ReactionFieldOptions extends Options {
     protected String LOCUS = "locus";

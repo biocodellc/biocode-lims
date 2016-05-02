@@ -18,7 +18,6 @@ import java.util.*;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class AnnotateLimsDataOperation extends DocumentOperation {
 

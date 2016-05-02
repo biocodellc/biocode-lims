@@ -12,7 +12,6 @@ import java.sql.SQLException;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 18/06/2009 5:09:03 PM
  */

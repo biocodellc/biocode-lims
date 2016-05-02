@@ -8,7 +8,6 @@ import javax.ws.rs.Path;
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 20/03/14 2:55 PM
  */

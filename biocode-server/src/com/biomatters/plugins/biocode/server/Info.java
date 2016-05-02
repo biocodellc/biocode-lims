@@ -11,7 +11,6 @@ import javax.ws.rs.*;
  * Provides basic information about the server.
  *
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 23/03/14 6:56 PM
  */

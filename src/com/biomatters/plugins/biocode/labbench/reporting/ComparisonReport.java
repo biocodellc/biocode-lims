@@ -39,7 +39,6 @@ import javax.swing.table.TableModel;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class ComparisonReport extends Report{
     boolean table;

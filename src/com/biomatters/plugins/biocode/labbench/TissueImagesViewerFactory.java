@@ -17,7 +17,6 @@ import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 3/06/2009 1:11:31 PM
  */

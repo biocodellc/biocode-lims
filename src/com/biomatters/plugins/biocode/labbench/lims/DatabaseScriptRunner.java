@@ -12,7 +12,6 @@ import java.util.List;
  * This will run any of the setup scripts Biomatters has written to setup the shared database.
  *
  * @author Matthew Cheung
- * @version $Id: DatabaseScriptRunner.java 18038 2008-03-11 03:20:44Z matthew $
  */
 public class DatabaseScriptRunner {
 

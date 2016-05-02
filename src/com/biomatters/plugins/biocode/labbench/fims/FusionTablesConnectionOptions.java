@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class FusionTablesConnectionOptions extends PasswordOptions {
     static final OptionValue NO_TABLE = new OptionValue("%NONE%", "<html><i>None</i></html>");

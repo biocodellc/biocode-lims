@@ -27,7 +27,6 @@ import java.util.List;
 
 /**
  * @author steve
- * @version $Id: 12/05/2009 8:00:41 AM steve $
  */
 public class ExcelFimsConnection extends TableFimsConnection{
 

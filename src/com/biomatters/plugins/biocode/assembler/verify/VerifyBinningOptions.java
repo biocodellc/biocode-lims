@@ -9,7 +9,6 @@ import java.util.prefs.Preferences;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class VerifyBinningOptions extends Options {
 

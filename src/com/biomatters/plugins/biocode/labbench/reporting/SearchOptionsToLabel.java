@@ -7,7 +7,6 @@ import java.util.ArrayList;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class SearchOptionsToLabel implements ButtonMultipleOptions.OptionsToLabel<SearchOptions>{
 

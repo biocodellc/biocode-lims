@@ -12,7 +12,6 @@ import java.util.*;
 
 /**
  * @author steve
- * @version $Id: 20/08/2009 2:34:58 PM steve $
  */
 public class TapirFimsSample implements FimsSample {
     // Defaults to Biocode values

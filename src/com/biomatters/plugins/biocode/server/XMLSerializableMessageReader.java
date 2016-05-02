@@ -21,7 +21,6 @@ import java.lang.reflect.Type;
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 25/03/14 10:52 AM
  */

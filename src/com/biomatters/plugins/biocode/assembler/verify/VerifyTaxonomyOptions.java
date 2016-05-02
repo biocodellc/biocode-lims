@@ -22,7 +22,6 @@ import java.util.Map;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class VerifyTaxonomyOptions extends Options {
 

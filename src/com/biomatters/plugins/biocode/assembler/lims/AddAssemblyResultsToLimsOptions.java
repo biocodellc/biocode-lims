@@ -14,7 +14,6 @@ import javax.swing.*;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class AddAssemblyResultsToLimsOptions extends Options {
     private BooleanOption addChromatogramsOption;

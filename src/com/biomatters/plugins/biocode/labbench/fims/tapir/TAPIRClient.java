@@ -20,7 +20,6 @@ import java.util.List;
 
 /**
  * @author steve
- * @version $Id: 19/08/2009 12:01:40 PM steve $
  */
 public class TAPIRClient {
     private final TapirSchema schema;

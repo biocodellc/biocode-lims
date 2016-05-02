@@ -25,7 +25,6 @@ import java.util.*;
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 1/04/14 11:55 AM
  */

@@ -20,7 +20,6 @@ import java.util.*;
 
 /**
  * @author steve
- * @version $Id: 27/05/2009 6:15:23 AM steve $
  */
 public class TAPIRFimsConnection extends FIMSConnection{
     private TapirSchema schema;

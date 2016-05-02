@@ -31,7 +31,6 @@ import org.jdom.Element;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 24/06/2009 6:02:38 PM
  */

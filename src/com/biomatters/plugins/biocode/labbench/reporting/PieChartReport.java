@@ -27,7 +27,6 @@ import java.util.List;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class PieChartReport extends Report{
 

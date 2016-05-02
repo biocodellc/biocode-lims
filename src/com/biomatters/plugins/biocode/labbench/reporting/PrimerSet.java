@@ -8,7 +8,6 @@ import java.util.Arrays;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 7/11/2011 12:13:12 PM
  */

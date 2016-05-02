@@ -6,7 +6,6 @@ import com.biomatters.plugins.biocode.utilities.PasswordOption;
 
 /**
  * @author Matthew Cheung
- * @version $Id$
  *          <p/>
  *          Created on 25/03/14 2:45 PM
  */

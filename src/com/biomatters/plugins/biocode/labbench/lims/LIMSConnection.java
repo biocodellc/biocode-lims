@@ -19,7 +19,6 @@ import java.util.Date;
 
 /**
  * @author steve
- * @version $Id: 27/05/2009 6:28:38 AM steve $
  */
 @SuppressWarnings({"ConstantConditions"})
 public abstract class LIMSConnection {

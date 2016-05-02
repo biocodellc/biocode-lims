@@ -30,7 +30,6 @@ import java.util.*;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 24/06/2009 7:35:20 PM
  */

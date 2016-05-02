@@ -32,7 +32,6 @@ import java.util.prefs.Preferences;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 7/07/2009 6:39:05 PM
  */

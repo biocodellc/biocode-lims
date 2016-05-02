@@ -10,7 +10,6 @@ import javax.swing.*;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 4/06/2009 11:21:32 AM
  */

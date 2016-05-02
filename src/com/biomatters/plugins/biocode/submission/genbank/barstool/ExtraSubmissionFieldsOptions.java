@@ -12,7 +12,6 @@ import java.util.List;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class ExtraSubmissionFieldsOptions extends Options {
 

@@ -22,7 +22,6 @@ import java.util.*;
 
 /**
  * @author Steven Stones-Havas
- * @version $Id$
  *          <p/>
  *          Created on 23/06/2009 12:45:32 PM
  */

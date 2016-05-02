@@ -23,7 +23,6 @@ import java.util.List;
 
 /**
  * @author steve
- * @version $Id: 16/05/2009 10:56:30 AM steve $
  */
 @SuppressWarnings({"ConstantConditions"})
 public class PCRReaction extends Reaction<PCRReaction> {

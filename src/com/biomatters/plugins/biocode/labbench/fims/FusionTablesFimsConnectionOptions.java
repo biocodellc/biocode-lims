@@ -11,7 +11,6 @@ import java.io.IOException;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class FusionTablesFimsConnectionOptions extends TableFimsConnectionOptions{
 

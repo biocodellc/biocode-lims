@@ -15,7 +15,6 @@ import java.sql.*;
 
 /**
  * @author Steve
- * @version $Id$
  */
 public class MySqlFimsConnectionOptions extends TableFimsConnectionOptions{
     private Driver driver;

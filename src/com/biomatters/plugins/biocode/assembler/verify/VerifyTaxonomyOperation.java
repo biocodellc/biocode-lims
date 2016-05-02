@@ -18,7 +18,6 @@ import java.util.*;
 
 /**
  * @author Richard
- * @version $Id$
  */
 public class VerifyTaxonomyOperation extends DocumentOperation {
     protected Object taxonomyValue;

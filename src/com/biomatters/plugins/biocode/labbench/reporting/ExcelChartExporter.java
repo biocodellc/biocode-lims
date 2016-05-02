@@ -14,7 +14,6 @@ import com.biomatters.plugins.biocode.labbench.ExcelUtilities;
 
 /**
  * @author Steve
- * @version $Id$
  *          <p/>
  *          Created on 2/09/2011 10:15:27 AM
  */
