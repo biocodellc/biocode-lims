@@ -31,6 +31,14 @@ import java.util.*;
  */
 public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
 
+    /**
+     * Duplicated in the GenBank Submission plugin.  DO NOT CHANGE otherwise assemblies aren't recoginised for submission
+     */
+    private static final DocumentField ASSEMBLED_LIMS_SEQUENCE = DocumentField.createBooleanField(
+            "Assembled LIMS Sequence",
+            "Created by assembling traces in the LIMS to a passed LIMS sequence reference that is ready to submit",
+            "assembledLimsSequence", false, false);
+
     private final boolean isAutomated;
 
     public DownloadChromatogramsFromLimsOperation(boolean isAutomated) {
@@ -239,7 +247,9 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             return null;
         } else {
             assert annotatedPluginDocuments.size() == 1;
-            return annotatedPluginDocuments.get(0);
+            AnnotatedPluginDocument assembly = annotatedPluginDocuments.get(0);
+            assembly.setFieldValue(ASSEMBLED_LIMS_SEQUENCE, true);
+            return assembly;
         }
     }
 
