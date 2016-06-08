@@ -19,7 +19,7 @@ This version includes an update to the LIMS database format.  This version is no
 LIMS plugin.  All users of the database will need to update the LIMS plugin to the latest version.
 * Built-in MySQL users will be upgraded automatically.
 * Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
-The schema upgrade script can be found at http://software.mooreabiocode.org
+The schema upgrade script can be found at http://software.mooreabiocode.org/index.php?title=Download
 
 
 ==Biocode Plugin 2.8.12 - Privately released ==
