@@ -666,26 +666,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 int version = resultSet.getInt("version");
                 String fullVersionString = getFullVersionStringFromDatabase();
 
-                if (version == ROLLBACK_VERSION && fullVersionString.equals(VERSION_WITHOUT_PROPS)) {
-                    // As part of a beta release we incremented the major version early to 10.  Revert to 9 and record full version.
-                    PreparedStatement updateMajorVersion = null;
-                    PreparedStatement insertVersion = null;
-
-                    try {
-                        updateMajorVersion = connection.prepareStatement("UPDATE databaseversion SET version = " + EXPECTED_SERVER_MAJOR_VERSION);
-                        updateMajorVersion.executeUpdate();
-                        version = EXPECTED_SERVER_MAJOR_VERSION;
-
-                        insertVersion = connection.prepareStatement("INSERT INTO properties(name, value) VALUES (?,?)");
-                        insertVersion.setObject(1, VERSION_PROPERTY);
-                        insertVersion.setObject(2, EXPECTED_SERVER_FULL_VERSION);
-                        insertVersion.executeUpdate();
-                        fullVersionString = EXPECTED_SERVER_FULL_VERSION;
-                    } finally {
-                        SqlUtilities.cleanUpStatements(updateMajorVersion, insertVersion);
-                    }
-                }
-
                 boolean databaseIsOlder = BiocodeUtilities.compareVersions(fullVersionString, EXPECTED_SERVER_FULL_VERSION) < 0;
                 if (version > EXPECTED_SERVER_MAJOR_VERSION) {
                     throw new ConnectionException("This database was written for a newer version of the LIMS plugin, and cannot be accessed");

@@ -19,7 +19,7 @@ CREATE TABLE gel_quantification (
   location INTEGER NOT NULL,
   technician VARCHAR(255),
   notes LONGVARCHAR,
-  volume double, -- Is this different to extraction vol?
+  volume double,
   gelImage LONGVARBINARY,
   gelBuffer VARCHAR(255),
   gelConc DOUBLE,
@@ -33,5 +33,5 @@ CREATE TABLE gel_quantification (
   FOREIGN KEY (plate) REFERENCES plate(id) ON DELETE CASCADE
 );
 
-UPDATE databaseversion SET version = 9;
-INSERT INTO properties (name,value) VALUES ('fullDatabaseVersion', '9.2');
+UPDATE databaseversion SET version = 11;
+INSERT INTO properties (name,value) VALUES ('fullDatabaseVersion', '11.0');

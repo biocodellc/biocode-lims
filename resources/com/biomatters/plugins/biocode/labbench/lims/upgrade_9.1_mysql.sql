@@ -34,5 +34,5 @@ CREATE TABLE gel_quantification (
   FOREIGN KEY (plate) REFERENCES plate(id) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
 
-UPDATE databaseversion SET version = 9;
-INSERT INTO properties (name,value) VALUES ('fullDatabaseVersion', '9.2');
+UPDATE databaseversion SET version = 11;
+INSERT INTO properties (name,value) VALUES ('fullDatabaseVersion', '11.0');

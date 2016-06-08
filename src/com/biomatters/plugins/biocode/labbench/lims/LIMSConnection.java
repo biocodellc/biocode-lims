@@ -23,17 +23,11 @@ import java.util.Date;
 @SuppressWarnings({"ConstantConditions"})
 public abstract class LIMSConnection {
     @SuppressWarnings({"ConstantConditions"})
-    public static final int EXPECTED_SERVER_MAJOR_VERSION = 9;
-    public static final String EXPECTED_SERVER_FULL_VERSION = "9.2";
+    public static final int EXPECTED_SERVER_MAJOR_VERSION = 11;
+    public static final String EXPECTED_SERVER_FULL_VERSION = "11.0";
     public static final int BATCH_SIZE = 192;  // 2 x 96-well plates
 
     public int requestTimeout = LoginOptions.DEFAULT_TIMEOUT;
-
-    /**
-     * Was used for a beta version. But since we didn't actually break backwards compatibility we reverted back to the old
-     * version and used a point release system with the value stored in the properties table.
-     */
-    public static final int ROLLBACK_VERSION = 10;
 
     public static final String VERSION_WITHOUT_PROPS = "9";
 

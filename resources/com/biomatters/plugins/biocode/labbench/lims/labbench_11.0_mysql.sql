@@ -214,7 +214,7 @@ CREATE TABLE `databaseversion` (
 
 /*!40000 ALTER TABLE `databaseversion` DISABLE KEYS */;
 INSERT INTO `databaseversion` (`version`) VALUES
- (9);
+ (11);
 /*!40000 ALTER TABLE `databaseversion` ENABLE KEYS */;
 
 
@@ -507,7 +507,7 @@ CREATE TABLE properties (
 -- Dumping data for table `properties`
 --
 INSERT INTO properties (name,value) VALUES
- ('fullDatabaseVersion', '9.2');
+ ('fullDatabaseVersion', '11.0');
 
 --
 -- Definition of table `sequencing_result`
