@@ -1,4 +1,4 @@
-==Biocode Plugin 3.0.0 - TBD==
+==Biocode Plugin 3.0.0 - 9 June 2016==
 * 'BOLD Trace submission': New function to create packages for submission of traces to BOLD.
 * Added the ability to create extraction plates from tissue documents.
 * Search performance improvements.
@@ -15,8 +15,8 @@
 * Many other bug fixes and improvements.
 
 '''Additional Notes'''
-This version includes an update to the LIMS database format.  This version can still be used by older versions of the
-LIMS plugin back to version 2.1.
+This version includes an update to the LIMS database format.  This version is not compatible with older versions of the
+LIMS plugin.  All users of the database will need to update the LIMS plugin to the latest version.
 * Built-in MySQL users will be upgraded automatically.
 * Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
 The schema upgrade script can be found at http://software.mooreabiocode.org
