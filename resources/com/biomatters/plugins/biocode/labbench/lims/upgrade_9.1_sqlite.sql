@@ -34,4 +34,4 @@ CREATE TABLE gel_quantification (
 );
 
 UPDATE databaseversion SET version = 11;
-INSERT INTO properties (name,value) VALUES ('fullDatabaseVersion', '11.0');
+UPDATE properties SET value = '11.0' WHERE name ='fullDatabaseVersion';
