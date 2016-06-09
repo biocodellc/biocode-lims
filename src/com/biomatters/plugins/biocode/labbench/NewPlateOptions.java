@@ -169,7 +169,7 @@ public class NewPlateOptions extends Options{
         addChildOptions("fromQuadrant", "Quadrant", "", docChooserOptions);
 
 
-        if(fromExistingOption != null) {
+        if(fromExistingOption != null && fromExistingPlates) {
             useCustomCopyOption = addBooleanOption(USE_CUSTOM_COPY, "Custom Copy", false);
             useCustomCopyOption.setDisabledValue(false);
             plateOption.addDependent(useCustomCopyOption, INDIVIDUAL_REACTIONS);
