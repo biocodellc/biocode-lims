@@ -1,83 +1,28 @@
 <PluginVersions>
-    <LatestVersion>2.8.9</LatestVersion>
-    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_8_9.gplugin</LatestVersionURL>
-    <ReleaseNotes>==Biocode Plugin 2.8.11 - 4 September 2015==
-* Fixed a crash that occurs when viewing the Reporting service in Geneious 8.1 or later.
-* Fixed a crash that occurs when using the Bulk Editor to fetch PCR or Cycle Sequencing reactions from extraction barcodes.
-* Fixed an error that prevented the use of compound queries that searched across both FIMS and LIMS fields.
-* Changed default Moorea FIMS connection URL to gall.bnhm.berkeley.edu from darwin.berkeley.edu.
-
-==Biocode Plugin 2.8.10==
-Beta release of 2.8.11.
-
-==Biocode Plugin 2.8.9 - 8 June 2015==
-* Fixed a bug that prevented the creation of PCR plates from existing 8 strip extraction plates.
-* Fixed a problem preventing the use of the same extraction within PCR or cycle sequencing plates.
-* Other minor fixes.
-
-==Biocode Plugin 2.8.8 - 2 March 2015==
-* The LIMS now actively tries to prevent duplicate extraction barcodes.  It will ask if extractions should be moved if duplicates are detected.
-* LIMS data will now be annotated with sequencing primers in addition to PCR primers if using GenBank Submission plugin v1.5.0 or greater.
-* Cherry picking an extraction plate will now correctly set the previous plate and well fields.
-* Fixed an issue where plates with errors could still be saved.
-* Fixed crash that would occur when changing columns in Primer Overview table.
-* Fixed a bug that would cause all plates with no workflows to be returned in addition to normal search results when searching solely on FIMS fields.
-* Fixed a problem where 8-strip plates would be displayed with incorrect well numbers in some views.
-* Fixed a problem where annotating an assembly would prevent generation of a consensus with quality scores.
-* Removed the ability to move extraction reactions via the reaction editor invoked from the workflow document viewer.
-* Other minor fixes and improvements.
-
-==Biocode Plugin 2.8.7 - 14 January 2015==
-* Added modifications in response to upcoming changes that will be made to the Biocode FIMS REST service.
-* Added the handling of the presence of duplicate document fields in the FIMS.
-* Fixed slow trace downloads from plates without workflows.
-* Other improvements and fixes.
-
-==Biocode Plugin 2.8.6 - 12 December 2014==
-* Fixed a bug that caused Geneious to crash trying to index sequences or traces that had been downloaded or annotated while using the new Biocode FIMS.
-
-==Biocode Plugin 2.8.5 - 8 December 2014==
-* Added cytB to the example loci list.
-* Fixed a bug where taxonomy fields that are below the species field on the connection options were not being incorporated into the values of annotated taxonomy fields.
-* Fixed a bug where the reporting module could not copy records from FIMS into MySQL based LIMS.
-* Other minor fixes.
-
-==Biocode Plugin 2.8.4 - 20 November 2014==
-* Remove development changes that were accidentally included in 2.8.3.
-
-==Biocode Plugin 2.8.3 - 19 November 2014==
-* Add the ability to bulk add traces to plates of any size.
-* Provide more information for connection errors.
-
-==Biocode Plugin 2.8.2 - 28 October 2014==
-* Fixed a bug that was causing the Sequencing Primer document note to sometimes not show up on downloaded sequences.
-* Fixed a bug where traces downloaded directly from the plate viewer would not be annotated with FIMS information.
-* Fixed a bug that caused the FIMS plate to be set as the Sequencing Plate when annotating assemblies using the FIMS.
-* Other minor fixes and improvements.
-
-==Biocode Plugin 2.8.1 - 23 September 2014==
-* Made 'Forward Plate' and 'Reverse Plate' fields on assembled sequences support more than one value.
-* Fixed a bug where workflows were being added to search results when downloading sequences
-* Made the 'Mark as Passed' operation work even when links to the original chromatogram documents has been lost.
-* Fixed a problem where a background maintenance task would fail when using the Built-in MySQL LIMS.
-* Other minor fixes and improvements.
-
-==Biocode Plugin 2.8.0 - 19 August 2014==
-* Added '# Passed' and '# Sequences' fields to cycle sequencing plate views.
-* Added 'Forward Plate' and 'Reverse Plate' fields to assembled sequences.
-* Annotate from FIMS/LIMS now works with any FIMS field in addition to well number.
-* Added extraction barcode as a displayable field on all plate types.
-* Improved performance when using the Biocode FIMS.
-* Fixed a bug where the # Traces field would not be populated in the Tabular Plate View.
-* Fixed a bug where searching the Moorea FIMS on Collection Date could return additional results.
-* Other minor fixes and improvements.
+    <LatestVersion>3.0.0</LatestVersion>
+    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_3_0_0.gplugin</LatestVersionURL>
+    <ReleaseNotes>==Biocode Plugin 3.0.0 - 9 June 2016==
+        * 'BOLD Trace submission': New function to create packages for submission of traces to BOLD.
+        * Added the ability to create extraction plates from tissue documents.
+        * Search performance improvements.
+        * Faster download of sequences.  Download of workflow documents is no longer required when downloading sequences.
+        * The # Traces, # Sequences, # Passed Sequences and Sequence Progress fields now show up for workflow documents.
+        * Added an operation to the plate bulk editor that allows for the importing of extraction barcodes from FIMS.
+        * Added the ability to export tables to .xls, .csv and .tsv.
+        * Increased the maximum number of individual reactions from 26 to 30.
+        * Added advanded option to New Plate operation for copying reactions to a custom plate format (individual reactions only)
+        * Added new Gel Quantification reaction type
+        * Download Traces from LIMS can now work on a selection of passed sequences
+        * Download Traces from LIMS can now re-assemble traces to selected sequences
+        * You can now search for reference assemblies of traces to passed sequences in the Biocode service.
+        * Many other bug fixes and improvements.
     </ReleaseNotes>
     <ExtraInformation>
-        Upgrading to 2.8.0 will apply a schema fix to MySQL LIMS databases which may take anywhere between a minute and an hour to perform.
-        The amount of time depends on the number of traces stored in the database.  If your database has over 30,000 traces
-        then it is recommended that an administrator perform it beforehand. Contact support@mooreabiocode.org for instructions.
+        This version includes an update to the LIMS database format.  This version is not compatible with older versions of the
+        LIMS plugin.  All users of the database will need to update the LIMS plugin to the latest version.
+        * Built-in MySQL users will be upgraded automatically.
+        * Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
 
-        Downloading or annotating sequences or traces using 2.8.5 could cause problems for users of the new Biocode FIMS.
-        Users of this FIMS should update to 2.8.6 and re-annotate/re-download documents causing errors.
+        The schema upgrade script can be found at http://software.mooreabiocode.org/index.php?title=Download
     </ExtraInformation>
 </PluginVersions>
