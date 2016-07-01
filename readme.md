@@ -1,33 +1,69 @@
-## Authors
-Biomatters Ltd
-
-Contact: support@mooreabiocode.org
-
-## Summary
+# Biocode LIMS
 The Biocode LIMS is a Geneious plugin that was developed as part of the [Moorea Biocode Project](http://mooreabiocode.org).
 It comprises everything you need to manage your lab and sequence analysis workflows.
 
-### Biocode LIMS Server
+### Biocode LIMS Server 
 The Biocode LIMS server is an extension to the original LIMS that adds security, user management, access control and 
- the ability to offload tasks from the Geneious client.  
+the ability to offload tasks from the Geneious client.  
  
- The server needs to be deployed in a compatible Java Web Application server and acts as a middle man between the 
- client and the LIMS database.  The client communicates with the server using a REST interface.  By providing this
- interface rather than a proprietary one, there is the possibility of other future clients outside of the Geneious 
- software package.
+The server needs to be deployed in a compatible Java Web Application server and acts as a middle man between the 
+client and the LIMS database.  The client communicates with the server using a REST interface.  By providing this
+interface rather than a proprietary one, there is the possibility of other future clients outside of the Geneious 
+software package.
  
- It is currently in active development and has not been released yet.
+It is currently in active development and has not been released yet.
+
+## Useful Information
+* Official releases are available from the [official website](http://software.mooreabiocode.org)
+* Official wiki at [http://software.mooreabiocode.org](http://software.mooreabiocode.org) for more information
+including the user guide.
+* Discussion forum at [http://connect.barcodeoflife.net/group/lims](http://connect.barcodeoflife.net/group/lims) 
+* Support email support@mooreabiocode.org
+ 
+## Requirements
+* Java Development Kit 1.6+
+* Apache Ant
 
 ## Installation
-Download official releases from the [official website](a href="http://software.mooreabiocode.org/")
+### Geneious Plugin
+Run the following command from the root directory to create the gplugin file:
 
-## Using the Source Code
-### Building
-Run the ant target create-plugin.  All dependencies will be retrieved from the internet using Apache Ivy.
+    ant create-plugin  
 
-### Building the Server
-The create-war ant task will create a distributable WAR file that can be deployed on most Java Web Servers.  (eg) Jetty 
+Drag and drop the gplugin file from the build directory into Geneious to install the plugin.
+
+### LIMS Server (Under Development)
+The LIMS Server is packaged as a distributable WAR file that can be deployed on most Java Web Servers.  (eg) Jetty 
 or Apache Tomcat.
+
+Run the following command from the **biocode-server** directory to create the war file:
+    
+    ant create-war
+
+The war file will be created in the biocode-server directory.
+
+## Development
+The development of this project follows the [Gitflow branching strategy](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow).  
+All development is done in the develop branch and merged to master when complete.  Thus master only contains released code.
+
+When switching branches it is always a good idea to run a build with
+
+    ant build-plugin
+
+This will ensure any dependency changes for the new branch are applied and everything compiles.
+
+### Modules
+The project currently contains two modules:
+
+* biocode-lims - The Geneious plugin
+* biocode-server - The unreleased server
+
+In most cases you will only need to make changes to the biocode-lims source code.
+
+
+### Dependency Management
+The plugin uses Apache Ivy for depenedency management and the repository includes everything that is required for its use.
+
 
 ### Use of an IDE
 Many modern IDEs come with Apache Ivy integration.  If you are using such a feature, please note that the biocode-server 
@@ -39,11 +75,5 @@ In the ant build, the complete Geneious runtime is downloaded and the required l
 If  you do not wish to use the ant build, then you can obtain the core libraries from the Geneious Plugin Development Kit
 or any installation of Geneious.
 
-
-## More Information
-See the official wiki at [http://software.mooreabiocode.org](http://software.mooreabiocode.org) for more information
-including the user guide.
-
-A great source of help can be found on the discussion forum at
-[http://connect.barcodeoflife.net/group/lims](http://connect.barcodeoflife.net/group/lims) or you can email
-support@mooreabiocode.org
+## Contributing
+Please contact support@mooreabiocode.org
