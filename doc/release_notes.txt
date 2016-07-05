@@ -1,5 +1,5 @@
-==Biocode Plugin 3.1.0 - TBD==
-* Server?
+==Biocode Plugin 3.0.1 - TBD==
+* Fixed a crash that occurred when saving a display template that did not have a chosen "label wells by" field
 
 ==Biocode Plugin 3.0.0 - 9 June 2016==
 * 'BOLD Trace submission': New function to create packages for submission of traces to BOLD.
