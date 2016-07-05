@@ -1064,10 +1064,6 @@ public class ReactionUtilities {
         if(field == otherField) {
             return true;
         }
-
-        if(field == null && otherField == null) {
-            return true;
-        }
         if(field == null || otherField == null) {
             return false;
         }
