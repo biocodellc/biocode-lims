@@ -1029,7 +1029,7 @@ public class ReactionUtilities {
         final Reaction.BackgroundColorer newColorer = colorSelector.getColorer();
         for(DisplayFieldsTemplate template : BiocodeService.getInstance().getDisplayedFieldTemplates(type)) {
             if(template.fieldsMatch(listSelector.getSelectedFields()) && template.colourerMatches(newColorer) &&
-                    template.getLabelField().getCode().equals(labelSelector.getDocumentField().getCode())) {
+                    fieldCodesEqual(template.getLabelField(), labelSelector.getDocumentField())) {
                 BiocodeService.getInstance().setDefaultDisplayedFieldsTemplate(template);
                 if(!createNewEvenIfItMatchesExisting) {
                     return template;
@@ -1059,6 +1059,20 @@ public class ReactionUtilities {
         return newTemplate;
     }
 
+
+    private static boolean fieldCodesEqual(DocumentField field, DocumentField otherField) {
+        if(field == otherField) {
+            return true;
+        }
+
+        if(field == null && otherField == null) {
+            return true;
+        }
+        if(field == null || otherField == null) {
+            return false;
+        }
+        return field.getCode().equals(otherField.getCode());
+    }
 
     public static Collection getAllValues(DocumentField field, List<Reaction> reactions) {
         Set allValues = new HashSet();
