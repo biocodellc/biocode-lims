@@ -3472,10 +3472,10 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             StringBuilder query = new StringBuilder("SELECT COUNT(id) FROM assembly WHERE progress=? AND id IN ");
             SqlUtilities.appendSetOfQuestionMarks(query, ids.size());
             PreparedStatement statement1 = connection.prepareStatement(query.toString());
+            statement1.setString(1, "passed");
             for(int i=0; i < ids.size(); i++) {
-                statement1.setInt(i+1, ids.get(i));
+                statement1.setInt(i+2, ids.get(i));
             }
-            statement1.setString(ids.size()+1, "passed");
             ResultSet set = statement1.executeQuery();
             set.next();
             int count = set.getInt(1);
