@@ -886,12 +886,7 @@ public class PlateBulkEditor {
             GuiUtilities.addEditMenuSupport(valueArea);
             GuiUtilities.addPopupEditMenu(valueArea);
             valueArea.setTransferHandler(new PasteHandler(valueArea.getTransferHandler()));
-            lineNumbers = new LineNumbers() {
-                @Override
-                public Dimension getPreferredSize() {
-                    return new Dimension(30, valueArea.getPreferredSize().height);
-                }
-            };
+            lineNumbers = new LineNumbers();
 
             scroller = new JScrollPane(valueArea);
             scroller.setRowHeaderView(lineNumbers);
