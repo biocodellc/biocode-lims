@@ -1,3 +1,6 @@
+==Biocode Plugin 3.0.2 - TBD==
+* Fixed column width in plate bulk editor when running on Windows with a HiDPI display
+
 ==Biocode Plugin 3.0.1 - 15 September 2016==
 * Fixed a crash that occurred when saving a display template that did not have a chosen "label wells by" field
 * Fixed bug that caused "Mark as Submitted in LIMS" to incorrectly say sequence did not exist
