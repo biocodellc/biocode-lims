@@ -168,7 +168,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     private void checkUpdate() {
-        final String pluginVersionsXmlURL = "http://desktop-links.geneious.com/assets/plugins/biocode/PluginVersions.xml?" +
+        final String pluginVersionsXmlURL = "https://desktop-links.geneious.com/assets/plugins/biocode/PluginVersions.xml?" +
                 "Version=" + getVersion() +
                 "&OS=" + System.getProperty("os.name").replace(" ", "_") + "_" +
                 System.getProperty("os.version", "").replace(" ", "_") +
