@@ -213,7 +213,7 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
     private List<OptionValue> getTables(boolean useCache) {
         try {
             if (useCache && tables != null) {
-                return tables;
+                return getTableOptionValues(tables);
             }
 
             List<Table> tableJson = FusionTableUtils.listTables(LoginOptions.DEFAULT_TIMEOUT);
@@ -222,14 +222,17 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
             for(Table table : tableJson) {
                 tables.add(new OptionValue(table.getTableId(), table.getName()));
             }
-
-            if(tables.size() == 0) {
-                return Collections.singletonList(FusionTablesConnectionOptions.NO_TABLE);
-            }
-
-            return tables;
+            return getTableOptionValues(tables);
         } catch (IOException e) {
             return Collections.singletonList(FusionTablesConnectionOptions.NO_TABLE);
+        }
+    }
+
+    private static List<OptionValue> getTableOptionValues(List<OptionValue> tables) {
+        if(tables.size() == 0) {
+            return Collections.singletonList(FusionTablesConnectionOptions.NO_TABLE);
+        } else {
+            return Collections.unmodifiableList(tables);
         }
     }
 
