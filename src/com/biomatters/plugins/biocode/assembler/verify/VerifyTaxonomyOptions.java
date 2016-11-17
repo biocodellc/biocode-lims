@@ -101,9 +101,10 @@ public class VerifyTaxonomyOptions extends Options {
                 }
             }
             if (!validProgramExists) continue;
-            if (databaseService.getName().equals("nr")) defaultDatabase = databaseOptionValue;
+            if (databaseService.getUniqueID().equals("NCBI_nr.nt")) defaultDatabase = databaseOptionValue;
             databaseOptionValues.add(databaseOptionValue);
         }
+        if (defaultDatabase == null) defaultDatabase = databaseOptionValues.get(0);
         databaseOption = addComboBoxOption("database", "Database:", databaseOptionValues, defaultDatabase);
         programOption = addComboBoxOption("program", "Program:", programOptionValues, programOptionValues.get(0));
         for (Map.Entry<String, Options> childOptionsEntry : childOptionsToAdd.entrySet()) {
@@ -113,6 +114,10 @@ public class VerifyTaxonomyOptions extends Options {
             if(maxHitsOption != null) {
                 //noinspection unchecked
                 maxHitsOption.setDefaultValue(5);
+                maxHitsOption.setDescription("<html>The maximum number of hits that will be returned for each query.<br><br>" +
+                        "<b>Note:</b> This option is different to <i>Max Target Sequences</i> provided on NCBI Blast.<br>" +
+                        "Geneious runs the BLAST search with <i>Max Target Sequences</i> = 1000 and<br>" +
+                        "returns the number of best hits specified by setting HITLIST_SIZE=<i>Maximum Hits</i>.</html>");
                 maxHitsOption.setVisible(true);
             }
             Option hitAnnosOption = options.getOption("getHitAnnos");
