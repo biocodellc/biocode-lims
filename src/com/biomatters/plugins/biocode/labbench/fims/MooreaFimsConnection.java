@@ -224,6 +224,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         //fields.add(new DocumentField("Taxon Notes", "", "biocode_collecting_event.TaxonNotes", String.class, false, false));
 
         fields.add(new DocumentField("Country", "", "biocode_collecting_event.Country", String.class, false, false));
+        fields.add(new DocumentField("Country (GenBank Format)", "", "biocode_collecting_event.genbank_country", String.class, false, false));
         fields.add(new DocumentField("Island", "", "biocode_collecting_event.Island", String.class, false, false));
         fields.add(new DocumentField("Island Group", "", "biocode_collecting_event.IslandGroup", String.class, false, false));
         fields.add(new DocumentField("State/Province", "", "biocode_collecting_event.StateProvince", String.class, true, false));
@@ -235,6 +236,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         fields.add(LONGITUDE_FIELD);
         fields.add(LATITUDE_FIELD);
+        fields.add(new DocumentField("Latitude/Longitude (GenBank Format)", "", "biocode_collecting_event.genbank_latlong", String.class, false, false));
 
         fields.add(new DocumentField("Minimum Elevation", "", "biocode_collecting_event.MinElevationMeters", Integer.class, false, false));
         fields.add(new DocumentField("Maximum Elevation", "", "biocode_collecting_event.MaxElevationMeters", Integer.class, false, false));
