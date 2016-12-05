@@ -1,6 +1,7 @@
 ==Biocode Plugin 3.0.2 - TBD==
 * Fixed column width in plate bulk editor when running on Windows with a HiDPI display
 * Fixed a crash that occurs when connecting to a Google Fusion Tables account that has no fusion tables
+* Fixed a crash when running Verify Taxonomy with Geneious R10
 
 ==Biocode Plugin 3.0.1 - 15 September 2016==
 * Fixed a crash that occurred when saving a display template that did not have a chosen "label wells by" field
