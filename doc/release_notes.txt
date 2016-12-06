@@ -1,4 +1,4 @@
-==Biocode Plugin 3.0.2 - TBD==
+==Biocode Plugin 3.0.2 - 7 December 2016==
 * Added Country (GenBank Format) and Lat/Long (GenBank Format) fields for use with submission to GenBank
 * Fixed column width in plate bulk editor when running on Windows with a HiDPI display
 * Fixed a crash that occurs when connecting to a Google Fusion Tables account that has no fusion tables
