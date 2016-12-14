@@ -310,7 +310,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         };
     }
 
-    public Driver getDriver() throws ConnectionException {
+    public synchronized Driver getDriver() throws ConnectionException {
         if(!driverLoaded) {
             String error = loadMySqlDriver();
             if(error != null) {
