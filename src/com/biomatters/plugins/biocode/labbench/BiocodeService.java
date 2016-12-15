@@ -99,7 +99,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private boolean loggingIn;
     ReportingService reportingService;
     private DisconnectCheckingThread disconnectCheckingThread;
-    private boolean driverLoaded;
     public static final int STATEMENT_QUERY_TIMEOUT = 300;
 
     private BiocodeService() {
@@ -311,14 +310,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public Driver getDriver() throws ConnectionException {
-        if(!driverLoaded) {
-            String error = loadMySqlDriver();
-            if(error != null) {
-                throw new ConnectionException(error);
-            }
+        String error = loadMySqlDriver();
+        if (error != null) {
+            throw new ConnectionException(error);
         }
 
-        if(driver == null && driverLoaded) {
+        if(driver == null) {
             throw new IllegalStateException("A driver load was attempted, but the driver has not been loaded");
         }
 
@@ -629,21 +626,21 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         updateStatus();
     }
 
-    public String loadMySqlDriver() {
-        driverLoaded = true;
-
+    public synchronized String loadMySqlDriver() {
         String error = null;
-        try {
-            Class driverClass = Class.forName("com.mysql.jdbc.Driver");
-            driver = (Driver) driverClass.newInstance();
-        } catch (ClassNotFoundException e1) {
-            error = "Could not find MySQL driver class";
-        } catch (IllegalAccessException e1) {
-            error = "Could not access MySQL driver class";
-        } catch (InstantiationException e1) {
-            error = "Could not instantiate MySQL driver class";
-        } catch (ClassCastException e1) {
-            error = "MySQL Driver class exists, but is not an SQL driver";
+        if (driver == null) {
+            try {
+                Class driverClass = Class.forName("com.mysql.jdbc.Driver");
+                driver = (Driver) driverClass.newInstance();
+            } catch (ClassNotFoundException e1) {
+                error = "Could not find MySQL driver class";
+            } catch (IllegalAccessException e1) {
+                error = "Could not access MySQL driver class";
+            } catch (InstantiationException e1) {
+                error = "Could not instantiate MySQL driver class";
+            } catch (ClassCastException e1) {
+                error = "MySQL Driver class exists, but is not an SQL driver";
+            }
         }
 
         return error;
