@@ -8,11 +8,42 @@ import com.google.common.collect.HashMultimap;
 
 import java.util.*;
 
+/**
+ * <b>Note</b>: This class was originally written for the Moorea Biocode Project.  It is duplicated from ContigNotesAndFieldCopying in
+ * the Biocode Plugin.  Any changes to this class need to be made to Geneious too.
+ */
 public class ContigNotesAndFieldCopying {
     /**
      * Code for Sequencing Primer note type defined in GenBank Submission plugin
      */
     static final String SEQ_PRIMER_NOTE_TYPE = "sequencingPrimer";
+
+    @SuppressWarnings("unused")
+    public static void copyMatchingFieldsAndNotesToContig(AnnotatedPluginDocument annotatedContig, List<AnnotatedPluginDocument> documentsContainingReads) throws DocumentOperationException {
+        copyMatchingFieldsToContig(annotatedContig, documentsContainingReads, Collections.emptySet());
+        copyMatchingDocumentNotesToContig(annotatedContig, documentsContainingReads);
+    }
+
+    /**
+     * <b>Note</b>: This whole class is duplicated. Any changes made must be made in the duplicate too. See note at top of this file
+
+     * @return all documents referenced by this contig, excluding the contig reference sequence. If any sequence does not have a reference, an empty list is returned.
+     */
+    public static List<AnnotatedPluginDocument> getDocumentsContainingReads(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
+        Set<AnnotatedPluginDocument> documentsContainingReads = new LinkedHashSet<>();
+        SequenceAlignmentDocument contig = (SequenceAlignmentDocument) annotatedContig.getDocument();
+        for (int i = 0; i < contig.getNumberOfSequences(); i ++) {
+            if (i == contig.getContigReferenceSequenceIndex()) {
+                continue;
+            }
+            AnnotatedPluginDocument referencedDocument = contig.getReferencedDocument(i);
+            if (referencedDocument == null) {
+                return Collections.emptyList(); //one sequence doesn't have a reference so bail on the whole thing
+            }
+            documentsContainingReads.add(referencedDocument);
+        }
+        return new ArrayList<>(documentsContainingReads);
+    }
 
     /**
      * Copies matching document notes from sequences referenced by an assembly to the assembly itself.  Only copies the
@@ -20,23 +51,16 @@ public class ContigNotesAndFieldCopying {
      * submission plugin that gets merged so that any non-null field values are copied across if all sequences have the
      * same value.
      * <br><br>
-     * <b>Note</b>: This method was originally written for the Moorea Biocode Project.  It is duplicated in the AssemblyOperation in
-     * the Alignment Plugin.  Any changes to this method need to be made there too.
+     * <b>Note</b>: This whole class is duplicated. Any changes made must be made in the duplicate too. See note at top of this file
      *
      * @param annotatedContig The contig assembly to copy notes to from it's references
      * @throws DocumentOperationException if documents cannot be loaded or edited
      */
-    public static void copyMatchingDocumentNotesToContig(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
-        SequenceAlignmentDocument contig = (SequenceAlignmentDocument)annotatedContig.getDocument();
+    @SuppressWarnings("WeakerAccess")
+    public static void copyMatchingDocumentNotesToContig(AnnotatedPluginDocument annotatedContig, List<AnnotatedPluginDocument> documentsContainingReads) throws DocumentOperationException {
         Map<String, DocumentNote> documentNotesToCopy = null;
-        for (int i = 0; i < contig.getNumberOfSequences(); i ++) {
-            if (i == contig.getContigReferenceSequenceIndex()) {
-                continue;
-            }
-            AnnotatedPluginDocument referencedDocument = contig.getReferencedDocument(i);
-            if (referencedDocument == null) {
-                return; //one sequence doesn't have a reference so bail on the whole thing
-            }
+        for (AnnotatedPluginDocument referencedDocument : documentsContainingReads) {
+
             if (documentNotesToCopy == null) {
                 documentNotesToCopy = new LinkedHashMap<String, DocumentNote>();
                 AnnotatedPluginDocument.DocumentNotes documentNotes = referencedDocument.getDocumentNotes(false);
@@ -58,7 +82,7 @@ public class ContigNotesAndFieldCopying {
 
         //noinspection StatementWithEmptyBody
         if(documentNotesToCopy.get(SEQ_PRIMER_NOTE_TYPE) == null) {
-            DocumentNote sequencingPrimerNote = hackToGetSequencingPrimerNoteToCopy(contig);
+            DocumentNote sequencingPrimerNote = hackToGetSequencingPrimerNoteToCopy(documentsContainingReads);
             if(sequencingPrimerNote != null) {
                 documentNotesToCopy.put(sequencingPrimerNote.getNoteTypeCode(), sequencingPrimerNote);
             }
@@ -78,14 +102,17 @@ public class ContigNotesAndFieldCopying {
 
     }
 
-    private static DocumentNote hackToGetSequencingPrimerNoteToCopy(SequenceAlignmentDocument contig) {
+    /**
+     * <b>Note</b>: This whole class is duplicated. Any changes made must be made in the duplicate too. See note at top of this file
+     */
+    private static DocumentNote hackToGetSequencingPrimerNoteToCopy(List<AnnotatedPluginDocument> documentsContainingReads) {
         DocumentNoteType sequencingPrimerNoteType = DocumentNoteUtilities.getNoteType(SEQ_PRIMER_NOTE_TYPE);
         if(sequencingPrimerNoteType == null) {
             return null;  // GenBank Submission plugin not initialized
         }
 
         HashMultimap<String, Object> seenFieldValues = HashMultimap.create();
-        for (AnnotatedPluginDocument refDoc : contig.getReferencedDocuments()) {
+        for (AnnotatedPluginDocument refDoc : documentsContainingReads) {
             if(refDoc == null) {
                 continue;
             }
@@ -115,6 +142,9 @@ public class ContigNotesAndFieldCopying {
         return newNote;
     }
 
+    /**
+     * <b>Note</b>: This whole class is duplicated. Any changes made must be made in the duplicate too. See note at top of this file
+     */
     private static boolean notesAreEqual(DocumentNote note1, DocumentNote note2) {
         if(note1 == null || note2 == null) {
             return false;
@@ -139,8 +169,7 @@ public class ContigNotesAndFieldCopying {
      * Attempts to copy across all field values that are equal in all referenced documents to the document that
      * references them.  No existing field values on the document will be overridden unless specified.
      * <br><br>
-     * <b>Note</b>: This method is identical to the method with the same name inside the com.biomatters.plugins.alignment.assembly.AssemblyOperation class.
-     * Until further established upon, changes that are made to either of the two methods should also be made in the other.
+     * <b>Note</b>: This whole class is duplicated. Any changes made must be made in the duplicate too. See note at top of this file
      *
      * @param annotatedContig The document to copy fields to from the documents it references
      * @param codesOfOverridableFields A set of {@link com.biomatters.geneious.publicapi.documents.DocumentField} codes
@@ -148,21 +177,11 @@ public class ContigNotesAndFieldCopying {
      *                                 value for that field.
      * @throws DocumentOperationException if there is a problem loading or saving the document
      */
-    public static void copyMatchingFieldsToContig(AnnotatedPluginDocument annotatedContig, Set<String> codesOfOverridableFields) throws DocumentOperationException {
-        SequenceAlignmentDocument contig = (SequenceAlignmentDocument)annotatedContig.getDocument();
+    @SuppressWarnings("WeakerAccess")
+    public static void copyMatchingFieldsToContig(AnnotatedPluginDocument annotatedContig , List<AnnotatedPluginDocument> sourceDocuments, Set<String> codesOfOverridableFields) throws DocumentOperationException {
         Map<DocumentField, Object> displayableFieldsToCopy = null;
 
-        for (int i = 0; i < contig.getNumberOfSequences(); i++) {
-            if (i == contig.getContigReferenceSequenceIndex()) {
-                continue;
-            }
-
-            AnnotatedPluginDocument referencedDocument = contig.getReferencedDocument(i);
-
-            if (referencedDocument == null) {
-                return; //one sequence doesn't have a reference so bail on the whole thing
-            }
-
+        for (AnnotatedPluginDocument referencedDocument : sourceDocuments) {
             if (displayableFieldsToCopy == null) {
                 displayableFieldsToCopy = new LinkedHashMap<DocumentField, Object>();
                 for (DocumentField field : referencedDocument.getDisplayableFields()) {
@@ -200,9 +219,14 @@ public class ContigNotesAndFieldCopying {
         annotatedContig.save();
     }
 
+    /**
+     * <b>Note</b>: This whole class is duplicated. Any changes made must be made in the duplicate too. See note at top of this file
+     */
+    @SuppressWarnings("WeakerAccess")
     public static final List<String> FIELDS_TO_NOT_COPY = Arrays.asList(
             DocumentField.AMBIGUITIES.getCode(),
             DocumentField.BIN.getCode(),
+            DocumentField.BIN_REASON.getCode(),
             DocumentField.CREATED_FIELD.getCode(),
             DocumentField.DESCRIPTION_FIELD.getCode(),
             DocumentField.FIRST_SEQUENCE_RESIDUES.getCode(),
@@ -214,9 +238,11 @@ public class ContigNotesAndFieldCopying {
             DocumentField.SEQUENCE_LENGTH.getCode(),
             DocumentField.TOPOLOGY_FIELD.getCode(),
             DocumentField.UNREAD_FIELD.getCode(),
+            DocumentField.MINIMUM_SEQUENCE_LENGTH.getCode(),
+            DocumentField.MAXIMUM_SEQUENCE_LENGTH.getCode(),
+            DocumentField.NUCLEOTIDES_COUNT.getCode(),
             PluginDocument.MODIFIED_DATE_FIELD.getCode(),
             "document_size",
             DocumentField.SEQUENCE_COUNT.getCode()
     );
 }
-

@@ -88,8 +88,9 @@ public class AnnotateUtilities {
                         noReferencesList.add(alignment.getSequence(i).getName());
                     }
                 }
-                ContigNotesAndFieldCopying.copyMatchingFieldsToContig(annotatedDocument, getDocumentFieldCodesWithoutDuplicates(fieldsAnnotated));
-                ContigNotesAndFieldCopying.copyMatchingDocumentNotesToContig(annotatedDocument);
+                List<AnnotatedPluginDocument> documentsContainingReads = ContigNotesAndFieldCopying.getDocumentsContainingReads(annotatedDocument);
+                ContigNotesAndFieldCopying.copyMatchingFieldsToContig(annotatedDocument, documentsContainingReads, getDocumentFieldCodesWithoutDuplicates(fieldsAnnotated));
+                ContigNotesAndFieldCopying.copyMatchingDocumentNotesToContig(annotatedDocument, documentsContainingReads);
                 newFields.addAll(fieldsAnnotated);
             } else {
                 newFields.addAll(annotateDocument(fimsDataGetter, failBlog, annotatedDocument, true));
