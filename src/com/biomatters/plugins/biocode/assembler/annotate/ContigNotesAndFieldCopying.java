@@ -20,7 +20,7 @@ public class ContigNotesAndFieldCopying {
 
     @SuppressWarnings("unused")
     public static void copyMatchingFieldsAndNotesToContig(AnnotatedPluginDocument annotatedContig, List<AnnotatedPluginDocument> documentsContainingReads) throws DocumentOperationException {
-        copyMatchingFieldsToContig(annotatedContig, documentsContainingReads, Collections.emptySet());
+        copyMatchingFieldsToContig(annotatedContig, documentsContainingReads, Collections.<String>emptySet());
         copyMatchingDocumentNotesToContig(annotatedContig, documentsContainingReads);
     }
 
@@ -30,7 +30,7 @@ public class ContigNotesAndFieldCopying {
      * @return all documents referenced by this contig, excluding the contig reference sequence. If any sequence does not have a reference, an empty list is returned.
      */
     public static List<AnnotatedPluginDocument> getDocumentsContainingReads(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
-        Set<AnnotatedPluginDocument> documentsContainingReads = new LinkedHashSet<>();
+        Set<AnnotatedPluginDocument> documentsContainingReads = new LinkedHashSet<AnnotatedPluginDocument>();
         SequenceAlignmentDocument contig = (SequenceAlignmentDocument) annotatedContig.getDocument();
         for (int i = 0; i < contig.getNumberOfSequences(); i ++) {
             if (i == contig.getContigReferenceSequenceIndex()) {
@@ -42,7 +42,7 @@ public class ContigNotesAndFieldCopying {
             }
             documentsContainingReads.add(referencedDocument);
         }
-        return new ArrayList<>(documentsContainingReads);
+        return new ArrayList<AnnotatedPluginDocument>(documentsContainingReads);
     }
 
     /**
