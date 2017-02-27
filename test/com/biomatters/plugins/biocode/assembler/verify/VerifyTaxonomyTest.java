@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
+import com.biomatters.geneious.publicapi.plugin.Geneious;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import jebl.util.ProgressListener;
 import org.junit.Before;
@@ -25,6 +26,11 @@ public class VerifyTaxonomyTest {
     @Test
     public void verifyTaxonomy_runDefaultBlast_resultDocumentContainsTaxonomy() throws DocumentOperationException {
         // This test doesn't test exactly whether the default database is correct, but at least we know that it works at all
+        Geneious.MajorVersion version9 = Geneious.MajorVersion.forVersion("9.0");
+        // if this version is smaller than version 9 it will return null because it doesn't recognize version 9.
+        if (version9 == null || Geneious.getMajorVersion().compareTo(version9) < 0) {
+            return; // blast only works in 8.1.9 or newer because of the https change, so don't bother testing it in old versions.
+        }
         String sequence = "GAAGTCGTAACAAGGTAGCCGTATCGGAAGGTGCGGCTGGATCACCTCCTTTCTAAGGAAAAGGAAACCTGTGAGTTTTCGTTCTTCT" +
                 "CTATTTGTTCAGTTTTGAGAGGTTAGTACTTCTCAGTATGTTTGTTCTTTGAAAACTAGATAAGAAAGTTAGTAAAGTTAGCATAGATAATTTATTAT" +
                 "TTATGACACAAGTAACCGAGAATCATCTGAAAGTGAATCTTTCATCTGATTGGATGTATCATCGCTGATACGGAAAATCAGAAAAACAACCTTTACTT" +
