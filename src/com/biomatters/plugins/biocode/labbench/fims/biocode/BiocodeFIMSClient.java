@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
+import org.apache.commons.beanutils.BeanUtils;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.filter.LoggingFilter;
@@ -16,6 +17,7 @@ import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.*;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
 import java.util.*;
@@ -101,11 +103,11 @@ public class BiocodeFIMSClient {
     }
 
     WebTarget getQueryTarget() {
-        return target.path("biocode-fims/rest/projects/query/json");
+        return target.path("biocode-fims/rest/v1.1/projects/query/json");
     }
 
     List<Project> getProjects() throws DatabaseServiceException {
-        Invocation.Builder request = target.path("biocode-fims/rest/projects/user/list").request(MediaType.APPLICATION_JSON_TYPE);
+        Invocation.Builder request = target.path("biocode-fims/rest/v1.1/projects/user/list").request(MediaType.APPLICATION_JSON_TYPE);
         try {
             Response response = request.get();
             List<Project> fromService = getRestServiceResult(new GenericType<List<Project>>() {
@@ -127,7 +129,7 @@ public class BiocodeFIMSClient {
 
     List<Graph> getGraphsForProject(String id) throws DatabaseServiceException {
         try {
-            Invocation.Builder request = target.path("biocode-fims/rest/projects").path(id).path("graphs").request(MediaType.APPLICATION_JSON_TYPE);
+            Invocation.Builder request = target.path("biocode-fims/rest/v1.1/projects").path(id).path("graphs").request(MediaType.APPLICATION_JSON_TYPE);
             Response response = request.get();
             return getRestServiceResult(new GenericType<List<Graph>>(){}, response);
         } catch(WebApplicationException e) {
@@ -149,7 +151,7 @@ public class BiocodeFIMSClient {
             }
         }
 
-        List<String> graphsToSearch = new ArrayList<String>();
+        List<String> graphsToSearch = new ArrayList<>();
         if(graph != null) {
             graphsToSearch.add(graph.getGraphId());
         } else {
@@ -158,14 +160,7 @@ public class BiocodeFIMSClient {
             }
         }
 
-        BiocodeFimsData data = getBiocodeFimsData(project, graphsToSearch, searchTerms, filter);
-        if(data.header == null)
-            data.header = Collections.emptyList();
-
-        if (data.data == null)
-            data.data = Collections.emptyList();
-
-        return data;
+        return getBiocodeFimsData(project, graphsToSearch, searchTerms, filter);
     }
 
     private BiocodeFimsData getBiocodeFimsData(String project, List<String> graphs, Form searchTerms, String filter) throws DatabaseServiceException {
@@ -173,7 +168,7 @@ public class BiocodeFIMSClient {
             WebTarget target = getQueryTarget();
 
             if(searchTerms == null || searchTerms.asMap().isEmpty()) {
-                target = target.queryParam("project_id", project);
+                target = target.queryParam("projectId", project);
                 if(filter != null) {
                     target = target.queryParam("filter", filter);
                 }
@@ -182,19 +177,21 @@ public class BiocodeFIMSClient {
                 }
                 Invocation.Builder request = target.
                         request(MediaType.APPLICATION_JSON_TYPE);
-                return request.get(BiocodeFimsData.class);
+                QueryResult result = request.get(QueryResult.class);
+                return QueryResultToData(result);
             } else {
                 Invocation.Builder request = target.
                         request(MediaType.APPLICATION_JSON_TYPE);
                 Form form = new Form(searchTerms.asMap());
-                form.param("project_id", project);
+                form.param("projectId", project);
                 if(graphs != null) {
                     for (String graph : graphs) {
                         form.param("graphs", graph);
                     }
                 }
                 Response response = request.post(Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
-                return getRestServiceResult(BiocodeFimsData.class, response);
+                QueryResult result = getRestServiceResult(QueryResult.class, response);
+                return QueryResultToData(result);
             }
         } catch (NotFoundException e) {
             throw new DatabaseServiceException("No data found.", false);
@@ -202,6 +199,28 @@ public class BiocodeFIMSClient {
             throw new DatabaseServiceException(e, "Encountered an error communicating with " + BiocodeFIMSConnection.BISCICOL_URL, false);
         } catch(ProcessingException e) {
             throw new DatabaseServiceException(e, "Encountered an error connecting to server: " + e.getMessage(), true);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            throw new DatabaseServiceException(e, "Failed to deserialize response. " + e.getMessage(), true);
         }
+    }
+
+    private BiocodeFimsData QueryResultToData(QueryResult result) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        BiocodeFimsData res = new BiocodeFimsData();
+        List<Content> contents = result.getContent();
+        if (contents == null || contents.size() == 0)
+            return res;
+
+        res.data = new ArrayList<>(contents.size());
+        Map<String, String> map = BeanUtils.describe(contents.get(0));
+        res.header = new ArrayList<>(map.keySet());
+        for (int i = 0; i < contents.size(); i++) {
+            Content c = contents.get(i);
+            Map<String, String> bean = BeanUtils.describe(c);
+            Row row = new Row();
+            row.rowItems = new ArrayList<>(bean.values());
+            res.data.add(row);
+        }
+
+        return res;
     }
 }

@@ -34,7 +34,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     private static final DocumentField IDENTIFICATION_DATE_FIELD = new DocumentField("Identification Date", "",
                 "TABLEFIMS:urn:identificationDate", Date.class, true, false);
 
-    private static final String HOST = "biscicol.org";
+    private static final String HOST = "www.biscicol.org";
     private static final int PORT = serverProbablyDeployed() ? 80 : 8179;  // Should be reverted to 80 once the new server is deployed
 
     private static boolean serverProbablyDeployed() {

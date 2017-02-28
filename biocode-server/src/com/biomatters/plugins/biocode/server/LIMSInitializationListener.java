@@ -340,7 +340,7 @@ public class LIMSInitializationListener implements ServletContextListener {
             }
             BiocodeFIMSConnectionOptions biocodeFimsConnectionOptions = (BiocodeFIMSConnectionOptions) childOptions;
             try {
-                biocodeFimsConnectionOptions.login(config.getProperty("fims.host", "http://biscicol.org"), username, password);
+                biocodeFimsConnectionOptions.login(config.getProperty("fims.host", "http://www.biscicol.org"), username, password);
             } catch (MalformedURLException e1) {
                 throw new ConfigurationException("Could not connect to server.  Invalid URL: " + e1.getMessage());
             } catch (ProcessingException e) {
