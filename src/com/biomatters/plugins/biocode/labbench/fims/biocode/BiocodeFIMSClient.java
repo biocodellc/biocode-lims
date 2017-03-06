@@ -151,7 +151,7 @@ public class BiocodeFIMSClient {
             }
         }
 
-        List<String> graphsToSearch = new ArrayList<>();
+        List<String> graphsToSearch = new ArrayList<String>();
         if(graph != null) {
             graphsToSearch.add(graph.getGraphId());
         } else {
@@ -199,7 +199,11 @@ public class BiocodeFIMSClient {
             throw new DatabaseServiceException(e, "Encountered an error communicating with " + BiocodeFIMSConnection.BISCICOL_URL, false);
         } catch(ProcessingException e) {
             throw new DatabaseServiceException(e, "Encountered an error connecting to server: " + e.getMessage(), true);
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+        } catch (NoSuchMethodException e) {
+            throw new DatabaseServiceException(e, "Failed to deserialize response. " + e.getMessage(), true);
+        } catch (InvocationTargetException e) {
+            throw new DatabaseServiceException(e, "Failed to deserialize response. " + e.getMessage(), true);
+        } catch (IllegalAccessException e) {
             throw new DatabaseServiceException(e, "Failed to deserialize response. " + e.getMessage(), true);
         }
     }
@@ -210,14 +214,14 @@ public class BiocodeFIMSClient {
         if (contents == null || contents.size() == 0)
             return res;
 
-        res.data = new ArrayList<>(contents.size());
+        res.data = new ArrayList<Row>(contents.size());
         Map<String, String> map = BeanUtils.describe(contents.get(0));
-        res.header = new ArrayList<>(map.keySet());
+        res.header = new ArrayList<String>(map.keySet());
         for (int i = 0; i < contents.size(); i++) {
             Content c = contents.get(i);
             Map<String, String> bean = BeanUtils.describe(c);
             Row row = new Row();
-            row.rowItems = new ArrayList<>(bean.values());
+            row.rowItems = new ArrayList<String>(bean.values());
             res.data.add(row);
         }
 

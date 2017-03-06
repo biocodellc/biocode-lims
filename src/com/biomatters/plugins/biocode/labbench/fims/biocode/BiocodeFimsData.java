@@ -8,6 +8,6 @@ import java.util.List;
  *         Created on 3/02/14 8:21 PM
  */
 public class BiocodeFimsData {
-    public List<String> header = new ArrayList<>();
-    public List<Row> data = new ArrayList<>();
+    public List<String> header = new ArrayList<String>();
+    public List<Row> data = new ArrayList<Row>();
 }
