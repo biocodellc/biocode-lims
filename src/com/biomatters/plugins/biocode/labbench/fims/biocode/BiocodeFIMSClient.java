@@ -166,33 +166,23 @@ public class BiocodeFIMSClient {
     private BiocodeFimsData getBiocodeFimsData(String project, List<String> graphs, Form searchTerms, String filter) throws DatabaseServiceException {
         try {
             WebTarget target = getQueryTarget();
+            if(graphs != null) {
+                target = target.queryParam("graphs", StringUtilities.join(",", graphs));
+            }
 
+            Entity<Form> entity = null;
             if(searchTerms == null || searchTerms.asMap().isEmpty()) {
                 target = target.queryParam("projectId", project);
                 if(filter != null) {
                     target = target.queryParam("filter", filter);
                 }
-                if(graphs != null) {
-                    target = target.queryParam("graphs", StringUtilities.join(",", graphs));
-                }
-                Invocation.Builder request = target.
-                        request(MediaType.APPLICATION_JSON_TYPE);
-                QueryResult result = request.get(QueryResult.class);
-                return QueryResultToData(result);
             } else {
-                Invocation.Builder request = target.
-                        request(MediaType.APPLICATION_JSON_TYPE);
                 Form form = new Form(searchTerms.asMap());
                 form.param("projectId", project);
-                if(graphs != null) {
-                    for (String graph : graphs) {
-                        form.param("graphs", graph);
-                    }
-                }
-                Response response = request.post(Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
-                QueryResult result = getRestServiceResult(QueryResult.class, response);
-                return QueryResultToData(result);
+                entity = Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE);
             }
+
+            return QueryResultToData(retrieveResult(target, entity));
         } catch (NotFoundException e) {
             throw new DatabaseServiceException("No data found.", false);
         } catch (WebApplicationException e) {
@@ -208,21 +198,48 @@ public class BiocodeFIMSClient {
         }
     }
 
-    private BiocodeFimsData QueryResultToData(QueryResult result) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        BiocodeFimsData res = new BiocodeFimsData();
-        List<Content> contents = result.getContent();
-        if (contents == null || contents.size() == 0)
-            return res;
+    private List<QueryResult> retrieveResult(WebTarget target, Entity entity) throws DatabaseServiceException {
+        List<QueryResult> res = new ArrayList<QueryResult>();
+        target = target.queryParam("limit", "100");
+        int page = 0;
+        QueryResult result;
+        while (true) {
+            WebTarget target1 = target.queryParam("page", "" + page++);
+            Invocation.Builder request = target1.request(MediaType.APPLICATION_JSON_TYPE);
+            if (entity == null)
+                result = request.get(QueryResult.class);
+            else
+                result = getRestServiceResult(QueryResult.class, request.post(entity));
 
-        res.data = new ArrayList<Row>(contents.size());
-        Map<String, String> map = BeanUtils.describe(contents.get(0));
-        res.header = new ArrayList<String>(map.keySet());
-        for (int i = 0; i < contents.size(); i++) {
-            Content c = contents.get(i);
-            Map<String, String> bean = BeanUtils.describe(c);
-            Row row = new Row();
-            row.rowItems = new ArrayList<String>(bean.values());
-            res.data.add(row);
+            if (result.getContent().size() == 0)
+                break;
+            res.add(result);
+        }
+
+        return res;
+    }
+
+    private BiocodeFimsData QueryResultToData(List<QueryResult> results) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        BiocodeFimsData res = new BiocodeFimsData();
+
+        //header
+        if (results.size() > 0 && results.get(0).getContent().size() > 0) {
+            Map<String, String> map = BeanUtils.describe(results.get(0).getContent().get(0));
+            res.header = new ArrayList<String>(map.keySet());
+        }
+
+        //data
+        for (QueryResult result : results) {
+            List<Content> contents = result.getContent();
+            if (contents == null || contents.size() == 0)
+                continue;
+
+            for (Content content : contents) {
+                Map<String, String> bean = BeanUtils.describe(content);
+                Row row = new Row();
+                row.rowItems = new ArrayList<String>(bean.values());
+                res.data.add(row);
+            }
         }
 
         return res;
