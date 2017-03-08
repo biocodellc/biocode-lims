@@ -27,6 +27,11 @@ public class Project {
     @XmlElement(name="projectTitle")public String title;
     @XmlElement(name="validationXml")public String xmlLocation;
 
+    private static Set<String> EXCLUDE_URI = new HashSet<String>();
+    static {
+        EXCLUDE_URI.add("urn:class");
+    }
+
     private List<Field> fields;
 
     public Project() {
@@ -117,7 +122,7 @@ public class Project {
         Set<String> urisSeen = new HashSet<String>();
         for (Element child : children) {
             String uri = child.getAttributeValue("uri");
-            if (!urisSeen.contains(uri)) {
+            if (!urisSeen.contains(uri) && !EXCLUDE_URI.contains(uri)) {
                 fromXml.add(new Field(uri, child.getAttributeValue("column")));
                 urisSeen.add(uri);
             }

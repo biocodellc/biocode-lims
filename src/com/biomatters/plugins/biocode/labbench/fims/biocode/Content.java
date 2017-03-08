@@ -99,9 +99,6 @@ public class Content {
     @SerializedName("eventID")
     @Expose
     private String eventID;
-    @SerializedName("class")
-    @Expose
-    private String _class;
     @SerializedName("basisOfID")
     @Expose
     private String basisOfID;
@@ -463,14 +460,6 @@ public class Content {
 
     public void setEventID(String eventID) {
         this.eventID = eventID;
-    }
-
-    public String getClass_() {
-        return _class;
-    }
-
-    public void setClass_(String _class) {
-        this._class = _class;
     }
 
     public String getBasisOfID() {
