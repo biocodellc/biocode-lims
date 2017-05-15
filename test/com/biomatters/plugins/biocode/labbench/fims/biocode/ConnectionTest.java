@@ -2,21 +2,16 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
-import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.List;
 
 /**
  * @author Matthew Cheung
  *         Created on 3/02/14 3:10 PM
  */
-public class ConnectionTest extends Assert {
+public class ConnectionTest extends BiocodeFimsTestCase {
 
     @Test
     public void getGraphs() throws DatabaseServiceException {
@@ -63,25 +58,5 @@ public class ConnectionTest extends Assert {
     @Test(expected = DatabaseServiceException.class)
     public void checkProjectRetrievalWhenNotLoggedIn() throws DatabaseServiceException {
         client.getProjects();
-    }
-
-    @Before
-    public void shareSessionsForBiSciCol() throws MalformedURLException {
-        SharedCookieHandler.registerHost(getHostname());
-    }
-
-    private BiocodeFIMSClient client;
-
-    @Before
-    public void createClient() {
-        client = new BiocodeFIMSClient(BiocodeFIMSConnection.BISCICOL_URL);
-    }
-    @After
-    public void logoutAfterTestDone() throws MalformedURLException {
-        SharedCookieHandler.unregisterHost(getHostname());
-    }
-
-    private String getHostname() throws MalformedURLException {
-        return new URL(BiocodeFIMSConnection.BISCICOL_URL).getHost();
     }
 }

@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
@@ -141,7 +142,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     private List<FimsSample> getFimsSamplesBySearch(Graph graph, Form form, StringBuilder filterText) throws ConnectionException {
         List<FimsSample> samples = new ArrayList<FimsSample>();
-        if (BiocodeService.getInstance().isQueryCancled())
+        if (!TestGeneious.isRunningTest() && BiocodeService.getInstance().isQueryCancled())
             return samples;
 
         try {

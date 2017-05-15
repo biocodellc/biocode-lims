@@ -69,7 +69,15 @@ public abstract class FIMSConnection {
     public abstract PasswordOptions getConnectionOptions();
 
     public void connect(Options options) throws ConnectionException {
-        requestTimeoutInSeconds = ((Options.IntegerOption)options.getParentOptions().getOption(LoginOptions.FIMS_REQUEST_TIMEOUT_OPTION_NAME)).getValue();
+        requestTimeoutInSeconds = LoginOptions.DEFAULT_TIMEOUT;
+        Options parentOptions = options.getParentOptions();
+        if(parentOptions != null) {
+            Options.IntegerOption option = (Options.IntegerOption) parentOptions.getOption(LoginOptions.FIMS_REQUEST_TIMEOUT_OPTION_NAME);
+            if (option != null) {
+                requestTimeoutInSeconds = option.getValue();
+            }
+        }
+
         _connect(options);
 
         if(getTissueSampleDocumentField() == null) {
