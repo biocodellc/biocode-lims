@@ -256,14 +256,24 @@ public class PlateBulkEditor {
                             BufferedReader in = new BufferedReader(new FileReader(inputFile));
                             String s;
                             while((s = in.readLine()) != null) {
-                                String[] data = s.split("\\t");
-                                if(data.length != 2) {
+                                if (s.isEmpty())
                                     continue;
+                                List<String> delimiters = Arrays.asList("\\t", ";", ",", " ", "-", "_");
+                                String[] data = new String[2];
+                                for (String delimiter : delimiters) {
+                                    String[] parts = s.split(delimiter);
+                                    if(parts.length == 2) {
+                                        data[0] = parts[0];
+                                        data[1] = parts[1];
+                                        break;
+                                    }
                                 }
+                                if (data[0] == null)
+                                    continue;   // No delimiter found in this line, try next line.
                                 String wellString = data[0].trim();
                                 String barcode = data[1].trim();
 
-                                if(wellString.length() != 0 && wellString.charAt(wellString.length()-1) == ';') {
+                                if(wellString.length() != 0 && delimiters.contains(wellString.substring(wellString.length()-1))) {
                                     wellString = wellString.substring(0, wellString.length()-1);
                                 }
                                 BiocodeUtilities.Well well;
