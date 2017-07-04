@@ -1,9 +1,11 @@
 package com.biomatters.plugins.biocode.labbench.plates;
 
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.lims.LimsTestCase;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -66,6 +68,27 @@ public class PlateBulkEditorTest extends LimsTestCase {
         assertEquals("G2 : 13 => 14", changes.get(13));
         assertEquals("H1 : 14 => 15", changes.get(14));
         assertEquals("H2 : 15 => 16", changes.get(15));
+    }
+
+    @Test
+    public void testBuldEdit_AddBarcodesFromFile_splitByDelimiters() {
+        PlateBulkEditor.DocumentFieldEditor barcodeEditor = new PlateBulkEditor.DocumentFieldEditor(PlateBulkEditor.EXTRACTION_BARCODE_FIELD, new Plate(Plate.Size.w1, Reaction.Type.PCR), PlateBulkEditor.Direction.ACROSS_AND_DOWN, null);
+        BiocodeUtilities.Well well = new BiocodeUtilities.Well("A1");
+
+        List<String> delimiters = Arrays.asList("\t", ";", ",", " ", "-", "_", /*Try some combinations:*/ ";\t", ",\t", "-;");
+        for (int i = 0; i < delimiters.size(); i++) {
+            PlateBulkEditor.setWellAndBarcode(String.format("A1%s%d", delimiters.get(i), i+2), barcodeEditor);
+            Object value = barcodeEditor.getValue(well.row(), well.col());
+            assertEquals(""+(i+2), value);
+        }
+        barcodeEditor.setValue(well.row(), well.col(), "0");
+        // test invalid lines:
+        List<String> invalidLines = Arrays.asList("Header", "Two words", "Three words header", "\n", "What's this?", "A1:A2:1234", "A1:x\nA1;y");
+        for (String invalidLine : invalidLines) {
+            PlateBulkEditor.setWellAndBarcode(invalidLine, barcodeEditor);
+            Object value = barcodeEditor.getValue(well.row(), well.col());
+            assertEquals("0", value);
+        }
     }
 
     private static String getNewLineSeparatedSequenceOfNumbers(int start, int end) {

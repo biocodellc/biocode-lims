@@ -256,34 +256,7 @@ public class PlateBulkEditor {
                             BufferedReader in = new BufferedReader(new FileReader(inputFile));
                             String s;
                             while((s = in.readLine()) != null) {
-                                if (s.isEmpty())
-                                    continue;
-                                List<String> delimiters = Arrays.asList("\\t", ";", ",", " ", "-", "_");
-                                String[] data = new String[2];
-                                for (String delimiter : delimiters) {
-                                    String[] parts = s.split(delimiter);
-                                    if(parts.length == 2) {
-                                        data[0] = parts[0];
-                                        data[1] = parts[1];
-                                        break;
-                                    }
-                                }
-                                if (data[0] == null)
-                                    continue;   // No delimiter found in this line, try next line.
-                                String wellString = data[0].trim();
-                                String barcode = data[1].trim();
-
-                                if(wellString.length() != 0 && delimiters.contains(wellString.substring(wellString.length()-1))) {
-                                    wellString = wellString.substring(0, wellString.length()-1);
-                                }
-                                BiocodeUtilities.Well well;
-                                try {
-                                    well = new BiocodeUtilities.Well(wellString);
-                                }
-                                catch(IllegalArgumentException ex) {
-                                    continue;
-                                }
-                                barcodeEditor.setValue(well.row(), well.col(), barcode);
+                                setWellAndBarcode(s, barcodeEditor);
                             }
                             in.close();
                             barcodeEditor.textViewFromValues();
@@ -690,6 +663,37 @@ public class PlateBulkEditor {
             Dialogs.showMessageDialog("The following workflow Ids were invalid and were not set:\n"+badWorkflows.toString());
         }
         return true;
+    }
+
+    protected static void setWellAndBarcode(String line, DocumentFieldEditor barcodeEditor) {
+        if (line.isEmpty())
+            return;
+        List<String> delimiters = Arrays.asList("\\t", ";", ",", " ", "-", "_");
+        String[] data = new String[2];
+        for (String delimiter : delimiters) {
+            String[] parts = line.split(delimiter);
+            if(parts.length == 2) {
+                data[0] = parts[0];
+                data[1] = parts[1];
+                break;
+            }
+        }
+        if (data[0] == null)
+            return;   // No delimiter found in this line, try next line.
+        String wellString = data[0].trim();
+        String barcode = data[1].trim();
+
+        if(wellString.length() != 0 && delimiters.contains(wellString.substring(wellString.length()-1))) {
+            wellString = wellString.substring(0, wellString.length()-1);
+        }
+        BiocodeUtilities.Well well;
+        try {
+            well = new BiocodeUtilities.Well(wellString);
+        }
+        catch(IllegalArgumentException ex) {
+            return;
+        }
+        barcodeEditor.setValue(well.row(), well.col(), barcode);
     }
 
     private static class ExtractionBarcodeFieldSelection extends Options {
