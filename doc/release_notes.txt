@@ -1,6 +1,7 @@
 ==Biocode Plugin 3.0.3 - TBD==
 * Updated for Biocode FIMS query system upgrades
 * Added the ability to use "match any" when searching the Biocode FIMS
+* Added support for more delimiters when loading barcodes from a file: tab, ";", ",", space, "-", "_"
 * Fix a rare crash that can occur when connecting to a MySQL FIMS or LIMS
 
 ==Biocode Plugin 3.0.2 - 7 December 2016==
