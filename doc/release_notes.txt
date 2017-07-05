@@ -1,4 +1,5 @@
 ==Biocode Plugin 3.0.3 - TBD==
+* Added support for more delimiters when loading barcodes from a file: tab, ";", ",", space, "-", "_"
 * Fix a rare crash that can occur when connecting to a MySQL FIMS or LIMS
 
 ==Biocode Plugin 3.0.2 - 7 December 2016==
