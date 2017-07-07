@@ -29,13 +29,15 @@ import java.util.prefs.Preferences;
  */public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
     private StringOption hostOption;
+    private StringOption usernameOption;
+    private PasswordOption passwordOption;
     private ComboBoxOption<ProjectOptionValue> projectOption;
 
     public BiocodeFIMSConnectionOptions() {
         super(BiocodePlugin.class);
         hostOption = addStringOption("host", "Host:", BiocodeFIMSConnection.BISCICOL_URL);
-        final StringOption usernameOption = addStringOption("username", "Username:", "");
-        final PasswordOption passwordOption = addCustomOption(new PasswordOption("password", "Password:", true));
+        usernameOption = addStringOption("username", "Username:", "");
+        passwordOption = addCustomOption(new PasswordOption("password", "Password:", true));
         addButtonOption("authenticate", "", "Authenticate").addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -202,5 +204,13 @@ import java.util.prefs.Preferences;
 
     public String getHost() {
         return hostOption.getValue();
+    }
+
+    public String getUserName() {
+        return usernameOption.getValue();
+    }
+
+    public String getPassword() {
+        return passwordOption.getPassword();
     }
 }

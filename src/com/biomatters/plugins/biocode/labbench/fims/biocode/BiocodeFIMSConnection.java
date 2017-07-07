@@ -305,6 +305,11 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         }
         BiocodeFIMSOptions fimsOptions = (BiocodeFIMSOptions) options;
         client = new BiocodeFIMSClient(fimsOptions.getHost(), requestTimeoutInSeconds);
+        try {
+            client.login(fimsOptions.getUserName(), fimsOptions.getPassword());
+        } catch (Exception e) {
+            throw new ConnectionException("Can not log in to host : " + fimsOptions.getHost() + " with your credential.");
+        }
 
         project = fimsOptions.getProject();
         if (project == null) {
