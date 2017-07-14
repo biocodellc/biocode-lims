@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.plugin.Geneious;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -270,7 +271,7 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         }
 
         Runnable runnable = getUpdateFieldsRunnable(newCols);
-        if(Geneious.isHeadless()) {
+        if(Geneious.isHeadless() || TestGeneious.isRunningTest()) {
             runnable.run();
         } else {
             ThreadUtilities.invokeNowOrLater(runnable);

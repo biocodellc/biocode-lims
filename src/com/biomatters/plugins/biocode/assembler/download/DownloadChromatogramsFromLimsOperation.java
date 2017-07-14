@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
+import com.biomatters.plugins.biocode.assembler.annotate.ContigNotesAndFieldCopying;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
 import com.biomatters.plugins.biocode.labbench.*;
@@ -215,7 +216,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             if(assembly != null) {
                 assembly.setName(reference.getName());
                 for (DocumentField field : reference.getDisplayableFields()) {
-                    if(!AnnotateUtilities.FIELDS_TO_NOT_COPY.contains(field.getCode()) && assembly.getFieldValue(field) == null) {
+                    if(!ContigNotesAndFieldCopying.FIELDS_TO_NOT_COPY.contains(field.getCode()) && assembly.getFieldValue(field) == null) {
                         assembly.setFieldValue(field, reference.getFieldValue(field));
                     }
                 }

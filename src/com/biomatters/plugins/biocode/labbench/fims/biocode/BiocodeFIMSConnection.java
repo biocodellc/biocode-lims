@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
@@ -13,8 +14,11 @@ import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import org.jdom.Element;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.core.Form;
 import javax.ws.rs.core.MultivaluedMap;
 import java.io.IOException;
@@ -34,7 +38,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     private static final DocumentField IDENTIFICATION_DATE_FIELD = new DocumentField("Identification Date", "",
                 "TABLEFIMS:urn:identificationDate", Date.class, true, false);
 
-    private static final String HOST = "biscicol.org";
+    private static final String HOST = "www.biscicol.org";
     private static final int PORT = serverProbablyDeployed() ? 80 : 8179;  // Should be reverted to 80 once the new server is deployed
 
     private static boolean serverProbablyDeployed() {
@@ -88,9 +92,11 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return getTissueIdsMatchingQuery(query, projectsToMatch);
     }
 
-    private List<FimsSample> getSamplesForQuery(Query query) throws ConnectionException {
+    private List<FimsSample> getSamplesForQuery(final Query query) throws ConnectionException {
+        boolean hackOrQuery = false;
+        // if it's an OR query we should retrieve all!!!
         StringBuilder filterText = new StringBuilder();
-        Form form = new Form();
+        final Form form = new Form();
         String expeditionToSearch = null;
         if (query instanceof BasicSearchQuery) {
             filterText.append(((BasicSearchQuery) query).getSearchText());
@@ -100,9 +106,8 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         } else if (query instanceof CompoundSearchQuery) {
             CompoundSearchQuery compound = (CompoundSearchQuery) query;
             if (compound.getOperator() == CompoundSearchQuery.Operator.OR) {
-                throw new ConnectionException("The Biocode FIMS does not support using the \"any\" operator");
+                hackOrQuery = true;
             }
-
             for (Query inner : compound.getChildren()) {
                 if (inner instanceof AdvancedSearchQueryTerm) {
                     expeditionToSearch = getExpeditionOrAddToForm(form, expeditionToSearch, (AdvancedSearchQueryTerm) inner);
@@ -112,12 +117,32 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             }
         }
 
-        return getFimsSamplesBySearch(graphs.get(expeditionToSearch), form, filterText);
+        // Nasty hack so we can do OR queries :'(
+        // We can replace this when Biocode FIMS rolls out an update to their querying system
+        List<FimsSample> searchResults = getFimsSamplesBySearch(graphs.get(expeditionToSearch), hackOrQuery ? new Form() : form, filterText);
+        if(hackOrQuery) {
+            final MultivaluedMap<String, String> map = form.asMap();
+            return new ArrayList<FimsSample>(Collections2.filter(searchResults, new Predicate<FimsSample>() {
+                @Override
+                public boolean apply(@Nullable FimsSample input) {
+                for (Map.Entry<String, List<String>> entry : map.entrySet()) {
+                    Object valueToMatch = input.getFimsAttributeValue(TableFimsConnection.CODE_PREFIX + entry.getKey());
+                    for (String value : entry.getValue()) {
+                        if(value.equals(valueToMatch)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+                }
+            }));
+        }
+        return searchResults;
     }
 
     private List<FimsSample> getFimsSamplesBySearch(Graph graph, Form form, StringBuilder filterText) throws ConnectionException {
         List<FimsSample> samples = new ArrayList<FimsSample>();
-        if (BiocodeService.getInstance().isQueryCancled())
+        if (!TestGeneious.isRunningTest() && BiocodeService.getInstance().isQueryCancled())
             return samples;
 
         try {

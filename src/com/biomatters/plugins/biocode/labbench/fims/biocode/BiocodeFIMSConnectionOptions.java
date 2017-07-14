@@ -3,7 +3,9 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.plugin.Geneious;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.LoginOptions;
@@ -97,11 +99,16 @@ import java.util.prefs.Preferences;
                 optionValues.add(new ProjectOptionValue(project));
             }
 
-            SwingUtilities.invokeLater(new Runnable() {
+            Runnable updateFields = new Runnable() {
                 public void run() {
                     projectOption.setPossibleValues(optionValues);
                 }
-            });
+            };
+            if(Geneious.isHeadless() || TestGeneious.isRunningTest()) {
+                updateFields.run();
+            } else {
+                SwingUtilities.invokeLater(updateFields);
+            }
 
         } catch (DatabaseServiceException e) {
             BiocodeUtilities.displayExceptionDialog("Failed to Load Projects",

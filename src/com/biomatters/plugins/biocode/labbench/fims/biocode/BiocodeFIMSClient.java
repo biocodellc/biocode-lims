@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
+import org.apache.commons.beanutils.BeanUtils;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.filter.LoggingFilter;
@@ -16,6 +17,7 @@ import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.*;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
 import java.util.*;
@@ -101,11 +103,11 @@ public class BiocodeFIMSClient {
     }
 
     WebTarget getQueryTarget() {
-        return target.path("biocode-fims/rest/projects/query/json");
+        return target.path("biocode-fims/rest/v1.1/projects/query/json");
     }
 
     List<Project> getProjects() throws DatabaseServiceException {
-        Invocation.Builder request = target.path("biocode-fims/rest/projects/user/list").request(MediaType.APPLICATION_JSON_TYPE);
+        Invocation.Builder request = target.path("biocode-fims/rest/v1.1/projects/user/list").request(MediaType.APPLICATION_JSON_TYPE);
         try {
             Response response = request.get();
             List<Project> fromService = getRestServiceResult(new GenericType<List<Project>>() {
@@ -127,7 +129,7 @@ public class BiocodeFIMSClient {
 
     List<Graph> getGraphsForProject(String id) throws DatabaseServiceException {
         try {
-            Invocation.Builder request = target.path("biocode-fims/rest/projects").path(id).path("graphs").request(MediaType.APPLICATION_JSON_TYPE);
+            Invocation.Builder request = target.path("biocode-fims/rest/v1.1/projects").path(id).path("graphs").request(MediaType.APPLICATION_JSON_TYPE);
             Response response = request.get();
             return getRestServiceResult(new GenericType<List<Graph>>(){}, response);
         } catch(WebApplicationException e) {
@@ -158,50 +160,88 @@ public class BiocodeFIMSClient {
             }
         }
 
-        BiocodeFimsData data = getBiocodeFimsData(project, graphsToSearch, searchTerms, filter);
-        if(data.header == null)
-            data.header = Collections.emptyList();
-
-        if (data.data == null)
-            data.data = Collections.emptyList();
-
-        return data;
+        return getBiocodeFimsData(project, graphsToSearch, searchTerms, filter);
     }
 
     private BiocodeFimsData getBiocodeFimsData(String project, List<String> graphs, Form searchTerms, String filter) throws DatabaseServiceException {
         try {
             WebTarget target = getQueryTarget();
+            if(graphs != null) {
+                target = target.queryParam("graphs", StringUtilities.join(",", graphs));
+            }
 
+            Entity<Form> entity = null;
             if(searchTerms == null || searchTerms.asMap().isEmpty()) {
-                target = target.queryParam("project_id", project);
+                target = target.queryParam("projectId", project);
                 if(filter != null) {
                     target = target.queryParam("filter", filter);
                 }
-                if(graphs != null) {
-                    target = target.queryParam("graphs", StringUtilities.join(",", graphs));
-                }
-                Invocation.Builder request = target.
-                        request(MediaType.APPLICATION_JSON_TYPE);
-                return request.get(BiocodeFimsData.class);
             } else {
-                Invocation.Builder request = target.
-                        request(MediaType.APPLICATION_JSON_TYPE);
                 Form form = new Form(searchTerms.asMap());
-                form.param("project_id", project);
-                if(graphs != null) {
-                    for (String graph : graphs) {
-                        form.param("graphs", graph);
-                    }
-                }
-                Response response = request.post(Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
-                return getRestServiceResult(BiocodeFimsData.class, response);
+                form.param("projectId", project);
+                entity = Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE);
             }
+
+            return QueryResultToData(retrieveResult(target, entity));
         } catch (NotFoundException e) {
             throw new DatabaseServiceException("No data found.", false);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, "Encountered an error communicating with " + BiocodeFIMSConnection.BISCICOL_URL, false);
         } catch(ProcessingException e) {
             throw new DatabaseServiceException(e, "Encountered an error connecting to server: " + e.getMessage(), true);
+        } catch (NoSuchMethodException e) {
+            throw new DatabaseServiceException(e, "Failed to deserialize response. " + e.getMessage(), true);
+        } catch (InvocationTargetException e) {
+            throw new DatabaseServiceException(e, "Failed to deserialize response. " + e.getMessage(), true);
+        } catch (IllegalAccessException e) {
+            throw new DatabaseServiceException(e, "Failed to deserialize response. " + e.getMessage(), true);
         }
+    }
+
+    private List<QueryResult> retrieveResult(WebTarget target, Entity entity) throws DatabaseServiceException {
+        List<QueryResult> res = new ArrayList<QueryResult>();
+        target = target.queryParam("limit", "100");
+        int page = 0;
+        QueryResult result;
+        while (true) {
+            WebTarget target1 = target.queryParam("page", "" + page++);
+            Invocation.Builder request = target1.request(MediaType.APPLICATION_JSON_TYPE);
+            if (entity == null)
+                result = request.get(QueryResult.class);
+            else
+                result = getRestServiceResult(QueryResult.class, request.post(entity));
+
+            if (result.getContent().size() == 0)
+                break;
+            res.add(result);
+        }
+
+        return res;
+    }
+
+    private BiocodeFimsData QueryResultToData(List<QueryResult> results) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        BiocodeFimsData res = new BiocodeFimsData();
+
+        //header
+        if (results.size() > 0 && results.get(0).getContent().size() > 0) {
+            Map<String, String> map = BeanUtils.describe(results.get(0).getContent().get(0));
+            res.header = new ArrayList<String>(map.keySet());
+        }
+
+        //data
+        for (QueryResult result : results) {
+            List<Content> contents = result.getContent();
+            if (contents == null || contents.size() == 0)
+                continue;
+
+            for (Content content : contents) {
+                Map<String, String> bean = BeanUtils.describe(content);
+                Row row = new Row();
+                row.rowItems = new ArrayList<String>(bean.values());
+                res.data.add(row);
+            }
+        }
+
+        return res;
     }
 }
