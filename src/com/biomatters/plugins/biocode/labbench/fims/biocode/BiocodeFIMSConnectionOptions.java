@@ -217,7 +217,15 @@ import java.util.prefs.Preferences;
         return usernameOption.getValue();
     }
 
+    public void setUserName(String name) {
+        usernameOption.setValue(name);
+    }
+
     public String getPassword() {
         return passwordOption.getPassword();
+    }
+
+    public void setPassword(String password) {
+        passwordOption.setPassword(password);
     }
 }

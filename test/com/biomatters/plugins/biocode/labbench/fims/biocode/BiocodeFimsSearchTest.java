@@ -4,22 +4,14 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.URN;
-import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.PasswordOptions;
-import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -31,7 +23,8 @@ public class BiocodeFimsSearchTest extends BiocodeFimsTestCase {
         BiocodeFIMSConnection connection = new BiocodeFIMSConnection();
         BiocodeFIMSOptions options = (BiocodeFIMSOptions)connection.getConnectionOptions();
         BiocodeFIMSConnectionOptions connectionOptions = (BiocodeFIMSConnectionOptions)options.getConnectionOptions();
-
+        connectionOptions.setUserName("demo");
+        connectionOptions.setPassword("demo");
         connectionOptions.login(BiocodeFIMSConnection.BISCICOL_URL, "demo", "demo");
 
         connectionOptions.setStringValue("project", "BWPT");
