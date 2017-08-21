@@ -1,4 +1,4 @@
-==Biocode Plugin 3.0.3 - TBD==
+==Biocode Plugin 3.0.3 - 21 August 2017==
 * Updated for Biocode FIMS query system upgrades
 * Added the ability to use "match any" when searching the Biocode FIMS
 * Fixed a problem where users were not re-authenticated with the Biocode FIMS unless they clicked 'Authenticate'
