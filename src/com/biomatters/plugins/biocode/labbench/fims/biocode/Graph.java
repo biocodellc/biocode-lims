@@ -1,5 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
@@ -8,6 +10,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  *         Created on 3/02/14 4:56 PM
  */
 @XmlRootElement
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Graph {
     @XmlElement(name = "expeditionCode") public String expeditionCode;
     @XmlElement(name = "expeditionTitle") public String expeditionTitle;

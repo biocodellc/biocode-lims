@@ -31,7 +31,7 @@
 
         <!-- Must use Jersey version less than 2.6  -->
         <dependency org="org.glassfish.jersey.core" name="jersey-client" rev="2.6" conf="build,test->default"/>
-        <dependency org="org.glassfish.jersey.media" name="jersey-media-moxy" rev="2.6" conf="build,test->default"/>
+        <dependency org="org.glassfish.jersey.media" name="jersey-media-json-jackson" rev="2.6" conf="build,test->default"/>
         <dependency org="commons-dbcp" name="commons-dbcp" rev="1.4" conf="build,test->default"/>
         <dependency org="commons-pool" name="commons-pool" rev="1.6" conf="build,test->default"/>
         <dependency org="commons-beanutils" name="commons-beanutils" rev="1.9.2" conf="build,test->default"/>

@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.xml.FastSaxBuilder;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 
@@ -20,6 +21,7 @@ import java.util.concurrent.TimeUnit;
  * @author Matthew Cheung
  *         Created on 13/02/14 8:52 PM
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Project {
 
     @XmlElement(name="projectId")public int id;

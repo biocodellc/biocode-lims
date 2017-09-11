@@ -157,11 +157,21 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
                     }
                 }
             } else {
+                int invalidTissueIds = 0;
                 for (Row row : data.data) {
                     TableFimsSample sample = getFimsSampleForRow(data.header, row);
                     samples.add(sample);
-                    cachedSamples.put(sample.getId(), new SoftReference<FimsSample>(sample));
+                    if(sample.getId() != null) {
+                        cachedSamples.put(sample.getId(), new SoftReference<FimsSample>(sample));
+                    } else {
+                        invalidTissueIds++;
+                    }
                 }
+                if(invalidTissueIds > 0) {
+                    throw new ConnectionException(invalidTissueIds + " tissue records did not have IDs, double check you have defined your Tissue ID correctly. " +
+                            "Please contact " + BiocodePlugin.SUPPORT_EMAIL + " for additional assistance.");
+                }
+
             }
         } catch (DatabaseServiceException e) {
             throw new ConnectionException(e.getMessage(), e);
@@ -177,7 +187,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         Map<String, Object> values = new HashMap<String, Object>();
         for (int i = 0; i < header.size(); i++) {
             DocumentField field = possibleColumns.get(header.get(i));
-            if (field != null && i < row.rowItems.size()) {  // todo should we error out when items don't match?
+            if (field != null && i < row.rowItems.size()) {
                 values.put(field.getCode(), row.rowItems.get(i));
             }
         }
