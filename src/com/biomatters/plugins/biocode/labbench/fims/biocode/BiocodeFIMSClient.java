@@ -41,7 +41,7 @@ public class BiocodeFIMSClient {
 
         target = ClientBuilder.newBuilder().withConfig(config).build().target(hostname)
                                     .register(JacksonFeature.class)
-                                    .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), true));
+                                    .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false));
     }
 
 
