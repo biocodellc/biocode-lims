@@ -1,16 +1,22 @@
 
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
+//import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import org.codehaus.jackson.map.ObjectMapper;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class QueryResult {
 
     @SerializedName("content")
     @Expose
-    private List<Content> content = null;
+    private List<Map<String, String>> content = null;
     @SerializedName("last")
     @Expose
     private Boolean last;
@@ -36,11 +42,11 @@ public class QueryResult {
     @Expose
     private Integer number;
 
-    public List<Content> getContent() {
+    public List<Map<String, String>> getContent() {
         return content;
     }
 
-    public void setContent(List<Content> content) {
+    public void setContent(List<Map<String, String>> content) {
         this.content = content;
     }
 
@@ -107,5 +113,4 @@ public class QueryResult {
     public void setNumber(Integer number) {
         this.number = number;
     }
-
 }

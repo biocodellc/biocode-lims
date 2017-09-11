@@ -3,10 +3,10 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
-import org.apache.commons.beanutils.BeanUtils;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.filter.LoggingFilter;
+import org.glassfish.jersey.jackson.JacksonFeature;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.ProcessingException;
@@ -40,7 +40,8 @@ public class BiocodeFIMSClient {
                 .property(ClientProperties.READ_TIMEOUT, timeout * 1000);
 
         target = ClientBuilder.newBuilder().withConfig(config).build().target(hostname)
-                                    .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false));
+                                    .register(JacksonFeature.class)
+                                    .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), true));
     }
 
 
@@ -222,22 +223,22 @@ public class BiocodeFIMSClient {
     private BiocodeFimsData QueryResultToData(List<QueryResult> results) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         BiocodeFimsData res = new BiocodeFimsData();
 
-        //header
-        if (results.size() > 0 && results.get(0).getContent().size() > 0) {
-            Map<String, String> map = BeanUtils.describe(results.get(0).getContent().get(0));
-            res.header = new ArrayList<String>(map.keySet());
+        if(results.isEmpty()) {
+            return res;
         }
+
+        //header
+        List<Map<String, String>> rows = results.get(0).getContent();
+        if(rows.isEmpty() || rows.get(0) == null) {
+            return res;
+        }
+        res.header = new ArrayList<String>(rows.get(0).keySet());
 
         //data
         for (QueryResult result : results) {
-            List<Content> contents = result.getContent();
-            if (contents == null || contents.size() == 0)
-                continue;
-
-            for (Content content : contents) {
-                Map<String, String> bean = BeanUtils.describe(content);
+            for (Map<String, String> rowValues : result.getContent()) {
                 Row row = new Row();
-                row.rowItems = new ArrayList<String>(bean.values());
+                row.rowItems = new ArrayList<String>(rowValues.values());
                 res.data.add(row);
             }
         }
