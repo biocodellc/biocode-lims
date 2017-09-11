@@ -235,10 +235,12 @@ public class BiocodeFIMSClient {
         res.header = new ArrayList<String>(rows.get(0).keySet());
 
         //data
-        for (Map<String, String> rowValues : rows) {
-            Row row = new Row();
-            row.rowItems = new ArrayList<String>(rowValues.values());
-            res.data.add(row);
+        for (QueryResult result : results) {
+            for (Map<String, String> rowValues : result.getContent()) {
+                Row row = new Row();
+                row.rowItems = new ArrayList<String>(rowValues.values());
+                res.data.add(row);
+            }
         }
 
         return res;
