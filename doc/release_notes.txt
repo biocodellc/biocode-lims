@@ -1,4 +1,5 @@
 ==Biocode Plugin 3.0.4 - TBD==
+* Fixed problem where the Biocode FIMS only retrieved field definitions from the Barcode of Wildlife project instead of the project that was specified.  This would result in empty tissue fields
 
 ==Biocode Plugin 3.0.3 - 21 August 2017==
 * Updated for Biocode FIMS query system upgrades
