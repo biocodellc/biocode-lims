@@ -1,12 +1,8 @@
 <PluginVersions>
-    <LatestVersion>3.0.3</LatestVersion>
-    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_3_0_3.gplugin</LatestVersionURL>
-    <ReleaseNotes>==Biocode Plugin 3.0.3 - 21 August 2017==
-        * Updated for Biocode FIMS query system upgrades
-        * Added the ability to use "match any" when searching the Biocode FIMS
-        * Fixed a problem where users were not re-authenticated with the Biocode FIMS unless they clicked 'Authenticate'
-        * Added support for more delimiters when loading barcodes from a file: tab, ";", ",", space, "-", "_"
-        * Fix a rare crash that can occur when connecting to a MySQL FIMS or LIMS
+    <LatestVersion>3.0.4</LatestVersion>
+    <LatestVersionURL>https://github.com/Biomatters/biocode-lims/releases/download/v3.0.4/Biocode_3_0_4.gplugin</LatestVersionURL>
+    <ReleaseNotes>==Biocode Plugin 3.0.4 - 11 September 2017==
+        * Fixed problem where the Biocode FIMS only retrieved field definitions from the Barcode of Wildlife project instead of the project that was specified.  This would result in empty tissue fields
     </ReleaseNotes>
     <ExtraInformation/>
 </PluginVersions>
