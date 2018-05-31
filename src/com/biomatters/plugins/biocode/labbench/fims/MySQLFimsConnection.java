@@ -143,7 +143,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         StringBuilder queryBuilder = new StringBuilder();
-        queryBuilder.append("SELECT ").append(getTissueCol()).append(" FROM ").append(tableName);
+        queryBuilder.append("SELECT '").append(getTissueCol()).append("' FROM ").append(tableName);
 
         List<Object> parameters = new ArrayList<Object>();
         String sqlString = SqlUtilities.getQuerySQLString(query, getSearchAttributes(), FIELD_PREFIX, false);
@@ -207,7 +207,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
 
     @Override
     public List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
-        StringBuilder query = new StringBuilder("SELECT * FROM " + tableName + " WHERE " + getTissueCol() + " IN ");
+        StringBuilder query = new StringBuilder("SELECT * FROM " + tableName + " WHERE '" + getTissueCol() + "' IN ");
         SqlUtilities.appendSetOfQuestionMarks(query, tissueIds.size());
 
         String queryString = query.toString();
