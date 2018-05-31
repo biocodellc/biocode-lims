@@ -245,7 +245,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         if(querySQLString == null) {
             return Collections.emptyList();
         }
-        String sql = "SELECT " + getTissueCol() + " FROM "+tableId+" WHERE "+ querySQLString;
+        String sql = "SELECT '" + getTissueCol() + "' FROM "+tableId+" WHERE "+ querySQLString;
         System.out.println(sql);
 
         try {
@@ -306,7 +306,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
                     return callback.isCanceled();
                 }
             };
-            StringBuilder queryString = new StringBuilder("SELECT * FROM " + tableId + " WHERE " + getTissueCol() + " IN (");
+            StringBuilder queryString = new StringBuilder("SELECT * FROM " + tableId + " WHERE '" + getTissueCol() + "' IN (");
             boolean first = true;
             for (String tissueId : tissueIds) {
                 if(first) {
