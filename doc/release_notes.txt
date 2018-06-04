@@ -1,4 +1,5 @@
 ==Biocode Plugin 3.0.5 - TBD==
+* Fixed a crash that occurs when searching a Google Fusion Table column which has space in its name
 
 ==Biocode Plugin 3.0.4 - 11 September 2017==
 * Fixed problem where the Biocode FIMS only retrieved field definitions from the Barcode of Wildlife project instead of the project that was specified.  This would result in empty tissue fields
