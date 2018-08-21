@@ -18,6 +18,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.color.ColorSpace;
 import java.awt.font.FontRenderContext;
+import java.awt.font.LineMetrics;
 import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
@@ -51,6 +52,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     private int[] fieldWidthCache = null;
     private GelImage gelImage = null;
     private BackgroundColorer backgroundColorer;
+    private Dimension cachedPreferredSize;
     private static final ImageObserver imageObserver = new ImageObserver(){
         public boolean imageUpdate(Image img, int infoflags, int x, int y, int width, int height) {
             return false;
@@ -84,6 +86,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         Runnable runnable = new Runnable() {
             public void run() {
                 fieldWidthCache = null;
+                cachedPreferredSize = null;
             }
         };
         ThreadUtilities.invokeNowOrLater(runnable);
@@ -340,6 +343,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public void setFieldsToDisplay(List<DocumentField> fields) {
         this.displayableFields = fields;
+        cachedPreferredSize = null;
         invalidateFieldWidthCache();
     }
 
@@ -599,13 +603,27 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     protected abstract String _areReactionsValid(List<T> reactions, JComponent dialogParent, boolean checkingFromPlate);
 
     public Dimension getPreferredSize() {
+        if(cachedPreferredSize == null) {
+            cachedPreferredSize = calculatePreferredSize();
+        }
+        return cachedPreferredSize;
+    }
+
+    private Dimension calculatePreferredSize() {
         int y = PADDING+3;
         int x = 10;
         List<DocumentField> fieldsToDisplay = getFieldsToDisplay();
 
-        if(fieldWidthCache == null || fieldWidthCache.length != fieldsToDisplay.size()) {
+        if(fieldWidthCache == null) {
             initFieldWidthCache();
         }
+
+        //make space for the well location label
+        if(this.locationString != null && this.locationString.length() > 0) {
+            LineMetrics lineMetrics = firstLabelFont.getLineMetrics(this.locationString, fontRenderContext);
+            y += (int)lineMetrics.getHeight();
+        }
+
         for (int i = 0; i < fieldsToDisplay.size(); i++) {
             DocumentField field = getFieldsToDisplay().get(i);
             if(field.equals(GEL_IMAGE_DOCUMENT_FIELD)) {
@@ -627,7 +645,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             }
         }
         x += PADDING;
-        return new Dimension(Math.max(50,x), Math.max(30,y));
+        return new Dimension(Math.max(50,x), y);
     }
 
     private void initFieldWidthCache() {
@@ -698,16 +716,26 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             }
         }
 
+        int y = location.y;
+
         if(label != null && label.length() > 0) {
             g.setColor(new Color(0,0,0,128));
             g.setFont(firstLabelFont.deriveFont(Font.PLAIN));
-            g.drawString(label, location.x+2, location.y+charHeight + 2);
+            LineMetrics lineMetrics = firstLabelFont.getLineMetrics(label, fontRenderContext);
+            g.drawString(label, location.x+2, location.y+(int)lineMetrics.getHeight());
+            y += (int)lineMetrics.getHeight() + LINE_SPACING;
         }
 
         g.setColor(enabled ? Color.black : Color.gray);
 
-        int y = location.y + charHeight;
-        y += (location.height - getPreferredSize().height + PADDING)/2;
+
+
+        //center the text vertically in the available space
+        int availableHeight = location.y + location.height - y;
+        int requiredHeight = getPreferredSize().height;
+        y += Math.max(0, (availableHeight - requiredHeight)/2);
+
+
         for (int i = 0; i < getFieldsToDisplay().size(); i++) {
             if(getFieldsToDisplay().get(i).equals(GEL_IMAGE_DOCUMENT_FIELD)) {
                 if(gelImage != null) {
@@ -717,7 +745,6 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 }
                 continue;
             }
-            g.setFont(i == 0 ? firstLabelFont : labelFont);
 
             DocumentField field = getFieldsToDisplay().get(i);
             String value = getDisplayableValue(field);
