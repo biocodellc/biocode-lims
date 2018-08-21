@@ -148,9 +148,7 @@ sourceSets {
         File geneiousFiles = file(geneiousFilesPath)
         runtimeClasspath += files("$geneiousFiles/resources")
         runtimeClasspath += files("$geneiousFiles/iSeek.jar")
-        if (file("$geneiousFiles/lib").listFiles()) {
-            runtimeClasspath += files(file("$geneiousFiles/lib").listFiles())
-        }
+        runtimeClasspath += fileTree("$geneiousFiles/lib")
     }
 
     test {
@@ -160,6 +158,10 @@ sourceSets {
         resources {
             srcDir 'testdata'
         }
+        File geneiousFiles = file(geneiousFilesPath)
+        runtimeClasspath += files("$geneiousFiles/resources")
+        runtimeClasspath += files("$geneiousFiles/iSeek.jar")
+        runtimeClasspath += fileTree("$geneiousFiles/lib")
     }
 }
 task createPlugin(dependsOn: build, type: Zip) {
