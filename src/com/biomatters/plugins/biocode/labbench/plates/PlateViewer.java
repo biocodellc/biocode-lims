@@ -448,6 +448,7 @@ public class PlateViewer extends JPanel {
                 }
                 GuiUtilities.ensureWindowIsOnScreen(frame);
                 frame.setVisible(true);
+                frame.createBufferStrategy(2);
             }
         };
         ThreadUtilities.invokeNowOrWait(runnable);

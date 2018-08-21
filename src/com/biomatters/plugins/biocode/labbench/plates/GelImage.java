@@ -3,16 +3,13 @@ package com.biomatters.plugins.biocode.labbench.plates;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.utilities.Base64Coder;
-import com.sun.media.jai.codec.ByteArraySeekableStream;
-import com.sun.media.jai.codec.ImageCodec;
-import com.sun.media.jai.codec.ImageDecoder;
-import com.sun.media.jai.codec.SeekableStream;
+
 import org.jdom.Element;
 
-import javax.media.jai.RenderedImageAdapter;
+import javax.imageio.ImageIO;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.awt.*;
-import java.awt.image.RenderedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -80,23 +77,7 @@ public class GelImage implements XMLSerializable {
             throw new IllegalStateException("The image data buffer is empty!");
         }
         try {
-            SeekableStream ss = new ByteArraySeekableStream(imageBytes);
-            String[] codecNames = ImageCodec.getDecoderNames(ss);
-            if(codecNames.length == 0) {
-                assert false;
-                return;
-            }
-            ImageDecoder decoder = ImageCodec.createImageDecoder(codecNames[0], ss, null);
-            RenderedImage renderedImage;
-            //noinspection ProhibitedExceptionCaught
-            try {
-                renderedImage = decoder.decodeAsRenderedImage();
-            } catch (NullPointerException e) { //GEN-11933
-                e.printStackTrace();
-                throw new RuntimeException("Decoder could not create rendered image for "+filename, e);
-            }
-            RenderedImageAdapter planarImage = new RenderedImageAdapter(renderedImage);
-            image = planarImage.getAsBufferedImage();
+            image = ImageIO.read(new ByteArrayInputStream(imageBytes));
         } catch (IOException e) {
             e.printStackTrace();
         }

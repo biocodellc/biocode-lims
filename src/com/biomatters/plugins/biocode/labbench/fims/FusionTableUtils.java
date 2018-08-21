@@ -179,8 +179,10 @@ public class FusionTableUtils {
             return Collections.emptyList();
         }
         List<DocumentField> fields = new ArrayList<DocumentField>();
-        for(Column col : table.getColumns()) {
-            fields.add(new DocumentField(col.getName(), "", XmlUtilities.encodeXMLChars(col.getName()), getColumnClass(col.getType()), false, false));
+        if(table.getColumns() != null) { //table.getColumns helpfully returns null instead of an empty list if there are no columns :(
+            for(Column col : table.getColumns()) {
+                fields.add(new DocumentField(col.getName(), "", XmlUtilities.encodeXMLChars(col.getName()), getColumnClass(col.getType()), false, false));
+            }
         }
         return fields;
     }

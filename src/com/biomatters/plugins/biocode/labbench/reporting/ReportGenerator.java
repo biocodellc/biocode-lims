@@ -386,32 +386,13 @@ public class ReportGenerator {
     }
 
     private Report getReport(String initialName, String initialType, Options initialOptions, Component dialogOwner) {
-        Options reportOptions = new Options(ReportGenerator.class);
-        reportOptions.addStringOption("name", "Report Name", initialName);
-        for(Report report : getNewReports()) {
-            Options options;
-            if(fimsToLims.limsHasFimsValues() || !report.requiresFimsValues()) {
-                options = report.getOptions();
-            }
-            else {
-                options = new Options(this.getClass());
-                options.addLabel("You must copy your FIMS data into the LIMS before using this report.");
-            }
-            String typeName = report.getTypeName();
-            if(typeName.equals(initialType)) {
-                options.valuesFromXML(initialOptions.valuesToXML("options"));
-            }
-            reportOptions.addChildOptions(typeName, report.getTypeName(), report.getTypeDescription(), options);
-        }
-        Options.Option chooser = reportOptions.addChildOptionsPageChooser("reportType", "ReportType", Collections.EMPTY_LIST, Options.PageChooserType.COMBO_BOX, false);
-        if(initialType != null) {
-            chooser.setValueFromString(initialType);
-        }
+        ReportOptions reportOptions = new ReportOptions(ReportGenerator.class, getNewReports(), initialName, initialType, initialOptions, fimsToLims);
 
         Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Create Report", dialogOwner);
         dialogOptions.setMaxWidth(Integer.MAX_VALUE);
 
-        if(Dialogs.OK.equals(Dialogs.showDialog(dialogOptions, reportOptions.getPanel()))) {
+
+        if(Dialogs.showOptionsDialog(reportOptions, "Create Report", false)) {
             String reportType = reportOptions.getValueAsString("reportType");
             for(Report report : getNewReports()) {
                 if(report.getTypeName().equals(reportType)) {

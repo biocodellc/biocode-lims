@@ -10,9 +10,11 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ImagePanel;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
-import com.sun.image.codec.jpeg.JPEGCodec;
 import org.virion.jam.util.SimpleListener;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.plugins.jpeg.JPEGImageWriteParam;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -150,8 +152,10 @@ public class GelSplitter {
                     BufferedImage entryImage = entry.getValue();
                     try {
                         ByteArrayOutputStream out = new ByteArrayOutputStream();
-                        com.sun.image.codec.jpeg.JPEGImageEncoder jpegImageEncoder = JPEGCodec.createJPEGEncoder(out);
-                        jpegImageEncoder.encode(entryImage);
+                        JPEGImageWriteParam params = new JPEGImageWriteParam(null);
+                        params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                        params.setCompressionQuality(0.8f);
+                        ImageIO.write(entryImage, "jpeg", out);
                         out.close();
                         GelImage gelImage = new GelImage(out.toByteArray(), entry.getKey().toString());
                         Reaction reaction = plate.getReaction(entry.getKey());

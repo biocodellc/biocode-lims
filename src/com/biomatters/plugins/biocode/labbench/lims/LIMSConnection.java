@@ -52,7 +52,7 @@ public abstract class LIMSConnection {
     }
 
     public static final DocumentField PLATE_ID_FIELD = DocumentField.createStringField("Plate ID", "", "plate.id", false, false);
-    public static final DocumentField PLATE_TYPE_FIELD = DocumentField.createEnumeratedField(new String[]{"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false);
+    public static final DocumentField PLATE_TYPE_FIELD = DocumentField.createEnumeratedField(new String[]{"Extraction", "PCR", "CycleSequencing", "GelQuantification"}, "Plate type", "", "plate.type", true, false);
     public static final DocumentField PLATE_NAME_FIELD = DocumentField.createStringField("Plate Name (LIMS)", "", "plate.name", true, false);
     public static final DocumentField PLATE_DATE_FIELD = DocumentField.createDateField("Last Modified (LIMS plate)", "", "plate.date", false, false);
     static {

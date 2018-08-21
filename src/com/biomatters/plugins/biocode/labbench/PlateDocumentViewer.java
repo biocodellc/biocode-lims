@@ -273,6 +273,7 @@ public class PlateDocumentViewer extends DocumentViewer{
             keyPanel.invalidate();
             plateView.invalidate();
             thingInsideScrollPane.revalidate();
+            plateView.repaint();
         }
     }
 

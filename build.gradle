@@ -1,0 +1,191 @@
+import java.text.SimpleDateFormat
+
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+}
+
+plugins {
+    id 'net.saliman.properties' version '1.4.5'
+}
+
+println "Gradle " + GradleVersion.current().getVersion() + ' - ' + GradleVersion.current().getBuildTime() + ' - ' + GradleVersion.current().getRevision() + (GradleVersion.current().isSnapshot() ? " SNAPSHOT" : "")
+
+
+apply plugin: "java"
+apply plugin: "idea"
+
+version = '3.0.5'
+
+defaultTasks 'createPlugin';
+
+task wrapper(type: Wrapper) {
+    gradleVersion = "3.5"
+}
+
+ext {
+    shortName = "BiocodePlugin"
+    pluginName = "com.biomatters.plugins.biocode." + shortName
+    geneiousPublicAPIVersion = "10.0.5"
+    pluginDistFilename = "${shortName}_" + version.replaceAll("\\.", "_") + ".gplugin"
+    geneiousFilesName = "GeneiousFiles"
+    geneiousFilesPath = "$buildDir/$geneiousFilesName"
+}
+
+repositories {
+    mavenCentral()
+    ivy {
+        url "http://assets.geneious.com/developer/geneious/ivy"
+        layout "pattern", {
+            ivy "[organisation]/[module]/ivys/ivy-[revision].xml"
+            artifact "[organisation]/[module]/[type]s/[artifact]-[revision].[ext]"
+        }
+    }
+}
+
+dependencies {
+    compile group: "com.biomatters", name: "geneious.publicapi", version: "$geneiousPublicAPIVersion", configuration: "api", changing: true
+    compile group: "com.google.guava", name: "guava", version:"15.0"
+
+    compile group: "org.hsqldb", name:"hsqldb", version:"2.3.0"
+    compile group: "org.jcommon", name:"jcommon", version:"1.0"
+    compile group: "org.jfree", name:"jfreechart", version:"1.0.15"
+    compile group: "net.sourceforge.jexcelapi", name:"jxl", version:"2.6.12"
+    compile group: "com.google.api-client", name:"google-api-client", version:"1.17.0-rc"
+    compile group: "com.google.api-client", name:"google-api-client-servlet", version:"1.17.0-rc"
+    compile group: "com.google.api-client", name:"google-api-client-appengine", version:"1.17.0-rc"
+    compile group: "com.google.http-client", name:"google-http-client-gson", version:"1.17.0-rc"
+    compile group: "com.google.apis", name:"google-api-services-fusiontables", version:"v1-rev33-1.17.0-rc"
+    compile group: "com.google.oauth-client", name:"google-oauth-client-jetty", version:"1.17.0-rc"
+    compile group: "com.google.oauth-client", name:"google-oauth-client-java6", version:"1.17.0-rc"
+
+
+    //    Must use Jersey version less than 2.6
+    compile group: "org.glassfish.jersey.core", name:"jersey-client", version:"2.6"
+    compile group: "org.glassfish.jersey.media", name:"jersey-media-json-jackson", version:"2.6"
+    compile group: "commons-dbcp", name:"commons-dbcp", version:"1.4"
+    compile group: "commons-pool", name:"commons-pool", version:"1.6"
+    compile group: "commons-beanutils", name:"commons-beanutils", version:"1.9.2"
+    compile group: "mysql", name:"mysql-connector-java", version:"5.1.6"
+
+
+    testCompile "junit:junit:4.+"
+    testRuntime group: "com.biomatters", name: "geneious.publicapi", version: "$geneiousPublicAPIVersion", configuration: "runtime"
+
+    File geneiousFiles = file(geneiousFilesPath)
+    testCompile files("$geneiousFiles/iSeek.jar")
+    testCompile files("$geneiousFiles/lib/common.jar")
+    testRuntime files("$geneiousFiles/resources")
+    if (file("$geneiousFiles/lib").listFiles()) {
+        testRuntime files(file("$geneiousFiles/lib").listFiles())
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        //BioJava uses old versions of log4j that have vulnerabilities - forcing gradle to bundle in the oldest version that fixes the issues
+        force 'org.apache.logging.log4j:log4j-api:2.8.2', 'org.apache.logging.log4j:log4j-core:2.8.2', 'org.apache.logging.log4j:log4j-slf4j-impl:2.8.2'
+    }
+}
+
+
+idea {
+    module {
+        inheritOutputDirs = true
+    }
+}
+
+task extractGeneiousRuntimeFiles(type: Copy) {
+
+    File zipFile = file(configurations.testRuntime.find {
+        it.getName().startsWith(geneiousFilesName) && it.getName().endsWith(".zip")
+    })
+
+    from zipTree(zipFile)
+    into buildDir
+}
+
+// Running the test task will depend on making the Geneious Runtime available
+tasks.test.dependsOn(extractGeneiousRuntimeFiles)
+
+
+tasks.test {
+    workingDir file(geneiousFilesPath)
+    minHeapSize '256M'
+    maxHeapSize '1024M'
+    jvmArgs '-ea', '-XX:MaxNewSize=40M', '-XX:MaxPermSize=256M', '-XX:ReservedCodeCacheSize=128m', '-Xss512K'
+    environment "DYLD_LIBRARY_PATH", "/Library/Application Support/Geneious/Frameworks:./activation/macos:./native_libs/macos"
+
+    environment "LD_LIBRARY_PATH", "./activation/linux64:./native_libs/linux64"
+}
+
+
+jar {
+    archiveName pluginName + ".jar"
+    include "**/*.class"
+    includeEmptyDirs false
+    manifest {
+        attributes('Implementation-Title': pluginName,
+                'Implementation-Version': version)
+    }
+}
+
+compileJava {
+    sourceCompatibility "1.8"
+    targetCompatibility "1.8"
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir 'src'
+        }
+        resources {
+            srcDir 'resources'
+        }
+        File geneiousFiles = file(geneiousFilesPath)
+        runtimeClasspath += files("$geneiousFiles/resources")
+        runtimeClasspath += files("$geneiousFiles/iSeek.jar")
+        if (file("$geneiousFiles/lib").listFiles()) {
+            runtimeClasspath += files(file("$geneiousFiles/lib").listFiles())
+        }
+    }
+
+    test {
+        java {
+            srcDir 'test'
+        }
+        resources {
+            srcDir 'testdata'
+        }
+    }
+}
+task createPlugin(dependsOn: build, type: Zip) {
+    description "Creates the gplugin to install into Geneious"
+
+    from {
+        configurations.compile.filter {
+            !it.getName().startsWith("GeneiousPublicAPI-") && !it.getName().startsWith("jdom-") && !it.getName().startsWith("jebl-")
+        }
+    }
+    from(libsDir)
+    from(sourceSets.main.resources)
+    into "$pluginName"
+
+    archiveName pluginDistFilename
+}
+
+task runGeneious(dependsOn: [extractGeneiousRuntimeFiles, assemble], type: JavaExec) {
+    main 'com.biomatters.iseek.application.ISeekMain'
+    classpath sourceSets.main.runtimeClasspath
+    args 'extraPlugins=' + pluginName
+    workingDir file(geneiousFilesPath)
+    minHeapSize '256M'
+    maxHeapSize '4096M'
+    jvmArgs '-XX:+UseCompressedOops', '-XX:+UseConcMarkSweepGC', '-ea', '-Xss512K', '-Djava.util.logging.config.file=no_logging.properties', '-DdevForce=1'
+    environment "DISPLAY", ":0.0"
+    environment "LD_LIBRARY_PATH", "./activation/linux64:./native_libs/linux64"
+    environment "DYLD_LIBRARY_PATH", "./activation/macos:./native_libs/macos"
+}

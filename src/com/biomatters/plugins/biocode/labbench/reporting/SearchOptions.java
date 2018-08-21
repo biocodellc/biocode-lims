@@ -5,7 +5,6 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import org.jdom.Element;
 
-import javax.media.jai.operator.AndDescriptor;
 import java.util.List;
 import java.util.ArrayList;
 

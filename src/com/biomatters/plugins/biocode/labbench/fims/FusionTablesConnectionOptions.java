@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class FusionTablesConnectionOptions extends PasswordOptions {
     static final OptionValue NO_TABLE = new OptionValue("%NONE%", "<html><i>None</i></html>");
 
-    private List<OptionValue> tables = null;
+    private List<OptionValue> tables = new ArrayList<OptionValue>();
 
     private JButton dialogOkButton;
 
@@ -218,9 +218,11 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
 
             List<Table> tableJson = FusionTableUtils.listTables(LoginOptions.DEFAULT_TIMEOUT);
 
-            tables = new ArrayList<OptionValue>();
-            for(Table table : tableJson) {
-                tables.add(new OptionValue(table.getTableId(), table.getName()));
+            synchronized (tables) {
+                tables.clear();
+                for (Table table : tableJson) {
+                    tables.add(new OptionValue(table.getTableId(), table.getName().isEmpty() ? "Untitled" : table.getName()));
+                }
             }
             return getTableOptionValues(tables);
         } catch (IOException e) {

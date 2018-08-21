@@ -208,7 +208,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
 
     @Override
     public final List<String> getImageUrls(FimsSample fimsSample) throws IOException {
-        URL xmlUrl = new URL("http://www.flickr.com/services/rest/?method=flickr.photos.search&format=rest&machine_tags=bioValidator:specimen="+ URLEncoder.encode("\""+fimsSample.getSpecimenId()+"\"", "UTF-8")+"&api_key=724c92d972c3822bdb9c8ff501fb3d6a");
+        URL xmlUrl = new URL("https://www.flickr.com/services/rest/?method=flickr.photos.search&format=rest&machine_tags=bioValidator:specimen="+ URLEncoder.encode("\""+fimsSample.getSpecimenId()+"\"", "UTF-8")+"&api_key=724c92d972c3822bdb9c8ff501fb3d6a");
         System.out.println(xmlUrl);
         final HttpURLConnection urlConnection = (HttpURLConnection)xmlUrl.openConnection();
         urlConnection.setRequestMethod("GET");
