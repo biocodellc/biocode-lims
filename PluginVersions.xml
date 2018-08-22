@@ -1,6 +1,6 @@
 <PluginVersions>
     <LatestVersion>3.0.4</LatestVersion>
-    <LatestVersionURL>https://github.com/Biomatters/biocode-lims/releases/download/v3.0.4/Biocode_3_0_4.gplugin</LatestVersionURL>
+    <LatestVersionURL>https://github.com/biocodellc/biocode-lims/releases/download/v3.0.4/Biocode_3_0_4.gplugin</LatestVersionURL>
     <ReleaseNotes>==Biocode Plugin 3.0.4 - 11 September 2017==
         * Fixed problem where the Biocode FIMS only retrieved field definitions from the Barcode of Wildlife project instead of the project that was specified.  This would result in empty tissue fields
     </ReleaseNotes>
