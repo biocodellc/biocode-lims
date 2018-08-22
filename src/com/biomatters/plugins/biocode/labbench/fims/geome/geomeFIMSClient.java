@@ -160,10 +160,8 @@ public class geomeFIMSClient {
             throw new DatabaseServiceException(e, e.getMessage(), true);
         }
     }
-
-    static final String EXPEDITION_NAME = "Expedition";
-
-    BiocodeFimsData getData(String project, Graph graph, Form searchTerms, String filter) throws DatabaseServiceException {
+    
+    BiocodeFimsData getData(String project, Form searchTerms, String filter) throws DatabaseServiceException {
         if(filter != null && filter.contains(",")) {
             try {
                 filter = URLEncoder.encode(filter, "UTF-8");
@@ -173,24 +171,12 @@ public class geomeFIMSClient {
             }
         }
 
-        List<String> graphsToSearch = new ArrayList<String>();
-        if(graph != null) {
-            graphsToSearch.add(graph.getGraphId());
-        } else {
-            for (Graph g : getGraphsForProject(project)) {
-                graphsToSearch.add(g.getGraphId());
-            }
-        }
-
-        return getBiocodeFimsData(project, graphsToSearch, searchTerms, filter);
+        return getBiocodeFimsData(project, searchTerms, filter);
     }
 
-    private BiocodeFimsData getBiocodeFimsData(String project, List<String> graphs, Form searchTerms, String filter) throws DatabaseServiceException {
+    private BiocodeFimsData getBiocodeFimsData(String project, Form searchTerms, String filter) throws DatabaseServiceException {
         try {
             WebTarget target = getQueryTarget();
-            if(graphs != null) {
-                target = target.queryParam("graphs", StringUtilities.join(",", graphs));
-            }
 
             Entity<Form> entity = null;
             if(searchTerms == null || searchTerms.asMap().isEmpty()) {
