@@ -368,7 +368,7 @@ public class ConnectionManager implements XMLSerializable{
                 e1.printStackTrace(writer);
                 Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error restoring Connection");
                 dialogOptions.setMoreOptionsButtonText("Show details", "Hide details");
-                Dialogs.showMoreOptionsDialog(dialogOptions, "There was an error restoring one or more of your saved connections from disk.  The affected connections will not be loaded.  Please send the detailed report to biocode.lims@gmail.com", stringWriter.toString());
+                Dialogs.showMoreOptionsDialog(dialogOptions, "There was an error restoring one or more of your saved connections from disk.  The affected connections will not be loaded.  Please send the detailed report to support@mooreabiocode.org", stringWriter.toString());
             }
         }
         selectedConnection = Integer.parseInt(element.getChildText("SelectedConnection"));
