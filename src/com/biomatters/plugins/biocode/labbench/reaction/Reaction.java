@@ -341,10 +341,15 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         return Collections.emptyList();
     }
 
-    public void setFieldsToDisplay(List<DocumentField> fields) {
-        this.displayableFields = fields;
-        cachedPreferredSize = null;
-        invalidateFieldWidthCache();
+    public void setFieldsToDisplay(final List<DocumentField> fields) {
+        Runnable runnable = new Runnable() {
+            public void run() {
+                Reaction.this.displayableFields = fields;
+                cachedPreferredSize = null;
+                invalidateFieldWidthCache();
+            }
+        };
+        ThreadUtilities.invokeNowOrLater(runnable);
     }
 
     /**
