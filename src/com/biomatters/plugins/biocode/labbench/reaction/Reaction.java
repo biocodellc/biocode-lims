@@ -741,8 +741,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         y += Math.max(0, (availableHeight - requiredHeight)/2);
 
 
-        for (int i = 0; i < getFieldsToDisplay().size(); i++) {
-            if(getFieldsToDisplay().get(i).equals(GEL_IMAGE_DOCUMENT_FIELD)) {
+        List<DocumentField> fieldsToDisplay = getFieldsToDisplay();
+        for (int i = 0; i < fieldsToDisplay.size(); i++) {
+            if(fieldsToDisplay.get(i).equals(GEL_IMAGE_DOCUMENT_FIELD)) {
                 if(gelImage != null) {
                     int x = (location.width-gelImage.getImage().getWidth(imageObserver))/2;
                     g.drawImage(gelImage.getImage(),location.x+x,y, imageObserver);
@@ -751,13 +752,13 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 continue;
             }
 
-            DocumentField field = getFieldsToDisplay().get(i);
+            DocumentField field = fieldsToDisplay.get(i);
             String value = getDisplayableValue(field);
             if (value.length() == 0) {
                 continue;
             }
             int textHeight = charHeight;
-            int textWidth = fieldWidthCache != null ? fieldWidthCache[i] : location.width;
+            int textWidth = fieldWidthCache != null && fieldWidthCache.length == fieldsToDisplay.size() ? fieldWidthCache[i] : location.width;
             g.drawString(value, location.x + (location.width - textWidth) / 2, y + textHeight);
             y += textHeight + LINE_SPACING;
         }
