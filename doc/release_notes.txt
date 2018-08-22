@@ -1,5 +1,6 @@
-==Biocode Plugin 3.0.5 - TBD==
+==Biocode Plugin 3.0.5 - 22 August 2018==
 * Fixed a crash that occurs when searching a Google Fusion Table column which has space in its name
+* Speed up plate rendering in some situations
 
 ==Biocode Plugin 3.0.4 - 11 September 2017==
 * Fixed problem where the Biocode FIMS only retrieved field definitions from the Barcode of Wildlife project instead of the project that was specified.  This would result in empty tissue fields
