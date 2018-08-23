@@ -1220,9 +1220,9 @@ public class ReactionUtilities {
         }
     }
 
-    public static void invalidateFieldWidthCacheOfReactions(Collection<? extends Reaction> reactions) {
+    public static void clearPreferredSizeForReactions(Collection<? extends Reaction> reactions) {
         for (Reaction reaction : reactions) {
-            reaction.invalidateFieldWidthCache();
+            reaction.clearPreferredSize();
         }
     }
 
