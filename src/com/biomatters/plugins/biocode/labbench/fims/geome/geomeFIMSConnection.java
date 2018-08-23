@@ -10,11 +10,12 @@ import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
+import org.apache.commons.collections.map.LinkedMap;
 
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.core.Response;
+import java.util.*;
 
 public class geomeFIMSConnection extends FIMSConnection {
     private static final String HOST = "api.develop.geome-db.org";
@@ -56,22 +57,28 @@ public class geomeFIMSConnection extends FIMSConnection {
             System.out.println("Finding projects...");
             for (Project project : projects) {
                 System.out.println(project.title);
-                // todo handle gzip encoding
-//                Invocation.Builder configRequest = client.getQueryTarget().path("projects").path(String.valueOf(project.id)).path("config").request();
-//
-//                Response response = configRequest.get();
-//                ProjectConfig config = geomeFIMSClient.getRestServiceResult(ProjectConfig.class, response);
-//                for (ProjectConfig.Entity entity : config.entities) {
-//                    System.out.println("Entity " + entity);
-//                    for (Project.Field field : entity.attributes) {
-//                        System.out.println(field.column + " (" + field.uri + ")");
-//                    }
-//                }
+
+                Invocation.Builder configRequest = client.getQueryTarget().path("projects").path(String.valueOf(project.id)).path("config").request();
+
+                Response response = configRequest.get();
+                ProjectConfig config = geomeFIMSClient.getRestServiceResult(ProjectConfig.class, response);
+                for (ProjectConfig.Entity entity : config.entities) {
+                    if(!Arrays.asList("Tissue", "Event", "Sample").contains(entity.conceptAlias)) {
+                        continue;
+                    }
+
+                    for (Project.Field attribute : entity.attributes) {
+                        allAttributes.put(attribute.uri, attribute.asDocumentField());
+                    }
+                }
             }
         } catch (Exception e) {
-            throw new ConnectionException("Can not log in to host : " + fimsOptions.getHost() + " with your credential.");
+            e.printStackTrace();
+            throw new ConnectionException("Unable to connect to GeOMe: " + e.getMessage());
         }
     }
+
+    private Map<String, DocumentField> allAttributes = new LinkedMap();
 
     @Override
     public void disconnect() {
@@ -80,7 +87,7 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     public DocumentField getTissueSampleDocumentField() {
-        return null;
+        return allAttributes.get("urn:tissueID");
     }
 
     @Override
@@ -95,17 +102,20 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     protected List<DocumentField> _getCollectionAttributes() {
-        return null;
+        return new ArrayList<>(allAttributes.values());
     }
 
     @Override
     protected List<DocumentField> _getTaxonomyAttributes() {
-        return null;
+        return Arrays.asList(
+                allAttributes.get("urn:family"),
+                allAttributes.get("urn:scientificName")
+        );
     }
 
     @Override
     protected List<DocumentField> _getSearchAttributes() {
-        return null;
+        return new ArrayList<>(allAttributes.values());
     }
 
     @Override

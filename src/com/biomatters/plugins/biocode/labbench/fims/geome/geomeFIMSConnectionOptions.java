@@ -9,7 +9,6 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.LoginOptions;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
-import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
 import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
 
@@ -70,19 +69,6 @@ import java.util.prefs.Preferences;
                 thread.start();
             }
         });
-        addDivider(" ");
-
-        final List<ProjectOptionValue> projectOptions = new ArrayList<ProjectOptionValue>();
-        List<Project> projectCache = getProjectCache();
-        if (projectCache == null || projectCache.isEmpty()) {
-            projectOptions.add(ProjectOptionValue.NO_VALUE);
-        } else {
-            for (Project project : projectCache) {
-                projectOptions.add(new ProjectOptionValue(project));
-            }
-        }
-
-        projectOption = addComboBoxOption("project", "Project:", projectOptions, projectOptions.get(0));
     }
 
     public void login(String host, String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
@@ -90,7 +76,6 @@ import java.util.prefs.Preferences;
         SharedCookieHandler.registerHost(url.getHost());
         geomeFIMSClient client = new geomeFIMSClient(host, LoginOptions.DEFAULT_TIMEOUT);
         client.login(username, password);
-//        loadProjectsFromServer(client);
     }
 
     private void loadProjectsFromServer(geomeFIMSClient client) {
@@ -197,15 +182,12 @@ import java.util.prefs.Preferences;
 
     private static final List<OptionValue> NO_FIELDS = Collections.singletonList(new OptionValue("None", "None"));
     public List<OptionValue> getFieldsAsOptionValues() throws DatabaseServiceException {
-        List<OptionValue> fields = new ArrayList<OptionValue>();
-        Project project = projectOption.getValue().project;
-        if(project == null) {
-            return NO_FIELDS;
-        }
-        for (Project.Field field : project.getFields()) {
-            fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.uri, field.column));
-        }
-        return fields;
+
+        return NO_FIELDS;
+//        for (Project.Field field : project.getFields()) {
+//            fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.uri, field.column));
+//        }
+//        return fields;
     }
 
     public Project getProject() {

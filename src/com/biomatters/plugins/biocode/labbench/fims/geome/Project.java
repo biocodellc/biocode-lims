@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims.geome;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.xml.FastSaxBuilder;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
@@ -152,21 +153,21 @@ public class Project {
         return result;
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Field {
-        String uri;
-        String column;
+        public String uri;
+        public String column;
+
+        public Field() {
+        }
 
         public Field(String uri, String column) {
             this.uri = uri;
             this.column = column;
         }
 
-        public String getColumn() {
-            return column;
-        }
-
-        public String getURI() {
-            return uri;
+        DocumentField asDocumentField() {
+            return new DocumentField(column, "", uri, String.class, false, false);
         }
     }
 }

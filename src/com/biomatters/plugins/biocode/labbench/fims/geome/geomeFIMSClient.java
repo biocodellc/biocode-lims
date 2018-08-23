@@ -10,6 +10,7 @@ import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.filter.LoggingFilter;
 import org.glassfish.jersey.jackson.JacksonFeature;
+import org.glassfish.jersey.message.GZipEncoder;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.ProcessingException;
@@ -51,8 +52,9 @@ public class geomeFIMSClient {
                 .property(ClientProperties.READ_TIMEOUT, timeout * 1000);
 
         target = ClientBuilder.newBuilder().withConfig(config).build().target(hostname)
-                                    .register(JacksonFeature.class)
-                                    .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), true));
+                .register(GZipEncoder.class)
+                .register(JacksonFeature.class)
+                .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), true));
     }
 
 
