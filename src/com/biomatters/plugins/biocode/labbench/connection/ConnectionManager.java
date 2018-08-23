@@ -42,6 +42,7 @@ public class ConnectionManager implements XMLSerializable{
     private JPanel centerPanel;
     private JList connectionsList;
     private JButton removeButton;
+    private JButton resetButton;
 
     public ConnectionManager() {
         connections = new ArrayList<Connection>();
@@ -210,6 +211,18 @@ public class ConnectionManager implements XMLSerializable{
         int imageNumber = (int)(6*Math.random())+1;
         final Image introImage = Toolkit.getDefaultToolkit().createImage(getClass().getResource("biocode_intro"+imageNumber+".jpg"));
 
+        resetButton = new JButton("Reset to previous values");
+        resetButton.setToolTipText("Resets the options for this connection back to the values they were last saved with");
+        resetButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Connection connection = getCurrentlySelectedConnection();
+                if(connection != null) {
+                    connection.resetOptions();
+                }
+            }
+        });
+
         centerPanel = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -330,6 +343,9 @@ public class ConnectionManager implements XMLSerializable{
         Connection selectedConnection = connections.get(this.selectedConnection);
         JPanel chosenConnectionPanel = selectedConnection.getConnectionOptionsPanel(okButton);
         centerPanel.add(chosenConnectionPanel, BorderLayout.CENTER);
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.add(resetButton);
+        centerPanel.add(bottomPanel, BorderLayout.SOUTH);
         ConnectionManager.packAncestor(chosenConnectionPanel);
         centerPanel.revalidate();
         if(selectedConnection.optionsCreated()) {

@@ -22,6 +22,8 @@ import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -198,6 +200,12 @@ public class Connection implements XMLSerializable {
             return passwordOptions;
         }
         return null;
+    }
+
+    public void resetOptions() {
+        if(connectionOptions != null && originalConnectionOptionsXml != null) {
+            connectionOptions.valuesFromXML(originalConnectionOptionsXml);
+        }
     }
 
     public void setPasswordsFromOptions(final Options enterPasswordOptions) {
