@@ -62,6 +62,9 @@ public class geomeFIMSConnection extends FIMSConnection {
 
                 Response response = configRequest.get();
                 ProjectConfig config = geomeFIMSClient.getRestServiceResult(ProjectConfig.class, response);
+
+                List<String> taxonomyFieldNames = Arrays.asList("urn:kingdom", "urn:phylum", "urn:subphylum", "urn:superClass", "urn:class", "urn:infraClass", "urn:subclass", "urn:superOrder", "urn:order", "urn:infraOrder", "urn:suborder", "urn:superFamily", "urn:family", "urn:subfamily", "urn:genus", "urn:subGenus", "urn:tribe", "urn:subTribe", "urn:species", "urn:subSpecies");
+
                 for (ProjectConfig.Entity entity : config.entities) {
                     if(!Arrays.asList("Tissue", "Event", "Sample").contains(entity.conceptAlias)) {
                         continue;
@@ -69,6 +72,13 @@ public class geomeFIMSConnection extends FIMSConnection {
 
                     for (Project.Field attribute : entity.attributes) {
                         allAttributes.put(attribute.uri, attribute.asDocumentField());
+                        if(taxonomyFieldNames.contains(attribute.uri)) {
+                            taxonomyAttributes.put(attribute.uri, attribute.asDocumentField());
+                        }
+                        else {
+                            collectionAttributes.put(attribute.uri, attribute.asDocumentField());
+                        }
+
                     }
                 }
             }
@@ -79,6 +89,8 @@ public class geomeFIMSConnection extends FIMSConnection {
     }
 
     private Map<String, DocumentField> allAttributes = new LinkedHashMap<>();
+    private Map<String, DocumentField> taxonomyAttributes = new LinkedHashMap<>();
+    private Map<String, DocumentField> collectionAttributes = new LinkedHashMap<>();
 
     @Override
     public void disconnect() {
@@ -105,15 +117,12 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     protected List<DocumentField> _getCollectionAttributes() {
-        return new ArrayList<>(allAttributes.values());
+        return new ArrayList<>(collectionAttributes.values());
     }
 
     @Override
     protected List<DocumentField> _getTaxonomyAttributes() {
-        return Arrays.asList(
-                allAttributes.get("urn:family"),
-                allAttributes.get("urn:scientificName")
-        );
+        return new ArrayList<>(taxonomyAttributes.values());
     }
 
     @Override
