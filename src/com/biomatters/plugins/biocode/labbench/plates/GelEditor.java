@@ -6,9 +6,11 @@ import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.StandardIcons;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.ImagePanel;
+import org.bouncycastle.asn1.x509.GeneralName;
 
 import javax.swing.*;
 import javax.swing.event.ListDataEvent;
@@ -169,7 +171,7 @@ public class GelEditor {
         if(image == null) {
             return new JPanel();
         }
-        ImagePanel imagePanel = new ImagePanel(image.getImage());
+        final ImagePanel imagePanel = new ImagePanel(image.getImage());
         JScrollPane imageScroller = new JScrollPane(imagePanel);
         final JTextArea notesArea = new JTextArea(image.getNotes());
         notesArea.addKeyListener(new KeyListener() {
@@ -192,6 +194,33 @@ public class GelEditor {
         panel.add(imageScroller, BorderLayout.CENTER);
         panel.add(notesScroller, BorderLayout.SOUTH);
         GeneiousActionToolbar toolbar = new GeneiousActionToolbar(Preferences.userNodeForPackage(GelEditor.class), false, true);
+        GeneiousAction zoomInAction = new GeneiousAction("", "Zoom in", IconUtilities.getIcons("zoomin.png")) {
+            public void actionPerformed(ActionEvent e) {
+                double zoom = imagePanel.getZoom();
+                if(zoom < 2.0) {
+                    zoom += 0.1;
+                    imagePanel.setZoom(zoom);
+                }
+
+            }
+        };
+        GeneiousAction fullZoomAction = new GeneiousAction("", "Full Zoom", IconUtilities.getIcons("fullzoom.png")) {
+            public void actionPerformed(ActionEvent e) {
+                imagePanel.setZoom(1.0);
+            }
+        };
+        GeneiousAction zoomOutAction = new GeneiousAction("", "Zoom out", IconUtilities.getIcons("zoomout.png")) {
+            public void actionPerformed(ActionEvent e) {
+                double zoom = imagePanel.getZoom();
+                if(zoom > 0.1) {
+                    zoom -= 0.1;
+                    imagePanel.setZoom(zoom);
+                }
+            }
+        };
+        toolbar.addAction(zoomOutAction);
+        toolbar.addAction(fullZoomAction);
+        toolbar.addAction(zoomInAction);
         Icons icon = BiocodePlugin.getIcons("splitgel16.png");
         toolbar.addAction(new GeneiousAction("Split GEL", "Split the GEL into wells, and attach them to your reactions.", icon){
             public void actionPerformed(ActionEvent e) {
