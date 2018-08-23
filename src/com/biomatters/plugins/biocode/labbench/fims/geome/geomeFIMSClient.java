@@ -4,6 +4,8 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.fims.biocode.*;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.filter.LoggingFilter;
@@ -20,6 +22,8 @@ import javax.ws.rs.core.Form;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
@@ -48,7 +52,7 @@ public class geomeFIMSClient {
 
         target = ClientBuilder.newBuilder().withConfig(config).build().target(hostname)
                                     .register(JacksonFeature.class)
-                                    .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false));
+                                    .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), true));
     }
 
 
@@ -61,27 +65,40 @@ public class geomeFIMSClient {
      * @throws DatabaseServiceException If the server returned an error when we tried to authenticate
      */
     void login(String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
-        // TODO: fetch these from properties file, not sure we want to code these into application??
-        String client_id = "";
-        String client_secret = "";
+        JsonNode secrets = getClientSecrets();
+        String clientId = secrets.get("client_id").asText();
+        String clientSecret = secrets.get("client_secret").asText();
 
-        //WebTarget path = target.path("biocode-fims/rest/authenticationService/login");
-
-        WebTarget path = target.path("oath/accessToken");
+        WebTarget path = target.path("/v1/oauth/accessToken");
         Invocation.Builder request = path.request();
         Form formToPost = new Form()
                 .param("username", username)
                 .param("password", password)
-                .param("client_id", client_id)
-                .param("client_secret", client_secret);
+                .param("client_id", clientId)
+                .param("client_secret", clientSecret)
+                .param("grant_type", "password");
+
         Response response = request.post(
                 Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
         
-        String result = getRestServiceResult(String.class, response);
-        // Not sure what the result looks like, should have access_token
-        System.out.println(result);
-        // TODO: we need to grab the access token from the result
-         access_token = "set access token here";
+        access_token = getRestServiceResult(String.class, response);
+    }
+
+    private JsonNode getClientSecrets() throws DatabaseServiceException {
+        InputStream secretsStream = geomeFIMSClient.class.getResourceAsStream("/geome_secrets.json");
+        if(secretsStream == null) {
+            throw new IllegalStateException("Can't find client secrets for connection to geome");
+        }
+
+
+        try {
+            JsonNode node = new ObjectMapper().readTree(secretsStream);
+            // todo Add a switch.  In general prod should be used and develop only for dev
+            return node.get("develop");
+
+        } catch (IOException e) {
+            throw new DatabaseServiceException("File missing stuff", false);
+        }
     }
 
     /**
@@ -125,7 +142,7 @@ public class geomeFIMSClient {
     }
 
     WebTarget getQueryTarget() {
-        return target.path("v1/records/Tissue/json");
+        return target.path("v1");
     }
 
     List<Project> getProjects() throws DatabaseServiceException {

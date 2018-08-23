@@ -11,6 +11,7 @@ import com.biomatters.plugins.biocode.labbench.AnimatedIcon;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.LoginOptions;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
+import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.google.api.services.fusiontables.model.Table;
 import org.jdom.Element;
 
@@ -59,7 +60,7 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
 
     @Override
     public void prepare() throws ConnectionException {
-        getTables(false);
+        updateTables();
     }
 
     @Override
@@ -182,16 +183,24 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
         final AtomicReference<List<OptionValue>> tableValues = new AtomicReference<List<OptionValue>>();
         final AtomicReference<String> accountName = new AtomicReference<String>();
         try {
-            tableValues.set(getTables(useCache));
+            if(!useCache) {
+                updateTables();
+            }
+            tableValues.set(tables);
             accountName.set(FusionTableUtils.getAccountName());
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new ConnectionException(e);
         }
 
         Runnable runnable = new Runnable() {
             public void run() {
                 ComboBoxOption tables = (ComboBoxOption)getOption(TableFimsConnectionOptions.TABLE_ID);
-                tables.setPossibleValues(tableValues.get());
+                if(tableValues.get().size() > 0) {
+                    tables.setPossibleValues(tableValues.get());
+                }
+                else {
+                    tables.setPossibleValues(Collections.singletonList(NO_TABLE));
+                }
                 LabelOption label = (LabelOption)getOption("currentUserLabel");
                 Option changeAccountButton = getOption("authorize");
                 if(accountName.get() != null) {
@@ -210,11 +219,8 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
 
 
 
-    private List<OptionValue> getTables(boolean useCache) {
+    private void updateTables() throws ConnectionException {
         try {
-            if (useCache && tables != null) {
-                return getTableOptionValues(tables);
-            }
 
             List<Table> tableJson = FusionTableUtils.listTables(LoginOptions.DEFAULT_TIMEOUT);
 
@@ -224,9 +230,9 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
                     tables.add(new OptionValue(table.getTableId(), table.getName().isEmpty() ? "Untitled" : table.getName()));
                 }
             }
-            return getTableOptionValues(tables);
+            getTableOptionValues(tables);
         } catch (IOException e) {
-            return Collections.singletonList(FusionTablesConnectionOptions.NO_TABLE);
+            throw new ConnectionException(e);
         }
     }
 

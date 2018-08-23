@@ -10,9 +10,6 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.LoginOptions;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
-import com.biomatters.plugins.biocode.labbench.fims.geome.geomeFIMSClient;
-import com.biomatters.plugins.biocode.labbench.fims.geome.geomeFIMSConnection;
-import com.biomatters.plugins.biocode.labbench.fims.geome.Project;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
 import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
 
@@ -93,7 +90,7 @@ import java.util.prefs.Preferences;
         SharedCookieHandler.registerHost(url.getHost());
         geomeFIMSClient client = new geomeFIMSClient(host, LoginOptions.DEFAULT_TIMEOUT);
         client.login(username, password);
-        loadProjectsFromServer(client);
+//        loadProjectsFromServer(client);
     }
 
     private void loadProjectsFromServer(geomeFIMSClient client) {
@@ -144,7 +141,6 @@ import java.util.prefs.Preferences;
                 childNode.putInt(ID, project.id);
                 childNode.put(CODE, project.code);
                 childNode.put(TITLE, project.title);
-                childNode.put(XML, project.jsonLocation);
             }
             cacheNode.flush();
         } catch (BackingStoreException e) {
@@ -207,7 +203,7 @@ import java.util.prefs.Preferences;
             return NO_FIELDS;
         }
         for (Project.Field field : project.getFields()) {
-            fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.uri, field.name));
+            fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.uri, field.column));
         }
         return fields;
     }

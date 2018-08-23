@@ -186,7 +186,7 @@ task runGeneious(dependsOn: [extractGeneiousRuntimeFiles, assemble], type: JavaE
     workingDir file(geneiousFilesPath)
     minHeapSize '256M'
     maxHeapSize '4096M'
-    jvmArgs '-XX:+UseCompressedOops', '-XX:+UseConcMarkSweepGC', '-ea', '-Xss512K', '-Djava.util.logging.config.file=no_logging.properties', '-DdevForce=1'
+    jvmArgs '-XX:+UseCompressedOops', '-XX:+UseConcMarkSweepGC', '-ea', '-Xss512K', '-Djava.util.logging.config.file=/Users/matthew/logging.properties', '-DdevForce=1'
     environment "DISPLAY", ":0.0"
     environment "LD_LIBRARY_PATH", "./activation/linux64:./native_libs/linux64"
     environment "DYLD_LIBRARY_PATH", "./activation/macos:./native_libs/macos"

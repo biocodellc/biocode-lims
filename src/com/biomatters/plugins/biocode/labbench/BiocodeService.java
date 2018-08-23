@@ -25,6 +25,7 @@ import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnection;
+import com.biomatters.plugins.biocode.labbench.fims.geome.geomeFIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchCallback;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
@@ -305,7 +306,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 new MySQLFimsConnection(),
                 new MooreaFimsConnection(),
                 new TAPIRFimsConnection(),
-                new BiocodeFIMSConnection()
+                new BiocodeFIMSConnection(),
+                new geomeFIMSConnection()
         };
     }
 
