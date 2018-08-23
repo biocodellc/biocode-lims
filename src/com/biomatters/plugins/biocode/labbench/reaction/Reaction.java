@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
+import com.biomatters.geneious.publicapi.components.GLabel;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
@@ -53,6 +54,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     private GelImage gelImage = null;
     private BackgroundColorer backgroundColorer;
     private Dimension cachedPreferredSize;
+    private JLabel renderingLabel = new JLabel();
+    private Font renderingFont = renderingLabel.getFont();
+    private float zoom = 1.0f;
     private static final ImageObserver imageObserver = new ImageObserver(){
         public boolean imageUpdate(Image img, int infoflags, int x, int y, int width, int height) {
             return false;
@@ -76,9 +80,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public abstract String getLocus();
 
-    public void setBaseFontSize(int fontSze) {
-        labelFont = new Font("sansserif", Font.PLAIN, fontSze);
-        firstLabelFont = new Font("sansserif", Font.BOLD, fontSze+2);
+    public void setZoom(float zoom) {
+        this.zoom = zoom;
         invalidateFieldWidthCache();
     }
 
@@ -218,8 +221,6 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     private static final int LINE_SPACING = 5;
 
-    private Font firstLabelFont = new Font("sansserif", Font.BOLD, 12);
-    private Font labelFont = new Font("sansserif", Font.PLAIN, 10);
 
     private Rectangle location = new Rectangle(0,0,0,0);
 
@@ -625,8 +626,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
         //make space for the well location label
         if(this.locationString != null && this.locationString.length() > 0) {
-            LineMetrics lineMetrics = firstLabelFont.getLineMetrics(this.locationString, fontRenderContext);
-            y += (int)lineMetrics.getHeight();
+            y += charHeight;
         }
 
         for (int i = 0; i < fieldsToDisplay.size(); i++) {
@@ -660,23 +660,25 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             fieldList.add(new DocumentField("a", "", "testField", String.class, false, false));
         }
         fieldWidthCache = new int[fieldList.size()];
+        renderingLabel.setFont(renderingFont.deriveFont(renderingFont.getSize() * zoom));
+        renderingLabel.setHorizontalAlignment(SwingConstants.CENTER);
         for(int i=0; i < fieldList.size(); i++) {
             String value = getDisplayableValue(fieldList.get(i));
             if(value.length() == 0) {
                 continue;
             }
-            Font font = i == 0 ? firstLabelFont : labelFont;
-            TextLayout tl = new TextLayout(value, font, fontRenderContext);
-            Rectangle2D layoutBounds = tl.getBounds();
-            if(layoutBounds != null) {
-                fieldWidthCache[i] = (int) layoutBounds.getWidth();
-            }
-            else {
-                fieldWidthCache[i] = 60;
-                assert false : "The text knows no bounds!";
-            }
-            charHeight = (int)tl.getBounds().getHeight();
+            renderingLabel.setText(getLabelText(i, fieldList.get(i)));
+            fieldWidthCache[i] = renderingLabel.getPreferredSize().width;
+            charHeight = Math.max(charHeight, renderingLabel.getPreferredSize().height);
         }
+    }
+
+    private String getLabelText(int fieldIndex, DocumentField field) {
+        String text = getDisplayableValue(field);
+        if(fieldIndex == 0) {
+            return "<html><div style='text-align: center;'><b>"+text+"</b></div></html>";
+        }
+        return "<html><div style='text-align: center;'>"+text+"</div></html>";
     }
 
     /**
@@ -724,11 +726,13 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         int y = location.y;
 
         if(label != null && label.length() > 0) {
-            g.setColor(new Color(0,0,0,128));
-            g.setFont(firstLabelFont.deriveFont(Font.PLAIN));
-            LineMetrics lineMetrics = firstLabelFont.getLineMetrics(label, fontRenderContext);
-            g.drawString(label, location.x+2, location.y+(int)lineMetrics.getHeight());
-            y += (int)lineMetrics.getHeight() + LINE_SPACING;
+            renderingLabel.setForeground(new Color(0,0,0,128));
+            renderingLabel.setText(label);
+            renderingLabel.setBounds(0, 0, renderingLabel.getPreferredSize().width, renderingLabel.getPreferredSize().height);
+            g.translate(location.x + 2, y+2);
+            renderingLabel.paint(g);
+            g.translate(-location.x - 2, -y-2);
+            y += renderingLabel.getPreferredSize().height + LINE_SPACING;
         }
 
         g.setColor(enabled ? Color.black : Color.gray);
@@ -753,14 +757,15 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             }
 
             DocumentField field = fieldsToDisplay.get(i);
-            String value = getDisplayableValue(field);
-            if (value.length() == 0) {
-                continue;
-            }
-            int textHeight = charHeight;
-            int textWidth = fieldWidthCache != null && fieldWidthCache.length == fieldsToDisplay.size() ? fieldWidthCache[i] : location.width;
-            g.drawString(value, location.x + (location.width - textWidth) / 2, y + textHeight);
-            y += textHeight + LINE_SPACING;
+
+            renderingLabel.setForeground(new Color(0,0,0));
+            renderingLabel.setText(getLabelText(i, field));
+            renderingLabel.setBounds(0, 0, location.width, renderingLabel.getPreferredSize().height);
+            g.translate(location.x, y+2);
+            renderingLabel.paint(g);
+            g.translate(-location.x, -y-2);
+            y += renderingLabel.getPreferredSize().height + LINE_SPACING;
+
         }
 
         g.setColor(Color.black);

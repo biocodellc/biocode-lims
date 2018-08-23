@@ -28,7 +28,7 @@ public class PlateView extends JPanel {
     boolean creating = false;
     private boolean editted = false;
 
-    private int zoom = 9;
+    private float zoom = 1.0f;
 
     public PlateView(int numberOfWells, Reaction.Type type, boolean creating) {
         this.creating = creating;
@@ -57,24 +57,24 @@ public class PlateView extends JPanel {
     }
 
     public void decreaseZoom () {
-        zoom--;
-        if (zoom < 5) {
-            zoom = 5;
+        zoom-= 0.1;
+        if (zoom < 0.1) {
+            zoom = 0.1f;
         }
         updateZoom();
     }
 
     public void increaseZoom () {
-        zoom++;
-        if (zoom > 15) {
-            zoom = 15;
+        zoom+= 0.1;
+        if (zoom > 3.0f) {
+            zoom = 3.0f;
         }
         updateZoom();
     }
 
     private void updateZoom() {
         for (Reaction r : getPlate().getReactions()) {
-            r.setBaseFontSize(zoom);
+            r.setZoom(zoom);
         }
         repaint();
     }
