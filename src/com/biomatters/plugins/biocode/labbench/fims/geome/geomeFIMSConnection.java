@@ -8,14 +8,18 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
+import com.biomatters.plugins.biocode.labbench.TissueDocument;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
+import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
 import org.apache.commons.collections.map.LinkedMap;
 
 
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.Response;
+import java.lang.ref.SoftReference;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class geomeFIMSConnection extends FIMSConnection {
     private static final String HOST = "api.develop.geome-db.org";
@@ -54,10 +58,7 @@ public class geomeFIMSConnection extends FIMSConnection {
         try {
             client.login(fimsOptions.getUserName(), fimsOptions.getPassword());
             List<Project> projects = client.getProjects();
-            System.out.println("Finding projects...");
             for (Project project : projects) {
-                System.out.println(project.title);
-
                 Invocation.Builder configRequest = client.getQueryTarget().path("projects").path(String.valueOf(project.id)).path("config").request();
 
                 Response response = configRequest.get();
@@ -85,9 +86,11 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     }
 
+    private static final String TISSUE_URN = "urn:tissueID";
+    private static final String SPECIMEN_URN = "urn:materialSampleID";
     @Override
     public DocumentField getTissueSampleDocumentField() {
-        return allAttributes.get("urn:tissueID");
+        return allAttributes.get(TISSUE_URN);
     }
 
     @Override
@@ -120,17 +123,73 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
-        return null;
+        return getTissueIdsMatchingQuery(query, projectsToMatch, true);
     }
+
+    private Map<String, SoftReference<Map<String, Object>>> cachedTissues = new HashMap<>();
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmptyQuery) throws ConnectionException {
-        return null;
+        Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
+                .queryParam("projectId", 3)
+                .queryParam("entity", "Tissue")
+                .queryParam("q", "_select_:[Tissue,Sample,Event]")
+                .request();
+        Response response = searchRequest.get();
+        try {
+            List<String> ids = new ArrayList<>();
+            SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
+            for (Map<String, Object> tissueMap : result.content.Tissue) {
+                String tissueId = tissueMap.get(getTissueSampleDocumentField().getName()).toString();
+                cachedTissues.put(tissueId, new SoftReference<>(tissueMap));
+                ids.add(tissueId);
+            }
+            return ids;
+        } catch (DatabaseServiceException e) {
+            throw new ConnectionException(e);
+        }
     }
 
     @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
-        return null;
+        Map<String, DocumentField> attributesByName = new HashMap<>();
+        allAttributes.values().forEach(f -> attributesByName.put(f.getName(), f));
+
+        List<FimsSample> samples = new ArrayList<>();
+
+        for (String tissueId : tissueIds) {
+            Map<String, Object> valuesForTissue = null;
+            SoftReference<Map<String, Object>> ref = cachedTissues.get(tissueId);
+            if(ref != null) {
+                valuesForTissue = ref.get();
+            }
+
+            if(valuesForTissue != null) {
+                // Need to convert map from name -> value to uri -> value because that's what Geneious expects
+                Map<String, Object> valuesByCode = new HashMap<>();
+                valuesForTissue.forEach((key, value) -> {
+                    DocumentField documentField = attributesByName.get(key);
+                    if(documentField != null) {
+                        valuesByCode.put(documentField.getCode(), value);
+                    } else {
+                        System.out.println("missing DocumentField for " + key);
+                    }
+                });
+                TissueDocument sample = new TissueDocument(
+                        new TableFimsSample(
+                                getCollectionAttributes(),
+                                getTaxonomyAttributes(), valuesByCode,
+                                TISSUE_URN,
+                                SPECIMEN_URN)
+                );
+                samples.add(sample);
+                if(callback != null) {
+                    callback.add(sample, Collections.emptyMap());
+                }
+            }
+        }
+
+        return samples;
     }
 
     @Override
@@ -140,17 +199,17 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     public DocumentField getPlateDocumentField() {
-        return null;
+        return allAttributes.get("urn:plateID");
     }
 
     @Override
     public DocumentField getWellDocumentField() {
-        return null;
+        return allAttributes.get("urn:wellID");
     }
 
     @Override
     public boolean storesPlateAndWellInformation() {
-        return false;
+        return true;
     }
 
     @Override

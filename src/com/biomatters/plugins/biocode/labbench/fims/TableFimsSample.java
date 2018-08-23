@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.jdom.Element;
 import jxl.Sheet;
@@ -181,6 +182,8 @@ public class TableFimsSample implements FimsSample {
             for(Element e : valuesElement.getChildren()) {
                 DocumentField field = getDocumentField(e.getChildText("key"));
                 if(field == null) {
+                    fields.stream().filter(f -> f.getName().contains("plate")).collect(Collectors.toList()).forEach(System.out::println);
+                    fields.forEach(f -> System.out.println(f.getName() + " (" + f.getCode() + ")"));
                     throw new IllegalStateException("The DocumentField "+e.getChildText("key")+" was not found!");
                 }
                 String valueText = e.getChildText("value");
