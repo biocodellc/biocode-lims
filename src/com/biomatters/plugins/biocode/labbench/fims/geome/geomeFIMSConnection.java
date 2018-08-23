@@ -12,7 +12,6 @@ import com.biomatters.plugins.biocode.labbench.TissueDocument;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
-import org.apache.commons.collections.map.LinkedMap;
 
 
 import javax.ws.rs.client.Invocation;
@@ -79,7 +78,7 @@ public class geomeFIMSConnection extends FIMSConnection {
         }
     }
 
-    private Map<String, DocumentField> allAttributes = new LinkedMap();
+    private Map<String, DocumentField> allAttributes = new LinkedHashMap<>();
 
     @Override
     public void disconnect() {
