@@ -19,7 +19,7 @@ import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.Response;
 import java.lang.ref.SoftReference;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.function.BiConsumer;
 
 public class geomeFIMSConnection extends FIMSConnection {
     private static final String HOST = "api.develop.geome-db.org";
@@ -87,7 +87,8 @@ public class geomeFIMSConnection extends FIMSConnection {
     }
 
     private static final String TISSUE_URN = "urn:tissueID";
-    private static final String SPECIMEN_URN = "urn:materialSampleID";
+    private static final String SAMPLE_URN = "urn:materialSampleID";
+    private static final String EVENT_ID = "eventID";
     @Override
     public DocumentField getTissueSampleDocumentField() {
         return allAttributes.get(TISSUE_URN);
@@ -127,6 +128,8 @@ public class geomeFIMSConnection extends FIMSConnection {
     }
 
     private Map<String, SoftReference<Map<String, Object>>> cachedTissues = new HashMap<>();
+    private Map<String, SoftReference<Map<String, Object>>> cachedSamples = new HashMap<>();
+    private Map<String, SoftReference<Map<String, Object>>> cachedEvents = new HashMap<>();
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmptyQuery) throws ConnectionException {
@@ -139,14 +142,25 @@ public class geomeFIMSConnection extends FIMSConnection {
         try {
             List<String> ids = new ArrayList<>();
             SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
-            for (Map<String, Object> tissueMap : result.content.Tissue) {
-                String tissueId = tissueMap.get(getTissueSampleDocumentField().getName()).toString();
-                cachedTissues.put(tissueId, new SoftReference<>(tissueMap));
-                ids.add(tissueId);
-            }
+
+            cacheMapById(getTissueSampleDocumentField().getName(), result.content.Tissue, cachedTissues, ids);
+            cacheMapById("materialSampleID", result.content.Sample, cachedSamples, ids);
+            cacheMapById(EVENT_ID, result.content.Event, cachedEvents, ids);
+
             return ids;
         } catch (DatabaseServiceException e) {
             throw new ConnectionException(e);
+        }
+    }
+
+    private void cacheMapById(String idField, List<Map<String, Object>> listToCache, Map<String, SoftReference<Map<String, Object>>> cache, List<String> idList) {
+        for (Map<String, Object> tissueMap : listToCache) {
+
+            String id = tissueMap.get(idField).toString();
+            cache.put(id, new SoftReference<>(tissueMap));
+            if(idList != null) {
+                idList.add(id);
+            }
         }
     }
 
@@ -167,20 +181,44 @@ public class geomeFIMSConnection extends FIMSConnection {
             if(valuesForTissue != null) {
                 // Need to convert map from name -> value to uri -> value because that's what Geneious expects
                 Map<String, Object> valuesByCode = new HashMap<>();
-                valuesForTissue.forEach((key, value) -> {
+
+                BiConsumer<String, Object> storeByCode = (key, value) -> {
                     DocumentField documentField = attributesByName.get(key);
-                    if(documentField != null) {
+                    if (documentField != null) {
                         valuesByCode.put(documentField.getCode(), value);
                     } else {
                         System.out.println("missing DocumentField for " + key);
                     }
-                });
+                };
+                valuesForTissue.forEach(storeByCode);
+                Object sampleId = valuesForTissue.get(allAttributes.get(SAMPLE_URN).getName());
+                String eventId = null;
+                if(sampleId != null) {
+                    SoftReference<Map<String, Object>> sampleInfo = cachedSamples.get(sampleId.toString());
+                    if (sampleInfo != null) {
+                        Map<String, Object> sampleValues = sampleInfo.get();
+                        if (sampleValues != null) {
+                            sampleValues.forEach(storeByCode);
+                            eventId = sampleValues.get(EVENT_ID).toString();
+                        }
+                    }
+                }
+
+                SoftReference<Map<String, Object>> eventInfo = cachedEvents.get(eventId);
+                if(eventInfo != null) {
+                    Map<String, Object> eventValues = eventInfo.get();
+                    if(eventValues != null) {
+                        eventValues.forEach(storeByCode);
+                    }
+                }
+
+
                 TissueDocument sample = new TissueDocument(
                         new TableFimsSample(
                                 getCollectionAttributes(),
                                 getTaxonomyAttributes(), valuesByCode,
                                 TISSUE_URN,
-                                SPECIMEN_URN)
+                                SAMPLE_URN)
                 );
                 samples.add(sample);
                 if(callback != null) {
