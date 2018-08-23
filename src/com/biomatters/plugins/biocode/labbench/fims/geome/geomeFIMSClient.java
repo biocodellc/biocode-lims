@@ -142,7 +142,7 @@ public class geomeFIMSClient {
     }
 
     WebTarget getQueryTarget() {
-        return target.path("v1/records/Tissue/json");
+        return target.path("v1");
     }
 
     List<Project> getProjects() throws DatabaseServiceException {
