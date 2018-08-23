@@ -484,7 +484,7 @@ public class PlateViewer extends JPanel {
     }
 
     private void updatePanelAndReactions(Collection<Reaction> reactionsUpdated) {
-        ReactionUtilities.invalidateFieldWidthCacheOfReactions(reactionsUpdated);
+        ReactionUtilities.clearPreferredSizeForReactions(reactionsUpdated);
 
         updatePanel();
     }

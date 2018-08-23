@@ -1,6 +1,5 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.components.GLabel;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
@@ -19,10 +18,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.color.ColorSpace;
 import java.awt.font.FontRenderContext;
-import java.awt.font.LineMetrics;
-import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
-import java.awt.geom.Rectangle2D;
 import java.awt.image.ImageObserver;
 import java.text.ParseException;
 import java.util.*;
@@ -50,7 +46,6 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     private FimsSample fimsSample = null;
     protected Date date = new Date();
     private static int charHeight = -1;
-    private int[] fieldWidthCache = null;
     private GelImage gelImage = null;
     private BackgroundColorer backgroundColorer;
     private Dimension cachedPreferredSize;
@@ -82,13 +77,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public void setZoom(float zoom) {
         this.zoom = zoom;
-        invalidateFieldWidthCache();
+        clearPreferredSize();
     }
 
-    public void invalidateFieldWidthCache() {
+    public void clearPreferredSize() {
         Runnable runnable = new Runnable() {
             public void run() {
-                fieldWidthCache = null;
                 cachedPreferredSize = null;
             }
         };
@@ -163,7 +157,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public void setFimsSample(FimsSample sample) {
         this.fimsSample = sample;
-        invalidateFieldWidthCache();
+        clearPreferredSize();
         if(workflow != null) {
             workflow.setFimsSample(fimsSample);
         }
@@ -347,7 +341,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             public void run() {
                 Reaction.this.displayableFields = fields;
                 cachedPreferredSize = null;
-                invalidateFieldWidthCache();
+                clearPreferredSize();
             }
         };
         ThreadUtilities.invokeNowOrLater(runnable);
@@ -616,61 +610,26 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     private Dimension calculatePreferredSize() {
-        int y = PADDING+3;
-        int x = 10;
-        List<DocumentField> fieldsToDisplay = getFieldsToDisplay();
-
-        if(fieldWidthCache == null) {
-            initFieldWidthCache();
-        }
-
-        //make space for the well location label
-        if(this.locationString != null && this.locationString.length() > 0) {
-            y += charHeight;
-        }
-
-        for (int i = 0; i < fieldsToDisplay.size(); i++) {
-            DocumentField field = getFieldsToDisplay().get(i);
-            if(field.equals(GEL_IMAGE_DOCUMENT_FIELD)) {
-                if(gelImage != null) {
-                    y += gelImage.getImage().getHeight(imageObserver)+5;
-                }
-                continue;
-            }
-            String value = getDisplayableValue(field);
-            if (value.length() == 0) {
-                continue;
-            }
-            y += charHeight + LINE_SPACING;
-            if(fieldWidthCache == null) {
-                assert false;
-            }
-            else {
-                x = Math.max(x, fieldWidthCache[i]);
-            }
-        }
-        x += PADDING;
-        return new Dimension(Math.max(50,x), y);
-    }
-
-    private void initFieldWidthCache() {
         assert EventQueue.isDispatchThread();
         List<DocumentField> fieldList = new ArrayList<DocumentField>(getFieldsToDisplay());
         if(fieldList.size() == 0) {
             fieldList.add(new DocumentField("a", "", "testField", String.class, false, false));
         }
-        fieldWidthCache = new int[fieldList.size()];
         renderingLabel.setFont(renderingFont.deriveFont(renderingFont.getSize() * zoom));
         renderingLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        int maxWidth = 0;
+        charHeight = 0;
         for(int i=0; i < fieldList.size(); i++) {
             String value = getDisplayableValue(fieldList.get(i));
             if(value.length() == 0) {
                 continue;
             }
             renderingLabel.setText(getLabelText(i, fieldList.get(i)));
-            fieldWidthCache[i] = renderingLabel.getPreferredSize().width;
+            maxWidth = Math.max(maxWidth, renderingLabel.getPreferredSize().width);
             charHeight = Math.max(charHeight, renderingLabel.getPreferredSize().height);
         }
+        return new Dimension(maxWidth + 10, (charHeight + LINE_SPACING) * (fieldList.size() + 1) + 10);
     }
 
     private String getLabelText(int fieldIndex, DocumentField field) {
@@ -710,10 +669,6 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         g.setColor(colorTheBackground && enabled ? isSelected() ? getBackgroundColor().darker() : getBackgroundColor() : Color.white);
         g.fillRect(location.x, location.y, location.width, location.height);
 
-        if(fieldWidthCache == null) {
-            initFieldWidthCache();
-        }
-
         String label = this.locationString;
         DocumentField labelField = getLabelFieldToShow();
         if(labelField != null) {
@@ -725,6 +680,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
         int y = location.y;
 
+        renderingLabel.setFont(renderingFont.deriveFont(renderingFont.getSize() * zoom));
         if(label != null && label.length() > 0) {
             renderingLabel.setForeground(new Color(0,0,0,128));
             renderingLabel.setText(label);

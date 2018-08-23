@@ -6,7 +6,6 @@ import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 
 import javax.swing.*;
@@ -80,7 +79,7 @@ public class PlateView extends JPanel {
     }
 
     public void setDefaultZoom() {
-        zoom = 10;
+        zoom = 1;
         updateZoom();
     }
 
@@ -209,7 +208,7 @@ public class PlateView extends JPanel {
                                             fireEditListeners();
                                         }
 
-                                        ReactionUtilities.invalidateFieldWidthCacheOfReactions(selectedReactions);
+                                        ReactionUtilities.clearPreferredSizeForReactions(selectedReactions);
 
                                         repaint();
                                         revalidate();
