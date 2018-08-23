@@ -42,17 +42,17 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     public PasswordOptions getConnectionOptions() {
-        return new geomeFIMSOptions();
+        return new geomeFIMSConnectionOptions();
     }
 
 
 
     @Override
     public void _connect(Options options) throws ConnectionException {
-        if (!(options instanceof geomeFIMSOptions)) {
+        if (!(options instanceof geomeFIMSConnectionOptions)) {
             throw new IllegalArgumentException("_connect() must be called with Options obtained from calling _getConnectionOptions()");
         }
-        geomeFIMSOptions fimsOptions = (geomeFIMSOptions) options;
+        geomeFIMSConnectionOptions fimsOptions = (geomeFIMSConnectionOptions) options;
         client = new geomeFIMSClient(fimsOptions.getHost(), requestTimeoutInSeconds);
         try {
             client.login(fimsOptions.getUserName(), fimsOptions.getPassword());
