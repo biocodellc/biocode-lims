@@ -179,7 +179,8 @@ public class geomeFIMSClient {
             throw new DatabaseServiceException(e, e.getMessage(), true);
         }
     }
-    
+
+
     BiocodeFimsData getData(String project, Form searchTerms, String filter) throws DatabaseServiceException {
         if(filter != null && filter.contains(",")) {
             try {
@@ -261,13 +262,14 @@ public class geomeFIMSClient {
         res.header = new ArrayList<String>(rows.get(0).keySet());
 
         //data
+        /*
         for (QueryResult result : results) {
             for (Map<String, String> rowValues : result.getContent()) {
-                Row row = new Row();
-                row.rowItems = new ArrayList<String>(rowValues.values());
-                res.data.add(row);
+                //Row row = new Row();
+                //row.row Items = new ArrayList<String>(rowValues.values());
+                //res.data.add(row);
             }
-        }
+        }   */
 
         return res;
     }
