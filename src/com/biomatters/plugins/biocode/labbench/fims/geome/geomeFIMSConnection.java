@@ -23,7 +23,7 @@ import java.util.Map;
 public class geomeFIMSConnection extends FIMSConnection {
     private static final String HOST = "api.develop.geome-db.org";
         private static final int PORT = 80;
-    static final String GEOME_URL = "http://" + HOST + ":" + PORT;
+    static final String GEOME_URL = "https://" + HOST + ":" + PORT;
     private geomeFIMSClient client;
           private Project project;
 

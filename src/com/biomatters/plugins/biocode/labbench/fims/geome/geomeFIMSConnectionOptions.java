@@ -93,7 +93,7 @@ import java.util.prefs.Preferences;
         SharedCookieHandler.registerHost(url.getHost());
         geomeFIMSClient client = new geomeFIMSClient(host, LoginOptions.DEFAULT_TIMEOUT);
         client.login(username, password);
-        loadProjectsFromServer(client);
+//        loadProjectsFromServer(client);
     }
 
     private void loadProjectsFromServer(geomeFIMSClient client) {
