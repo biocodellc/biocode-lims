@@ -44,7 +44,7 @@ public class geomeFIMSConnection extends FIMSConnection {
         return new geomeFIMSConnectionOptions();
     }
 
-
+    private List<Project> projects;
 
     @Override
     public void _connect(Options options) throws ConnectionException {
@@ -55,7 +55,11 @@ public class geomeFIMSConnection extends FIMSConnection {
         client = new geomeFIMSClient(fimsOptions.getHost(), requestTimeoutInSeconds);
         try {
             client.login(fimsOptions.getUserName(), fimsOptions.getPassword());
-            List<Project> projects = client.getProjects();
+            projects = client.getProjects(fimsOptions.includePublicProjects());
+            if(projects.isEmpty()) {
+                throw new ConnectionException("You don't have access to any projects");
+            }
+
             for (Project project : projects) {
                 Invocation.Builder configRequest = client.getQueryTarget().path("projects").path(String.valueOf(project.id)).path("config").request();
 

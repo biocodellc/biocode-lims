@@ -1,28 +1,16 @@
 package com.biomatters.plugins.biocode.labbench.fims.geome;
 
-import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.plugin.Geneious;
-import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.plugins.biocode.BiocodePlugin;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.LoginOptions;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
 import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
 
-import javax.swing.*;
 import javax.ws.rs.ProcessingException;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.prefs.BackingStoreException;
-import java.util.prefs.Preferences;
 
 /**
  * @author Matthew Cheung
@@ -33,165 +21,25 @@ import java.util.prefs.Preferences;
     private StringOption hostOption;
     private StringOption usernameOption;
     private PasswordOption passwordOption;
-    private ComboBoxOption<ProjectOptionValue> projectOption;
+    private BooleanOption includePublicProjectsOption;
 
     public geomeFIMSConnectionOptions() {
         super(BiocodePlugin.class);
         hostOption = addStringOption("host", "Host:", geomeFIMSConnection.GEOME_URL);
         usernameOption = addStringOption("username", "Username:", "");
         passwordOption = addCustomOption(new PasswordOption("password", "Password:", true));
-        addButtonOption("authenticate", "", "Authenticate").addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                final ProgressFrame progressFrame = new ProgressFrame("Authenticating...", "", Dialogs.getCurrentModalDialog());
-                progressFrame.setCancelable(false);
-                progressFrame.setIndeterminateProgress();
-                Thread thread = new Thread() {
-                    public void run() {
-                        try {
-                            login(
-                                    hostOption.getValue(),
-                                    usernameOption.getValue(),
-                                    passwordOption.getPassword());
-                        } catch (MalformedURLException e) {
-                            Dialogs.showMessageDialog("Could not connect to server.  Invalid URL: " + e.getMessage(), "Invalid URL");
-                        } catch (ProcessingException e) {
-                            Dialogs.showMessageDialog(
-                                    "There was a problem communicating with the server: " + e.getMessage(),
-                                    "Connection Error"
-                            );
-                        } catch (DatabaseServiceException e) {
-                            Dialogs.showMessageDialog(e.getMessage(), "Login Failed");
-                        }
-                        progressFrame.setComplete();
-                    }
-                };
-                thread.start();
-            }
-        });
+        includePublicProjectsOption = addBooleanOption("includePublic", "Include data from public projects", false);
     }
 
     public void login(String host, String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
-        URL url = new URL(host);
-        SharedCookieHandler.registerHost(url.getHost());
-        geomeFIMSClient client = new geomeFIMSClient(host, LoginOptions.DEFAULT_TIMEOUT);
-        client.login(username, password);
-    }
-
-    private void loadProjectsFromServer(geomeFIMSClient client) {
         try {
-            List<Project> projects = client.getProjects();
-            cacheProjects(projects);
-
-            final List<ProjectOptionValue> optionValues = new ArrayList<ProjectOptionValue>();
-            for (Project project : projects) {
-                optionValues.add(new ProjectOptionValue(project));
-            }
-
-            Runnable updateFields = new Runnable() {
-                public void run() {
-                    projectOption.setPossibleValues(optionValues);
-                }
-            };
-            if(Geneious.isHeadless() || TestGeneious.isRunningTest()) {
-                updateFields.run();
-            } else {
-                SwingUtilities.invokeLater(updateFields);
-            }
-
-        } catch (DatabaseServiceException e) {
-            BiocodeUtilities.displayExceptionDialog("Failed to Load Projects",
-                    "Failed to load project list from " + geomeFIMSConnection.GEOME_URL + ": " + e.getMessage(), e, null);
+            URL url = new URL(host);
+            SharedCookieHandler.registerHost(url.getHost());
+            geomeFIMSClient client = new geomeFIMSClient(host, LoginOptions.DEFAULT_TIMEOUT);
+            client.login(username, password);
+        } catch (IOException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
-    }
-
-    private static final String CACHE_NAME = "cachedProjects";
-    private static final String ID = "id";
-    private static final String CODE = "code";
-    private static final String TITLE = "title";
-    private static final String XML = "xmlConfigLocation";
-
-    /**
-     * Stores expeditions to a cache to be retrieved when Options are created to avoid the delay that is
-     * required to query the web service for the live list of expeditions.
-     *
-     * @param projects
-     */
-    private void cacheProjects(List<Project> projects) {
-        try {
-            Preferences cacheNode = getCacheNode();
-            cacheNode.clear();
-            for (Project project : projects) {
-                Preferences childNode = cacheNode.node(project.code);
-                childNode.putInt(ID, project.id);
-                childNode.put(CODE, project.code);
-                childNode.put(TITLE, project.title);
-            }
-            cacheNode.flush();
-        } catch (BackingStoreException e) {
-            e.printStackTrace();  // Won't be able to store anything in the cache.  Oh well
-        }
-    }
-
-    /**
-     *
-     * @return A list of {@link Project}s retrieved previously or null if the cache is empty or if there
-     * is a problem retrieving the cache from preferences
-     */
-    private List<Project> getProjectCache() {
-        try {
-            List<Project> fromCache = new ArrayList<Project>();
-            Preferences cacheNode = getCacheNode();
-            String[] children = cacheNode.childrenNames();
-            if(children == null || children.length == 0) {
-                return null;
-            }
-            for (String child : children) {
-                Preferences projectNode = cacheNode.node(child);
-                int id = projectNode.getInt(ID, -1);
-                String code = projectNode.get(CODE, null);
-                String title = projectNode.get(TITLE, null);
-                String xml = projectNode.get(XML, null);
-                if(id != -1 && code != null && title != null && xml != null) {
-                    fromCache.add(new Project(id, code, title, xml));
-                }
-            }
-            return fromCache;
-        } catch (BackingStoreException e) {
-            e.printStackTrace();
-            return null;  // Won't be able to use the cache, but oh well.
-        }
-    }
-
-    private Preferences getCacheNode() {
-        Preferences preferences = Preferences.userNodeForPackage(geomeFIMSConnection.class);
-        return preferences.node(CACHE_NAME);
-    }
-
-    private static class ProjectOptionValue extends OptionValue {
-        Project project;
-
-        ProjectOptionValue(Project project) {
-            super(project == null ? "noValue" :  project.code,
-                    project == null ? "Please login to retrieve projects " : project.title);
-            this.project = project;
-        }
-
-        static final ProjectOptionValue NO_VALUE = new ProjectOptionValue(null);
-    }
-
-    private static final List<OptionValue> NO_FIELDS = Collections.singletonList(new OptionValue("None", "None"));
-    public List<OptionValue> getFieldsAsOptionValues() throws DatabaseServiceException {
-
-        return NO_FIELDS;
-//        for (Project.Field field : project.getFields()) {
-//            fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.uri, field.column));
-//        }
-//        return fields;
-    }
-
-    public Project getProject() {
-        return projectOption.getValue().project;
     }
 
     public String getHost() {
@@ -212,5 +60,9 @@ import java.util.prefs.Preferences;
 
     public void setPassword(String password) {
         passwordOption.setPassword(password);
+    }
+
+    public boolean includePublicProjects() {
+        return includePublicProjectsOption.getValue();
     }
 }

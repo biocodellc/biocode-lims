@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims.geome;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.fims.biocode.*;
 import org.codehaus.jackson.JsonNode;
@@ -147,8 +146,12 @@ public class geomeFIMSClient {
         return target.path("v1").queryParam("access_token", access_token);
     }
 
-    List<Project> getProjects() throws DatabaseServiceException {
-        Invocation.Builder request = target.path("v1/projects").queryParam("access_token", access_token).request(MediaType.APPLICATION_JSON_TYPE);//.header("Authorization", "Bearer " + access_token);
+    List<Project> getProjects(boolean includePublic) throws DatabaseServiceException {
+        Invocation.Builder request = target.path("v1/projects")
+                .queryParam("includePublic", includePublic)
+                .queryParam("access_token", access_token) //.header("Authorization", "Bearer " + access_token);
+                .request(MediaType.APPLICATION_JSON_TYPE);
+
         try {
             Response response = request.get();
             List<Project> fromService = getRestServiceResult(new GenericType<List<Project>>() {
