@@ -1,10 +1,9 @@
 package com.biomatters.plugins.biocode.labbench.fims.geome;
 
-import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
+import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
@@ -141,10 +140,12 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmptyQuery) throws ConnectionException {
+        String queryString = buildQuery(query) + " _select_:[Tissue,Sample,Event]";
+        System.out.println(queryString);
         Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
                 .queryParam("projectId", 3)
                 .queryParam("entity", "Tissue")
-                .queryParam("q", "_select_:[Tissue,Sample,Event]")
+                .queryParam("q", queryString)
                 .request();
         Response response = searchRequest.get();
         try {
@@ -159,6 +160,107 @@ public class geomeFIMSConnection extends FIMSConnection {
         } catch (DatabaseServiceException e) {
             throw new ConnectionException(e);
         }
+    }
+
+    private String buildQuery(Query query) {
+        if(query instanceof BasicSearchQuery) {
+            return ((BasicSearchQuery) query).getSearchText();
+        }
+        else if(query instanceof CompoundSearchQuery) {
+            CompoundSearchQuery cquery = (CompoundSearchQuery)query;
+            CompoundSearchQuery.Operator operator = cquery.getOperator();
+            String join = "";
+            switch(operator) {
+                case OR:
+                    join = " OR ";
+                    break;
+                case AND:
+                    join = " AND ";
+                    break;
+            }
+            List<String> childQueries = new ArrayList<>();
+            for (Query childQuery : cquery.getChildren()) {
+                childQueries.add(buildQuery(childQuery));
+            }
+            return StringUtilities.join(join, childQueries);
+        }
+        else if(query instanceof AdvancedSearchQueryTerm) {
+            return getQueryExpression((AdvancedSearchQueryTerm)query);
+        }
+        else {
+            throw new RuntimeException("Unrecognised query type: "+query.getClass());
+        }
+
+    }
+
+
+
+    public static String getQueryExpression(AdvancedSearchQueryTerm query) {
+        String join = "";
+        String append = "\"";
+        String prepend = "\"";
+        String beforeQuery = "";
+        switch(query.getCondition()) {
+            case EQUAL:
+                join = "::";
+                break;
+            case APPROXIMATELY_EQUAL:
+                join = ":";
+                prepend="\"%";
+                append = "%\"";
+                break;
+            case BEGINS_WITH:
+                join = "::";
+                append="%\"";
+                break;
+            case ENDS_WITH:
+                join = "::";
+                prepend = "\"%";
+                break;
+            case CONTAINS:
+                join = "::";
+                append = "%\"";
+                prepend = "\"%";
+                break;
+            case GREATER_THAN:
+            case DATE_AFTER:
+                join = ">";
+                prepend = "";
+                append = "";
+                break;
+            case GREATER_THAN_OR_EQUAL_TO:
+            case DATE_AFTER_OR_ON:
+                join = ">=";
+                prepend = "";
+                append = "";
+                break;
+            case LESS_THAN:
+            case DATE_BEFORE:
+                join = "<";
+                prepend = "";
+                append = "";
+                break;
+            case LESS_THAN_OR_EQUAL_TO:
+            case DATE_BEFORE_OR_ON:
+                join = "<=";
+                prepend = "";
+                append = "";
+                break;
+            case NOT_CONTAINS:
+                join = "::";
+                append = "%\"";
+                prepend = "\"%";
+                beforeQuery = "NOT ";
+                break;
+            case NOT_EQUAL:
+                join = "::";
+                beforeQuery = "NOT ";
+                break;
+            case IN_RANGE:
+                //todo: this is a special case
+                return query.getField().getName() + ":[" + query.getValues()[0] + " TO " + query.getValues()[1] + "]";
+         }
+        return beforeQuery + query.getField().getName() + join + prepend + query.getValues()[0] + append;
     }
 
     private void cacheMapById(String idField, List<Map<String, Object>> listToCache, Map<String, SoftReference<Map<String, Object>>> cache, List<String> idList) {
@@ -178,6 +280,8 @@ public class geomeFIMSConnection extends FIMSConnection {
         allAttributes.values().forEach(f -> attributesByName.put(f.getName(), f));
 
         List<FimsSample> samples = new ArrayList<>();
+
+        List<String> uncachedTissueIds = new ArrayList<>();
 
         for (String tissueId : tissueIds) {
             Map<String, Object> valuesForTissue = null;
@@ -210,6 +314,12 @@ public class geomeFIMSConnection extends FIMSConnection {
                             eventId = sampleValues.get(EVENT_ID).toString();
                         }
                     }
+                    else {
+                        uncachedTissueIds.add(tissueId);
+                    }
+                }
+                else {
+                    uncachedTissueIds.add(tissueId);
                 }
 
                 SoftReference<Map<String, Object>> eventInfo = cachedEvents.get(eventId);
