@@ -295,11 +295,31 @@ public class geomeFIMSConnection extends FIMSConnection {
                 Map<String, Object> valuesByCode = new HashMap<>();
 
                 BiConsumer<String, Object> storeByCode = (key, value) -> {
+                    if(value == null || value instanceof String && value.toString().trim().length() == 0) {
+                        return;
+                    }
+
                     DocumentField documentField = attributesByName.get(key);
                     if (documentField != null) {
-                        valuesByCode.put(documentField.getCode(), value);
+
+                        Object valueToStore;
+                        try {
+                            if(Boolean.class == documentField.getValueType()) {
+                                valueToStore = Boolean.valueOf(value.toString());
+                            } else if(Double.class == documentField.getValueType()) {
+                                valueToStore = Double.valueOf(value.toString());
+                            } else if(Integer.class == documentField.getValueType()) {
+                                valueToStore = Integer.valueOf(value.toString());
+                            } else {
+                                valueToStore = value.toString();
+                            }
+                            valuesByCode.put(documentField.getCode(), valueToStore);
+                        } catch (NumberFormatException e) {
+                            System.out.println("Invalid value for " + documentField.getValueType() + " was " + value);
+                        }
                     } else {
-                        System.out.println("missing DocumentField for " + key);
+                        // todo bring in projectId, bcid, expeditionCode from other entities
+//                        System.out.println("missing DocumentField for " + key);
                     }
                 };
                 valuesForTissue.forEach(storeByCode);
