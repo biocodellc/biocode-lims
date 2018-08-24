@@ -123,9 +123,14 @@ public class geomeFIMSConnection extends FIMSConnection {
         return null;
     }
 
+    private static final DocumentField PROJECT_FIELD = new DocumentField("Project", "", "geomeProject", String.class, false, false);
+
     @Override
     protected List<DocumentField> _getCollectionAttributes() {
-        return new ArrayList<>(collectionAttributes.values());
+        List<DocumentField> result = new ArrayList<>(collectionAttributes.values());
+        result.removeAll(_getTaxonomyAttributes());
+        result.add(PROJECT_FIELD);
+        return result;
     }
 
     @Override
@@ -135,7 +140,10 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     protected List<DocumentField> _getSearchAttributes() {
-        return new ArrayList<>(allAttributes.values());
+        List<DocumentField> result = new ArrayList<>();
+        result.addAll(_getTaxonomyAttributes());
+        result.addAll(_getCollectionAttributes());
+        return result;
     }
 
     @Override
@@ -146,26 +154,64 @@ public class geomeFIMSConnection extends FIMSConnection {
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmptyQuery) throws ConnectionException {
         String queryString = buildQuery(query);
-        System.out.println(queryString);
-        Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
-                .queryParam("projectId", 3)
-                .queryParam("entity", "Tissue")
-                .queryParam("limit", 10000)
-                .queryParam("q", queryString)
-                .request();
-        Response response = searchRequest.get();
-        try {
-            List<String> ids = new ArrayList<>();
-            SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
 
-            for (Map<String, Object> tissue : result.content.Tissue) {
-                ids.add(tissue.get(getTissueSampleDocumentField().getName()).toString());
-            }
-
-            return ids;
-        } catch (DatabaseServiceException e) {
-            throw new ConnectionException(e);
+        Project project = getProjectFromQuery(query);
+        List<Project> projectsToSearch = new ArrayList<>();
+        if(project == null) {
+            projectsToSearch.addAll(projects);
+        } else {
+            projectsToSearch.add(project);
         }
+
+        List<String> ids = new ArrayList<>();
+        for (Project currentProject : projectsToSearch) {
+            Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
+                    .queryParam("projectId", currentProject.id)
+                    .queryParam("entity", "Tissue")
+                    .queryParam("limit", 10000)
+                    .queryParam("q", queryString)
+                    .request();
+            Response response = searchRequest.get();
+            try {
+                SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
+                for (Map<String, Object> tissue : result.content.Tissue) {
+                    ids.add(tissue.get(getTissueSampleDocumentField().getName()).toString());
+                }
+
+
+            } catch (DatabaseServiceException e) {
+                throw new ConnectionException(e);
+            }
+        }
+
+        return ids;
+    }
+
+    private Project getProjectFromQuery(Query query) {
+        // todo
+        if(query instanceof AdvancedSearchQueryTerm) {
+            Project project = getProjectFromSearchTerm((AdvancedSearchQueryTerm) query);
+            if (project != null) return project;
+        }
+
+        if(query instanceof CompoundSearchQuery) {
+
+        }
+
+
+        return null;
+    }
+
+    private Project getProjectFromSearchTerm(AdvancedSearchQueryTerm query) {
+        AdvancedSearchQueryTerm term = query;
+        if(PROJECT_FIELD.getCode().equals(term.getField().getCode())) {
+            for (Project project : projects) {
+                if(project.title.equals(term.getValues()[0])) {
+                    return project;
+                }
+            }
+        }
+        return null;
     }
 
     private String buildQuery(Query query) {
