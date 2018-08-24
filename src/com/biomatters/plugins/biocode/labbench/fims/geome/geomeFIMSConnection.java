@@ -187,24 +187,33 @@ public class geomeFIMSConnection extends FIMSConnection {
         return ids;
     }
 
-    private Project getProjectFromQuery(Query query) {
-        // todo
+    private Project getProjectFromQuery(Query query) throws ConnectionException {
         if (query instanceof AdvancedSearchQueryTerm) {
             Project project = getProjectFromSearchTerm((AdvancedSearchQueryTerm) query);
             if (project != null) return project;
         }
 
+
         if (query instanceof CompoundSearchQuery) {
-
+            if(((CompoundSearchQuery) query).getOperator() != CompoundSearchQuery.Operator.AND) {
+                throw new ConnectionException("OR queries with Project unsupported");
+            }
+            for (Query childQuery : ((CompoundSearchQuery) query).getChildren()) {
+                if(childQuery instanceof AdvancedSearchQueryTerm) {
+                    Project project = getProjectFromSearchTerm((AdvancedSearchQueryTerm) childQuery);
+                    if(project != null) return project;
+                }
+            }
         }
-
 
         return null;
     }
 
-    private Project getProjectFromSearchTerm(AdvancedSearchQueryTerm query) {
-        AdvancedSearchQueryTerm term = query;
+    private Project getProjectFromSearchTerm(AdvancedSearchQueryTerm term) throws ConnectionException {
         if (PROJECT_FIELD.getCode().equals(term.getField().getCode())) {
+            if(term.getCondition() != Condition.CONTAINS) {
+                throw new ConnectionException("Only Project queries with Contains are supported");
+            }
             for (Project project : projects) {
                 if (project.title.equals(term.getValues()[0])) {
                     return project;
@@ -231,6 +240,10 @@ public class geomeFIMSConnection extends FIMSConnection {
             }
             List<String> childQueries = new ArrayList<>();
             for (Query childQuery : cquery.getChildren()) {
+                if(childQuery instanceof AdvancedSearchQueryTerm &&
+                        ((AdvancedSearchQueryTerm) childQuery).getField().getCode().equals(PROJECT_FIELD.getCode())) {
+                    continue;
+                }
                 childQueries.add(buildQuery(childQuery));
             }
             return StringUtilities.join(join, childQueries);
