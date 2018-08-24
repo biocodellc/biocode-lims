@@ -61,7 +61,7 @@ public class geomeFIMSConnection extends FIMSConnection {
         try {
             client.login(fimsOptions.getUserName(), fimsOptions.getPassword());
             projects = client.getProjects(fimsOptions.includePublicProjects());
-            if(projects.isEmpty()) {
+            if (projects.isEmpty()) {
                 throw new ConnectionException("You don't have access to any projects");
             }
 
@@ -157,7 +157,7 @@ public class geomeFIMSConnection extends FIMSConnection {
 
         Project project = getProjectFromQuery(query);
         List<Project> projectsToSearch = new ArrayList<>();
-        if(project == null) {
+        if (project == null) {
             projectsToSearch.addAll(projects);
         } else {
             projectsToSearch.add(project);
@@ -189,12 +189,12 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     private Project getProjectFromQuery(Query query) {
         // todo
-        if(query instanceof AdvancedSearchQueryTerm) {
+        if (query instanceof AdvancedSearchQueryTerm) {
             Project project = getProjectFromSearchTerm((AdvancedSearchQueryTerm) query);
             if (project != null) return project;
         }
 
-        if(query instanceof CompoundSearchQuery) {
+        if (query instanceof CompoundSearchQuery) {
 
         }
 
@@ -204,9 +204,9 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     private Project getProjectFromSearchTerm(AdvancedSearchQueryTerm query) {
         AdvancedSearchQueryTerm term = query;
-        if(PROJECT_FIELD.getCode().equals(term.getField().getCode())) {
+        if (PROJECT_FIELD.getCode().equals(term.getField().getCode())) {
             for (Project project : projects) {
-                if(project.title.equals(term.getValues()[0])) {
+                if (project.title.equals(term.getValues()[0])) {
                     return project;
                 }
             }
@@ -322,114 +322,116 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
-        Map<String, DocumentField> attributesByName = new HashMap<>();
-        allAttributes.values().forEach(f -> attributesByName.put(f.getName(), f));
-
-        Query[] tissueQueries = new Query[tissueIds.size()];
-        for (int i = 0; i < tissueIds.size(); i++) {
-            tissueQueries[i] = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, tissueIds.get(i));
-        }
-        Query tissueQuery = Query.Factory.createOrQuery(tissueQueries, Collections.emptyMap());
-
-        String queryString = buildQuery(tissueQuery);
-
-        Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
-                .queryParam("projectId", 3)
-                .queryParam("entity", "Tissue")
-                .queryParam("limit", 10000)
-//                .queryParam("q", queryString + "_select_:[Tissue,Sample,Event]")
-                .request();
-
-
-        Form formToPost = new Form()
-                .param("query", queryString + "_select_:[Tissue,Sample,Event]");
-
-        Response response = searchRequest.post(
-                Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
         try {
-            SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
-
             List<FimsSample> samples = new ArrayList<>();
+            for (Project currentProject : projects) {
 
-            Map<String, Map<String, Object>> mappedTissues = mapResults(getTissueSampleDocumentField().getName(), result.content.Tissue);
-            Map<String, Map<String, Object>> mappedSamples = mapResults("materialSampleID", result.content.Sample);
-            Map<String, Map<String, Object>> mappedEvents = mapResults(EVENT_ID, result.content.Event);
+                Map<String, DocumentField> attributesByName = new HashMap<>();
+                allAttributes.values().forEach(f -> attributesByName.put(f.getName(), f));
 
-
-            for (String tissueId : tissueIds) {
-                Map<String, Object> valuesForTissue = mappedTissues.get(tissueId);
-
-                if (valuesForTissue != null) {
-                    // Need to convert map from name -> value to uri -> value because that's what Geneious expects
-                    Map<String, Object> valuesByCode = new HashMap<>();
-
-                    BiConsumer<String, Object> storeByCode = (key, value) -> {
-                        if (value == null || value instanceof String && value.toString().trim().length() == 0) {
-                            return;
-                        }
-
-                        DocumentField documentField = attributesByName.get(key);
-                        if (documentField != null) {
-
-                            Object valueToStore;
-                            try {
-                                if (Boolean.class == documentField.getValueType()) {
-                                    valueToStore = Boolean.valueOf(value.toString());
-                                } else if (Double.class == documentField.getValueType()) {
-                                    valueToStore = Double.valueOf(value.toString());
-                                } else if (Integer.class == documentField.getValueType()) {
-                                    valueToStore = Integer.valueOf(value.toString());
-                                } else {
-                                    valueToStore = value.toString();
-                                }
-                                valuesByCode.put(documentField.getCode(), valueToStore);
-                            } catch (NumberFormatException e) {
-                                System.out.println("Invalid value for " + documentField.getValueType() + " was " + value);
-                            }
-                        } else {
-                            // todo bring in projectId, bcid, expeditionCode from other entities
-//                        System.out.println("missing DocumentField for " + key);
-                        }
-                    };
-                    valuesForTissue.forEach(storeByCode);
-                    Object sampleId = valuesForTissue.get(allAttributes.get(SAMPLE_URN).getName());
-                    String eventId = null;
-                    if (sampleId != null) {
-                        Map<String, Object> sampleValues = mappedSamples.get(sampleId.toString());
-
-                        if (sampleValues != null) {
-                            sampleValues.forEach(storeByCode);
-                            eventId = sampleValues.get(EVENT_ID).toString();
-                        }
-                        else {
-                            throw new ConnectionException("Expected to find sample "+sampleId+" but it was not returned by the server");
-                        }
-
-                    }
-
-                    Map<String, Object> eventValues = mappedEvents.get(eventId);
-                    if (eventValues != null) {
-                        eventValues.forEach(storeByCode);
-                    }
-                    else {
-                        throw new ConnectionException("Expected to find event " + eventId + " but it was not returned by the server");
-                    }
-
-
-                    TissueDocument sample = new TissueDocument(
-                            new TableFimsSample(
-                                    getCollectionAttributes(),
-                                    getTaxonomyAttributes(), valuesByCode,
-                                    TISSUE_URN,
-                                    SAMPLE_URN)
-                    );
-                    samples.add(sample);
-                    if (callback != null) {
-                        callback.add(sample, Collections.emptyMap());
-                    }
+                Query[] tissueQueries = new Query[tissueIds.size()];
+                for (int i = 0; i < tissueIds.size(); i++) {
+                    tissueQueries[i] = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, tissueIds.get(i));
                 }
-                else {
-                    throw new ConnectionException("Expected to find tissue "+tissueId+" but it was not returned by the server");
+                Query tissueQuery = Query.Factory.createOrQuery(tissueQueries, Collections.emptyMap());
+
+                String queryString = buildQuery(tissueQuery);
+
+                Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
+                        .queryParam("projectId", currentProject.id)
+                        .queryParam("entity", "Tissue")
+                        .queryParam("limit", 10000)
+                        //                .queryParam("q", queryString + "_select_:[Tissue,Sample,Event]")
+                        .request();
+
+
+                Form formToPost = new Form()
+                        .param("query", queryString + "_select_:[Tissue,Sample,Event]");
+
+                Response response = searchRequest.post(
+                        Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
+
+                SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
+
+
+
+                Map<String, Map<String, Object>> mappedTissues = mapResults(getTissueSampleDocumentField().getName(), result.content.Tissue);
+                Map<String, Map<String, Object>> mappedSamples = mapResults("materialSampleID", result.content.Sample);
+                Map<String, Map<String, Object>> mappedEvents = mapResults(EVENT_ID, result.content.Event);
+
+
+                for (String tissueId : tissueIds) {
+                    Map<String, Object> valuesForTissue = mappedTissues.get(tissueId);
+
+                    if (valuesForTissue != null) {
+                        // Need to convert map from name -> value to uri -> value because that's what Geneious expects
+                        Map<String, Object> valuesByCode = new HashMap<>();
+
+                        BiConsumer<String, Object> storeByCode = (key, value) -> {
+                            if (value == null || value instanceof String && value.toString().trim().length() == 0) {
+                                return;
+                            }
+
+                            DocumentField documentField = attributesByName.get(key);
+                            if (documentField != null) {
+
+                                Object valueToStore;
+                                try {
+                                    if (Boolean.class == documentField.getValueType()) {
+                                        valueToStore = Boolean.valueOf(value.toString());
+                                    } else if (Double.class == documentField.getValueType()) {
+                                        valueToStore = Double.valueOf(value.toString());
+                                    } else if (Integer.class == documentField.getValueType()) {
+                                        valueToStore = Integer.valueOf(value.toString());
+                                    } else {
+                                        valueToStore = value.toString();
+                                    }
+                                    valuesByCode.put(documentField.getCode(), valueToStore);
+                                } catch (NumberFormatException e) {
+                                    System.out.println("Invalid value for " + documentField.getValueType() + " was " + value);
+                                }
+                            } else {
+                                // todo bring in projectId, bcid, expeditionCode from other entities
+                                //                        System.out.println("missing DocumentField for " + key);
+                            }
+                        };
+                        valuesForTissue.forEach(storeByCode);
+                        Object sampleId = valuesForTissue.get(allAttributes.get(SAMPLE_URN).getName());
+                        String eventId = null;
+                        if (sampleId != null) {
+                            Map<String, Object> sampleValues = mappedSamples.get(sampleId.toString());
+
+                            if (sampleValues != null) {
+                                sampleValues.forEach(storeByCode);
+                                eventId = sampleValues.get(EVENT_ID).toString();
+                            } else {
+                                throw new ConnectionException("Expected to find sample " + sampleId + " but it was not returned by the server");
+                            }
+
+                        }
+
+                        Map<String, Object> eventValues = mappedEvents.get(eventId);
+                        if (eventValues != null) {
+                            eventValues.forEach(storeByCode);
+                        } else {
+                            throw new ConnectionException("Expected to find event " + eventId + " but it was not returned by the server");
+                        }
+
+
+                        TissueDocument sample = new TissueDocument(
+                                new TableFimsSample(
+                                        getCollectionAttributes(),
+                                        getTaxonomyAttributes(), valuesByCode,
+                                        TISSUE_URN,
+                                        SAMPLE_URN)
+                        );
+                        samples.add(sample);
+                        if (callback != null) {
+                            callback.add(sample, Collections.emptyMap());
+                        }
+                    } else {
+                        throw new ConnectionException("Expected to find tissue " + tissueId + " but it was not returned by the server");
+                    }
                 }
             }
 
