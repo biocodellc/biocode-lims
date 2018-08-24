@@ -40,7 +40,7 @@ import java.util.logging.Logger;
  */
 public class geomeFIMSClient {
     private WebTarget target;
-    public  String access_token;
+    public  AccessToken access_token;
 
     public geomeFIMSClient(String hostname) {
         this(hostname, 0);
@@ -66,7 +66,7 @@ public class geomeFIMSClient {
      * @throws ProcessingException If a problem occurs accessing the webservice to login
      * @throws DatabaseServiceException If the server returned an error when we tried to authenticate
      */
-    void login(String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
+    void login(String username, String password) throws IOException, ProcessingException, DatabaseServiceException {
         JsonNode secrets = getClientSecrets();
         String clientId = secrets.get("client_id").asText();
         String clientSecret = secrets.get("client_secret").asText();
@@ -82,8 +82,8 @@ public class geomeFIMSClient {
 
         Response response = request.post(
                 Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
-        
-        access_token = getRestServiceResult(String.class, response);
+
+        access_token = new ObjectMapper().readValue(getRestServiceResult(String.class, response), AccessToken.class);
     }
 
     private JsonNode getClientSecrets() throws DatabaseServiceException {
@@ -144,11 +144,11 @@ public class geomeFIMSClient {
     }
 
     WebTarget getQueryTarget() {
-        return target.path("v1");
+        return target.path("v1").queryParam("access_token", access_token);
     }
 
     List<Project> getProjects() throws DatabaseServiceException {
-        Invocation.Builder request = target.path("v1/projects").request(MediaType.APPLICATION_JSON_TYPE);
+        Invocation.Builder request = target.path("v1/projects").queryParam("access_token", access_token).request(MediaType.APPLICATION_JSON_TYPE);//.header("Authorization", "Bearer " + access_token);
         try {
             Response response = request.get();
             List<Project> fromService = getRestServiceResult(new GenericType<List<Project>>() {
@@ -170,7 +170,7 @@ public class geomeFIMSClient {
 
     List<Graph> getGraphsForProject(String id) throws DatabaseServiceException {
         try {
-            Invocation.Builder request = target.path("biocode-fims/rest/v1.1/projects").path(id).path("graphs").request(MediaType.APPLICATION_JSON_TYPE);
+            Invocation.Builder request = target.path("biocode-fims/rest/v1.1/projects").path(id).path("graphs").queryParam("access_token", access_token).request(MediaType.APPLICATION_JSON_TYPE);//.header("Authorization", "Bearer " + access_token);
             Response response = request.get();
             return getRestServiceResult(new GenericType<List<Graph>>(){}, response);
         } catch(WebApplicationException e) {
@@ -233,7 +233,7 @@ public class geomeFIMSClient {
         QueryResult result;
         while (true) {
             WebTarget target1 = target.queryParam("page", "" + page++);
-            Invocation.Builder request = target1.request(MediaType.APPLICATION_JSON_TYPE);
+            Invocation.Builder request = target1.queryParam("access_token", access_token).request(MediaType.APPLICATION_JSON_TYPE);//.header("Authorization", "Bearer " + access_token);
             if (entity == null)
                 result = request.get(QueryResult.class);
             else
