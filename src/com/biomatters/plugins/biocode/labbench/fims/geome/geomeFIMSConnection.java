@@ -429,8 +429,6 @@ public class geomeFIMSConnection extends FIMSConnection {
                         if (callback != null) {
                             callback.add(sample, Collections.emptyMap());
                         }
-                    } else {
-                        throw new ConnectionException("Expected to find tissue " + tissueId + " but it was not returned by the server");
                     }
                 }
             }
