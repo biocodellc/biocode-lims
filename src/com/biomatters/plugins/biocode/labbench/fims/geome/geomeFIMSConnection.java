@@ -267,7 +267,7 @@ public class geomeFIMSConnection extends FIMSConnection {
                 break;
             case APPROXIMATELY_EQUAL:
                 join = ":";
-                prepend = "\"%";
+                prepend = "\"%25";
                 append = "%\"";
                 break;
             case BEGINS_WITH:
@@ -276,12 +276,12 @@ public class geomeFIMSConnection extends FIMSConnection {
                 break;
             case ENDS_WITH:
                 join = "::";
-                prepend = "\"%";
+                prepend = "\"%25";
                 break;
             case CONTAINS:
                 join = "::";
                 append = "%\"";
-                prepend = "\"%";
+                prepend = "\"%25";
                 break;
             case GREATER_THAN:
             case DATE_AFTER:
@@ -310,7 +310,7 @@ public class geomeFIMSConnection extends FIMSConnection {
             case NOT_CONTAINS:
                 join = "::";
                 append = "%\"";
-                prepend = "\"%";
+                prepend = "\"%25";
                 beforeQuery = "NOT ";
                 break;
             case NOT_EQUAL:
