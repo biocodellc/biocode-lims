@@ -271,7 +271,7 @@ public class geomeFIMSConnection extends FIMSConnection {
                 break;
             case APPROXIMATELY_EQUAL:
                 join = ":";
-                prepend = "\"%";
+                prepend = "\"%25";
                 append = "%\"";
                 break;
             case BEGINS_WITH:
@@ -280,12 +280,12 @@ public class geomeFIMSConnection extends FIMSConnection {
                 break;
             case ENDS_WITH:
                 join = "::";
-                prepend = "\"%";
+                prepend = "\"%25";
                 break;
             case CONTAINS:
                 join = "::";
                 append = "%\"";
-                prepend = "\"%";
+                prepend = "\"%25";
                 break;
             case GREATER_THAN:
             case DATE_AFTER:
@@ -314,7 +314,7 @@ public class geomeFIMSConnection extends FIMSConnection {
             case NOT_CONTAINS:
                 join = "::";
                 append = "%\"";
-                prepend = "\"%";
+                prepend = "\"%25";
                 beforeQuery = "NOT ";
                 break;
             case NOT_EQUAL:
@@ -357,7 +357,7 @@ public class geomeFIMSConnection extends FIMSConnection {
                 Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
                         .queryParam("projectId", currentProject.id)
                         .queryParam("entity", "Tissue")
-                        .queryParam("limit", 10000)
+                        .queryParam("limit", 100000)
                         //                .queryParam("q", queryString + "_select_:[Tissue,Sample,Event]")
                         .request();
 
