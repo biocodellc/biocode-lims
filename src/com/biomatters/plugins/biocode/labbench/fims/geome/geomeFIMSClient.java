@@ -7,6 +7,7 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
+import org.glassfish.jersey.client.oauth2.OAuth2ClientSupport;
 import org.glassfish.jersey.filter.LoggingFilter;
 import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.message.GZipEncoder;
@@ -83,6 +84,8 @@ public class geomeFIMSClient {
                 Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 
         access_token = new ObjectMapper().readValue(getRestServiceResult(String.class, response), AccessToken.class);
+
+        target.register(OAuth2ClientSupport.feature(access_token.getAccess_token()));
     }
 
     private JsonNode getClientSecrets() throws DatabaseServiceException {
@@ -143,13 +146,12 @@ public class geomeFIMSClient {
     }
 
     WebTarget getQueryTarget() {
-        return target.path("v1").queryParam("access_token", access_token);
+        return target.path("v1");
     }
 
     List<Project> getProjects(boolean includePublic) throws DatabaseServiceException {
         Invocation.Builder request = target.path("v1/projects")
                 .queryParam("includePublic", includePublic)
-                .queryParam("access_token", access_token) //.header("Authorization", "Bearer " + access_token);
                 .request(MediaType.APPLICATION_JSON_TYPE);
 
         try {
@@ -173,7 +175,7 @@ public class geomeFIMSClient {
 
     List<Graph> getGraphsForProject(String id) throws DatabaseServiceException {
         try {
-            Invocation.Builder request = target.path("biocode-fims/rest/v1.1/projects").path(id).path("graphs").queryParam("access_token", access_token).request(MediaType.APPLICATION_JSON_TYPE);//.header("Authorization", "Bearer " + access_token);
+            Invocation.Builder request = target.path("biocode-fims/rest/v1.1/projects").path(id).path("graphs").request(MediaType.APPLICATION_JSON_TYPE);//.header("Authorization", "Bearer " + access_token);
             Response response = request.get();
             return getRestServiceResult(new GenericType<List<Graph>>(){}, response);
         } catch(WebApplicationException e) {
@@ -236,7 +238,7 @@ public class geomeFIMSClient {
         QueryResult result;
         while (true) {
             WebTarget target1 = target.queryParam("page", "" + page++);
-            Invocation.Builder request = target1.queryParam("access_token", access_token).request(MediaType.APPLICATION_JSON_TYPE);//.header("Authorization", "Bearer " + access_token);
+            Invocation.Builder request = target1.request(MediaType.APPLICATION_JSON_TYPE);//.header("Authorization", "Bearer " + access_token);
             if (entity == null)
                 result = request.get(QueryResult.class);
             else

@@ -248,7 +248,11 @@ public class geomeFIMSConnection extends FIMSConnection {
             }
             return StringUtilities.join(join, childQueries);
         } else if (query instanceof AdvancedSearchQueryTerm) {
-            return getQueryExpression((AdvancedSearchQueryTerm) query);
+            AdvancedSearchQueryTerm aQuery = (AdvancedSearchQueryTerm) query;
+            if(aQuery.getField().getCode().equals(PROJECT_FIELD.getCode())) {
+                return "";
+            }
+            return getQueryExpression(aQuery);
         } else {
             throw new RuntimeException("Unrecognised query type: " + query.getClass());
         }
