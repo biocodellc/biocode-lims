@@ -353,7 +353,7 @@ public class geomeFIMSConnection extends FIMSConnection {
                 Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
                         .queryParam("projectId", currentProject.id)
                         .queryParam("entity", "Tissue")
-                        .queryParam("limit", 10000)
+                        .queryParam("limit", 100000)
                         //                .queryParam("q", queryString + "_select_:[Tissue,Sample,Event]")
                         .request();
 
