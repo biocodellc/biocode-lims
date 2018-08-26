@@ -15,6 +15,8 @@ public class Project {
     @XmlElement(name="projectCode")public String code;
     @XmlElement(name="projectTitle")public String title;
 
+    public Boolean validForLIMS;
+
     public Project() {
     }
 
@@ -22,6 +24,15 @@ public class Project {
         this.id = id;
         this.code = code;
         this.title = title;
+        // DIPNET Is the only project not suitable for LIMS.  The reason for this is that
+        // the entity key for Tissue is materialSampleID which is the same as Sample
+        // In effect this makes the Tissue entity a 1:1 mirror with the Sample entity.
+        // DIPNet was not meant to accumulate tissues.
+        if (this.title.equals("DIPNET")) {
+              validForLIMS = false;
+        } else {
+            validForLIMS = true;
+        }
     }
 
 

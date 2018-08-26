@@ -158,7 +158,7 @@ public class geomeFIMSClient {
             }, response);
             List<Project> returnList = new ArrayList<Project>();
             for (Project project : fromService) {
-                if (project.code != null && project.id != 2) { // Exclude project 2, it doesn't have tissue IDs
+                if (project.code != null && project.validForLIMS) { 
                     returnList.add(project);
                 }
             }
