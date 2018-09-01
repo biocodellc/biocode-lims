@@ -11,11 +11,14 @@ import java.util.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Project {
 
-    @XmlElement(name="projectId")public int id;
-    @XmlElement(name="projectCode")public String code;
-    @XmlElement(name="projectTitle")public String title;
+    @XmlElement(name = "projectId")
+    public int id;
+    @XmlElement(name = "projectCode")
+    public String code;
+    @XmlElement(name = "projectTitle")
+    public String title;
 
-    public Boolean validForLIMS;
+    private Boolean validForLIMS = false;
 
     public Project() {
     }
@@ -24,17 +27,21 @@ public class Project {
         this.id = id;
         this.code = code;
         this.title = title;
+
+    }
+
+    public Boolean getValidForLIMS() {
         // DIPNET Is the only project not suitable for LIMS.  The reason for this is that
         // the entity key for Tissue is materialSampleID which is the same as Sample
         // In effect this makes the Tissue entity a 1:1 mirror with the Sample entity.
         // DIPNet was not meant to accumulate tissues.
-        if (this.title.equals("DIPNET")) {
-              validForLIMS = false;
+        // TODO: replace with network-based project filtering 
+        if (this.code.equals("DIPNET")) {
+            return false;
         } else {
-            validForLIMS = true;
+            return true;
         }
     }
-
 
     @Override
     public boolean equals(Object o) {
@@ -73,6 +80,7 @@ public class Project {
     }
 
     private static final Map<String, Class> DATA_TYPES_TO_CLASSES = new HashMap<>();
+
     static {
         DATA_TYPES_TO_CLASSES.put("BOOLEAN", Boolean.class);
         DATA_TYPES_TO_CLASSES.put("FLOAT", Double.class);
