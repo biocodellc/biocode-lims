@@ -1122,6 +1122,7 @@ public class ReactionUtilities {
                     destOptions.setValue("extractionId", "");
                     destOptions.setValue("previousPlate", srcReaction.getPlateName());
                     destOptions.setValue("previousWell", srcReaction.getLocationString());
+                    destOptions.setValue("extractionBarcode", ""); //ChrisM requested cloned extractions don't have barcodes (because we don't clone the barcodes off the plates, we just take some of the extraction)
                 }
             } catch (XMLSerializationException e) {
                 e.printStackTrace();
@@ -1219,9 +1220,9 @@ public class ReactionUtilities {
         }
     }
 
-    public static void invalidateFieldWidthCacheOfReactions(Collection<? extends Reaction> reactions) {
+    public static void clearPreferredSizeForReactions(Collection<? extends Reaction> reactions) {
         for (Reaction reaction : reactions) {
-            reaction.invalidateFieldWidthCache();
+            reaction.clearPreferredSize();
         }
     }
 

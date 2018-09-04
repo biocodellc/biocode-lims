@@ -278,7 +278,7 @@ public class PlateDocumentViewer extends DocumentViewer{
     }
 
     private void updatePanelAndReactions(Collection<Reaction> reactions) {
-        ReactionUtilities.invalidateFieldWidthCacheOfReactions(reactions);
+        ReactionUtilities.clearPreferredSizeForReactions(reactions);
         updatePanel();
     }
 

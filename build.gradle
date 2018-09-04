@@ -65,6 +65,7 @@ dependencies {
     //    Must use Jersey version less than 2.6
     compile group: "org.glassfish.jersey.core", name:"jersey-client", version:"2.6"
     compile group: "org.glassfish.jersey.media", name:"jersey-media-json-jackson", version:"2.6"
+    compile group: "org.glassfish.jersey.security", name:"oauth2-client", version:"2.6"
     compile group: "commons-dbcp", name:"commons-dbcp", version:"1.4"
     compile group: "commons-pool", name:"commons-pool", version:"1.6"
     compile group: "commons-beanutils", name:"commons-beanutils", version:"1.9.2"

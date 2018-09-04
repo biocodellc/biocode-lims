@@ -15,19 +15,25 @@ import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.submission.bold.GenerateBOLDTraceSubmissionOperation;
-import org.jdom.Document;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.jackson.JacksonFeature;
 
 import javax.swing.*;
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.GenericType;
+import javax.ws.rs.core.Response;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.prefs.Preferences;
 
 /**
@@ -41,7 +47,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     private static GeneiousActionOptions superBiocodeAction;
-    public static final String PLUGIN_VERSION = "3.0.5";
+    public static final String PLUGIN_VERSION = "3.0.6";
     public static final String SUPPORT_EMAIL = "support@mooreabiocode.org";
 
     public static GeneiousActionOptions getSuperBiocodeAction() {
@@ -96,12 +102,12 @@ public class BiocodePlugin extends GeneiousPlugin {
         NewVersionAvailableDialogOptions(String latestVersion,
                                          String latestVersionURL,
                                          String releaseNotes,
-                                         String extraInformation) throws IOException, JDOMException {
+                                         String extraInformation) {
 
             addLabel("<html>There is a new version of the Biocode plugin available (" + latestVersion + "). " +
                     "You are<br> " +
-                    "using " + getVersion() + ". If you would like to upgrade, please visit:<br> " +
-                    "<a href=\"" + latestVersionURL + "\">" + latestVersionURL + "</a><br><br></html>");
+                    "using " + getVersion() + ". If you would like to upgrade, please <br> " +
+                    "<a href=\"" + latestVersionURL + "\">Download " + latestVersion + "</a><br><br></html>");
 
             releaseNotesDisplay = addMultipleLineStringOption("releaseNotes", "", releaseNotes, 10, true);
 
@@ -162,29 +168,19 @@ public class BiocodePlugin extends GeneiousPlugin {
         };
         new Thread(r).start();
 
-        if (compareVersions(Geneious.getVersion(), "8.1.0") < 0) {
-            checkUpdate();
-        }
+        checkUpdate();
     }
 
     private void checkUpdate() {
-        final String pluginVersionsXmlURL = "https://desktop-links.geneious.com/assets/plugins/biocode/PluginVersions.xml?" +
-                "Version=" + getVersion() +
-                "&OS=" + System.getProperty("os.name").replace(" ", "_") + "_" +
-                System.getProperty("os.version", "").replace(" ", "_") +
-                "&OSArch=" + System.getProperty("os.arch").replace(" ", "_");
-
         Runnable r2 = new Runnable(){
             public void run() {
                 try {
-                    SAXBuilder builder = new SAXBuilder();
-                    Document document = builder.build(new URL(pluginVersionsXmlURL));
-
-                    String latestVersion = document.getRootElement().getChildText("LatestVersion");
-                    String latestVersionURL = document.getRootElement().getChildText("LatestVersionURL");
-                    String releaseNotes = document.getRootElement().getChildText("ReleaseNotes");
-                    String extraInformation = document.getRootElement().getChildText("ExtraInformation");
-                    if (latestVersion != null && compareVersions(getVersion(), latestVersion) < 0) {
+                    Release latest = getLatestRelease();
+                    if (latest != null && compareVersions(getVersion(), latest.tag_name) < 0) {
+                        String latestVersion = latest.tag_name;
+                        String latestVersionURL = latest.assets.get(0).browser_download_url;
+                        String releaseNotes = latest.body;
+                        String extraInformation = "";
                         final Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[]{"OK"}, "New Biocode Plugin Available");
                         final NewVersionAvailableDialogOptions newVersionAvailableDialogOptions =
                                 new NewVersionAvailableDialogOptions(latestVersion, latestVersionURL, releaseNotes, extraInformation);
@@ -196,10 +192,6 @@ public class BiocodePlugin extends GeneiousPlugin {
                             }
                         });
                     }
-                } catch (MalformedURLException e) {
-                    throw new IllegalStateException("Invalid URL", e);
-                } catch (JDOMException e) {
-                    Dialogs.showMessageDialog("Failed to show updates for Biocode Plugin." + e.getMessage());
                 } catch (IOException e) {
                     Dialogs.showMessageDialog("Failed to show updates for Biocode Plugin." + e.getMessage());
                 } catch (InterruptedException e) {
@@ -210,10 +202,25 @@ public class BiocodePlugin extends GeneiousPlugin {
             }
         };
         long lastRun = Preferences.userNodeForPackage(BiocodePlugin.class).getLong("LastUpgradeCheck", 0);
-
         if(System.currentTimeMillis() - lastRun > 1000 * 60 * 60 * 24) {
             Preferences.userNodeForPackage(BiocodePlugin.class).putLong("LastUpgradeCheck", System.currentTimeMillis());
             new Thread(r2, "Checking for update versions of the biocode plugin").start();
+        }
+    }
+
+    private static Release getLatestRelease() throws IOException {
+        try {
+            ClientConfig config = new ClientConfig();
+            WebTarget target = ClientBuilder.newBuilder().withConfig(config).build()
+                    .target("https://api.github.com/repos/biocodellc/biocode-lims/releases")
+                    .register(JacksonFeature.class);
+
+            Response response = target.request().get();
+            List<Release> releases = response.readEntity(new GenericType<List<Release>>() {});
+            Optional<Release> maxRelease = releases.stream().filter(r -> !r.shouldNotifyEveryone()).max((o1, o2) -> compareVersions(o1.tag_name, o2.tag_name));
+            return maxRelease.orElse(null);
+        } catch(ProcessingException| WebApplicationException e) {
+            throw new IOException(e.getMessage(), e);
         }
     }
 
@@ -226,6 +233,9 @@ public class BiocodePlugin extends GeneiousPlugin {
      * or a positive number of version1 > version2.
      */
     public static int compareVersions(String version1, String version2) {
+        if(version1.startsWith("v")) version1 = version1.substring(1);
+        if(version2.startsWith("v")) version2 = version2.substring(1);
+
         String[]ver1 = version1.split("\\.");
         String[]ver2 = version2.split("\\.");
 

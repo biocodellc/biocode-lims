@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.jdom.Element;
 import jxl.Sheet;
@@ -137,7 +138,7 @@ public class TableFimsSample implements FimsSample {
             }
         }
         // Crash here for developers.
-        assert value instanceof String : "TableFimsSample only supports serializing Strings or Dates to XML.  " +
+        assert value instanceof String : "TableFimsSample only supports serializing defined types to XML.  " +
                 "If you've added a new type of DocumentField then you will need to add support for serializing it.  " +
                 "Otherwise Geneious core will have a heart attack when it discovers that the value after fromXML() is a " +
                 "String but the DocumentField is of another type";
@@ -181,6 +182,8 @@ public class TableFimsSample implements FimsSample {
             for(Element e : valuesElement.getChildren()) {
                 DocumentField field = getDocumentField(e.getChildText("key"));
                 if(field == null) {
+                    fields.stream().filter(f -> f.getName().contains("plate")).collect(Collectors.toList()).forEach(System.out::println);
+                    fields.forEach(f -> System.out.println(f.getName() + " (" + f.getCode() + ")"));
                     throw new IllegalStateException("The DocumentField "+e.getChildText("key")+" was not found!");
                 }
                 String valueText = e.getChildText("value");
@@ -299,12 +302,27 @@ public class TableFimsSample implements FimsSample {
             }
         };
 
+        private static final Converter<Integer> INTEGER_CONVERTER = new Converter<Integer>("XML_Integer_Value:", Integer.class) {
+
+            @Override
+            protected Integer _convertFromString(String stringValue) {
+                return Integer.valueOf(stringValue);
+            }
+        };
+
+        private static final Converter<Boolean> BOOLEAN_CONVERTER = new Converter<Boolean>("XML_Boolean_Value", Boolean.class) {
+            @Override
+            protected Boolean _convertFromString(String stringValue) {
+                return Boolean.valueOf(stringValue);
+            }
+        };
+
         /**
          *
          * @return All available converters
          */
         public static Collection<Converter> values() {
-            return Arrays.<Converter>asList(DATE_CONVERTER, DOUBLE_CONVERTER);
+            return Arrays.<Converter>asList(DATE_CONVERTER, DOUBLE_CONVERTER, INTEGER_CONVERTER, BOOLEAN_CONVERTER);
         }
     }
 }
