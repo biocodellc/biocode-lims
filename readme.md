@@ -14,8 +14,8 @@ software package.
 It is currently in active development and has not been released yet.
 
 ## Useful Information
-* Official releases are available from the [official website](http://software.mooreabiocode.org)
-* Official wiki at [http://software.mooreabiocode.org](http://software.mooreabiocode.org) for more information
+* Official releases are available from the [official website](https://github.com/biocodellc/biocode-lims/releases)
+* Official wiki at [https://github.com/biocodellc/biocode-lims/](https://github.com/biocodellc/biocode-lims/) for more information
 including the user guide.
 * Discussion forum at [http://connect.barcodeoflife.net/group/lims](http://connect.barcodeoflife.net/group/lims) 
 * Support email support@mooreabiocode.org
