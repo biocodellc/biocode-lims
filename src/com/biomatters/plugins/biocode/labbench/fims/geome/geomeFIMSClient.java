@@ -160,7 +160,7 @@ public class geomeFIMSClient {
             }, response);
             List<Project> returnList = new ArrayList<Project>();
             for (Project project : fromService) {
-                if (project.code != null && project.validForLIMS) { 
+                if (project.code != null && project.getValidForLIMS()) {
                     returnList.add(project);
                 }
             }

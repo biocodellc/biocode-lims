@@ -459,7 +459,7 @@ public abstract class FIMSConnection {
      */
     protected abstract List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException;
 
-    private Map<String, SoftReference<FimsSample>> sampleCache = new HashMap<String, SoftReference<FimsSample>>();
+    protected Map<String, SoftReference<FimsSample>> sampleCache = new HashMap<String, SoftReference<FimsSample>>();
 
     public final FimsSample getFimsSampleFromCache(String tissueId) {
         SoftReference<FimsSample> fimsSampleSoftReference = sampleCache.get(tissueId);

@@ -155,7 +155,7 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
                         "\n" +
                         "For more information about creating and using Fusion Tables, please see: " +
                         "\n" +
-                        "<a href=\"http://software.mooreabiocode.org/index.php?title=Google_Fusion_Tables_FIMS\">The Moorea Biocode Plugin Documentation</a>" +
+                        "<a href=\"https://github.com/biocodellc/biocode-lims/wiki/Fusion-Tables\">The Moorea Biocode Plugin Documentation</a>" +
                         "", "Getting an ID", getPanel(), Dialogs.DialogIcon.INFORMATION);
             }
         });
