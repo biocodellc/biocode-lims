@@ -251,7 +251,7 @@ public class geomeFIMSConnection extends FIMSConnection {
         }
 
         // if the project cannot be found, then return an error...
-        throw new ConnectionException("Project '" + term.getValues()[0] +"' cannot be found.  Enter a valid project title or code.");
+        throw new ConnectionException("Project '" + term.getValues()[0] +"' cannot be found or is not a LIMS-enabled project. Please check the project code or title and try again.");
 
     }
 
