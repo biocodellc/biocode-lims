@@ -241,12 +241,18 @@ public class geomeFIMSConnection extends FIMSConnection {
                 throw new ConnectionException("Only Project queries with Contains are supported");
             }
             for (Project project : projects) {
-                if (project.title.equals(term.getValues()[0])) {
+                // query either the project title or the project code
+                if (project.title.equals(term.getValues()[0]) ||
+                        project.code.equals(term.getValues()[0])) {
                     return project;
                 }
+
             }
         }
-        return null;
+
+        // if the project cannot be found, then return an error...
+        throw new ConnectionException("Project '" + term.getValues()[0] +"' cannot be found.  Enter a valid project title or code.");
+
     }
 
     private String buildQuery(Query query) {
