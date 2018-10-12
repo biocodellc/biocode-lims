@@ -28,9 +28,9 @@ including the user guide.
 ### Geneious Plugin
 Run the following command from the root directory to create the gplugin file:
 
-    ant create-plugin  
+    ./gradlew  createPlugin
 
-Drag and drop the gplugin file from the build directory into Geneious to install the plugin.
+Drag and drop the gplugin file from the build/distributoin directory into Geneious to install the plugin.
 
 ### LIMS Server (Under Development)
 The LIMS Server is packaged as a distributable WAR file that can be deployed on most Java Web Servers.  (eg) Jetty 
@@ -38,7 +38,7 @@ or Apache Tomcat.
 
 Run the following command from the **biocode-server** directory to create the war file:
     
-    ant create-war
+    ./gradelw create-war
 
 The war file will be created in the biocode-server directory.
 
@@ -48,7 +48,7 @@ All development is done in the develop branch and merged to master when complete
 
 When switching branches it is always a good idea to run a build with
 
-    ant build-plugin
+    ./gradlew  build-plugin
 
 This will ensure any dependency changes for the new branch are applied and everything compiles.
 
