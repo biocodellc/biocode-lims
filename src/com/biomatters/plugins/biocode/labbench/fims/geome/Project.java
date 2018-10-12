@@ -17,28 +17,37 @@ public class Project {
     public String code;
     @XmlElement(name = "projectTitle")
     public String title;
+    @XmlElement(name = "projectConfiguration")
+    public ProjectConfiguration configuration;
 
-    private Boolean validForLIMS = false;
+    //private Boolean validForLIMS = false;
 
     public Project() {
     }
 
-    public Project(int id, String code, String title, String jsonLocation) {
+    public Project(int id, String code, String title, ProjectConfiguration configuration, String jsonLocation) {
         this.id = id;
         this.code = code;
         this.title = title;
-
+        this.configuration = configuration;
     }
 
     public Boolean getValidForLIMS() {
-        // DIPNET Is the only project not suitable for LIMS.  The reason for this is that
+        // Data Publications Is the only project configuration not suitable for LIMS.  The reason for this is that
         // the entity key for Tissue is materialSampleID which is the same as Sample
         // In effect this makes the Tissue entity a 1:1 mirror with the Sample entity.
-        // DIPNet was not meant to accumulate tissues.
-        // TODO: replace with network-based project filtering 
-        if (this.code.equals("DIPNET")) {
-            return false;
-        } else {
+        // Data Publications, as a network approved configuration, is not meant to accumulate tissues.
+        // TODO: establish more robust method of filtering based on a setting from server rather than name
+        try {
+            if (this.configuration.name.contains("Data Publications")) {
+                return false;
+            } else {
+                return true;
+            }
+        } catch (Exception e) {
+            // by default we likely want to return true since exceptions here will indicate some
+            // difficulty in discovering the project configuration setting, which probably means
+            // this is not "Data Publications"
             return true;
         }
     }
