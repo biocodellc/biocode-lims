@@ -1,20 +1,13 @@
-==Biocode Plugin 3.0.6 - 03 September 2018==
-* Enable queries on GeOMe project (in the drop-down list of search terms)
-* Cache FIMS data when performing tissueID search in GeOMe. Eliminates need to redo the search
-* Specify a single query for all available projects rather than looping projects for GeOMe
-* Populate attributes using a call to GeOMe network API instead of individual projects which speeds up populating attributes. 
-* Enable full-text queries for GeOMe projects.
-
 ==Biocode Plugin 3.0.7 - 10 October 12 2018==
 * set default geome fims instance to production. 
 * enable either production or develop geome to be called 
 * Bug fixes
 
-==Biocode Plugin 3.0.6 - 04 September 2018==
+==Biocode Plugin 3.0.6 - 03 September 2018==
 * Enable queries on GeOMe project (in the drop-down list of search terms)
 * Cache FIMS data when performing tissueID search in GeOMe. Eliminates need to redo the search
 * Specify a single query for all available projects rather than looping projects for GeOMe
-* Populate attributes using a call to GeOMe network API instead of individual projects which speeds up populating attributes.
+* Populate attributes using a call to GeOMe network API instead of individual projects which speeds up populating attributes. 
 * Enable full-text queries for GeOMe projects.
 
 ==Biocode Plugin 3.0.5 - 22 August 2018==
