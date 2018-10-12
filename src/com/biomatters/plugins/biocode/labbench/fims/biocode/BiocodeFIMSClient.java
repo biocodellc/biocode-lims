@@ -115,7 +115,7 @@ public class BiocodeFIMSClient {
             }, response);
             List<Project> returnList = new ArrayList<Project>();
             for (Project project : fromService) {
-                if (project.code != null) {
+                if (project.title != null) {
                     returnList.add(project);
                 }
             }

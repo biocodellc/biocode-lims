@@ -133,7 +133,7 @@ import java.util.prefs.Preferences;
             Preferences cacheNode = getCacheNode();
             cacheNode.clear();
             for (Project project : projects) {
-                Preferences childNode = cacheNode.node(project.code);
+                Preferences childNode = cacheNode.node(project.title);
                 childNode.putInt(ID, project.id);
                 childNode.put(CODE, project.code);
                 childNode.put(TITLE, project.title);
@@ -184,7 +184,7 @@ import java.util.prefs.Preferences;
         Project project;
 
         ProjectOptionValue(Project project) {
-            super(project == null ? "noValue" :  project.code,
+            super(project == null ? "noValue" :  project.title,
                     project == null ? "Please login to retrieve projects " : project.title);
             this.project = project;
         }

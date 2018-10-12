@@ -26,7 +26,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 public class geomeFIMSConnection extends FIMSConnection {
-    private static final String HOST = "api.develop.geome-db.org";
+    private static final String HOST = "api.geome-db.org";
     static final String GEOME_URL = "https://" + HOST;
     private geomeFIMSClient client;
 
@@ -60,7 +60,9 @@ public class geomeFIMSConnection extends FIMSConnection {
         geomeFIMSConnectionOptions fimsOptions = (geomeFIMSConnectionOptions) options;
         client = new geomeFIMSClient(fimsOptions.getHost(), requestTimeoutInSeconds);
         try {
-            client.login(fimsOptions.getUserName(), fimsOptions.getPassword());
+            String username=fimsOptions.getUserName();
+            String password=fimsOptions.getPassword();
+            client.login(username,password);
             projects = client.getProjects(fimsOptions.includePublicProjects());
             if (projects.isEmpty()) {
                 throw new ConnectionException("You don't have access to any projects");
@@ -112,6 +114,7 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     public DocumentField getTissueSampleDocumentField() {
+
         return allAttributes.get(TISSUE_URN);
     }
 
@@ -180,7 +183,7 @@ public class geomeFIMSConnection extends FIMSConnection {
         }
         queryString += " _projects_:" + projectIds;
 
-        System.out.println(projectIds);
+        //System.out.println(projectIds);
         // _projects_:[1,2,11]
         Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
 //                .queryParam("_projects_:", projectIds)
@@ -249,9 +252,9 @@ public class geomeFIMSConnection extends FIMSConnection {
 
             }
         }
-
+         return null;
         // if the project cannot be found, then return an error...
-        throw new ConnectionException("Project '" + term.getValues()[0] +"' cannot be found or is not a LIMS-enabled project. Please check the project code or title and try again.");
+        //throw new ConnectionException("Project '" + term.getValues()[0] +"' cannot be found or is not a LIMS-enabled project. Please check the project code or title and try again.");
 
     }
 

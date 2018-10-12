@@ -36,17 +36,19 @@ import java.util.logging.Logger;
 
 /**
  * @author Matthew Cheung
- *         Created on 7/02/14 5:51 AM
+ * Created on 7/02/14 5:51 AM
  */
 public class geomeFIMSClient {
     private WebTarget target;
-    public  AccessToken access_token;
+    public AccessToken access_token;
+    private String hostname = "";
 
     public geomeFIMSClient(String hostname) {
         this(hostname, 0);
     }
 
     public geomeFIMSClient(String hostname, int timeout) {
+        this.hostname = hostname;
         ClientConfig config = new ClientConfig()
                 .property(ClientProperties.CONNECT_TIMEOUT, timeout * 1000)
                 .property(ClientProperties.READ_TIMEOUT, timeout * 1000);
@@ -59,11 +61,11 @@ public class geomeFIMSClient {
 
 
     /**
-     *
      * @param username The username to use to authenticate
      * @param password The password to use to authenticate
-     * @throws MalformedURLException If the url specified was not a valid URL
-     * @throws ProcessingException If a problem occurs accessing the webservice to login
+     *
+     * @throws MalformedURLException    If the url specified was not a valid URL
+     * @throws ProcessingException      If a problem occurs accessing the webservice to login
      * @throws DatabaseServiceException If the server returned an error when we tried to authenticate
      */
     void login(String username, String password) throws IOException, ProcessingException, DatabaseServiceException {
@@ -90,15 +92,18 @@ public class geomeFIMSClient {
 
     private JsonNode getClientSecrets() throws DatabaseServiceException {
         InputStream secretsStream = geomeFIMSClient.class.getResourceAsStream("/geome_secrets.json");
-        if(secretsStream == null) {
+        if (secretsStream == null) {
             throw new IllegalStateException("Can't find client secrets for connection to geome");
         }
 
 
         try {
             JsonNode node = new ObjectMapper().readTree(secretsStream);
-            // todo Add a switch.  In general prod should be used and develop only for dev
-            return node.get("develop");
+            if (hostname.contains("develop"))
+                return node.get("develop");
+            else
+                return node.get("production");
+
 
         } catch (IOException e) {
             throw new DatabaseServiceException("File missing stuff", false);
@@ -109,8 +114,10 @@ public class geomeFIMSClient {
      * Retrieves the result of a REST method call to either the BiSciCol or Biocode-FIMS services.
      *
      * @param resultType The class of the entity that should be returned from the method
-     * @param response The response from the method call
+     * @param response   The response from the method call
+     *
      * @return The result entity
+     *
      * @throws DatabaseServiceException if an error was returned by the server
      */
     static <T> T getRestServiceResult(Class<T> resultType, Response response) throws DatabaseServiceException {
@@ -146,11 +153,12 @@ public class geomeFIMSClient {
     }
 
     WebTarget getQueryTarget() {
-        return target.path("v1");
+        //return target.path("v1");
+        return target.path("");
     }
 
     List<Project> getProjects(boolean includePublic) throws DatabaseServiceException {
-        Invocation.Builder request = target.path("v1/projects")
+        Invocation.Builder request = target.path("projects")
                 .queryParam("includePublic", includePublic)
                 .request(MediaType.APPLICATION_JSON_TYPE);
 
@@ -160,7 +168,8 @@ public class geomeFIMSClient {
             }, response);
             List<Project> returnList = new ArrayList<Project>();
             for (Project project : fromService) {
-                if (project.code != null && project.getValidForLIMS()) {
+                Boolean validForLims = project.getValidForLIMS();
+                if (project.title != null && validForLims) {
                     returnList.add(project);
                 }
             }
@@ -177,20 +186,21 @@ public class geomeFIMSClient {
         try {
             Invocation.Builder request = target.path("biocode-fims/rest/v1.1/projects").path(id).path("graphs").request(MediaType.APPLICATION_JSON_TYPE);//.header("Authorization", "Bearer " + access_token);
             Response response = request.get();
-            return getRestServiceResult(new GenericType<List<Graph>>(){}, response);
-        } catch(WebApplicationException e) {
+            return getRestServiceResult(new GenericType<List<Graph>>() {
+            }, response);
+        } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, "Error message from server: " + target.getUri().getHost() + ": " + e.getMessage(), true);
-        } catch(ProcessingException e) {
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), true);
         }
     }
 
 
     BiocodeFimsData getData(String project, Form searchTerms, String filter) throws DatabaseServiceException {
-        if(filter != null && filter.contains(",")) {
+        if (filter != null && filter.contains(",")) {
             try {
                 filter = URLEncoder.encode(filter, "UTF-8");
-            } catch(UnsupportedEncodingException e) {
+            } catch (UnsupportedEncodingException e) {
                 // Go with default encoding
                 e.printStackTrace();
             }
@@ -204,9 +214,9 @@ public class geomeFIMSClient {
             WebTarget target = getQueryTarget();
 
             Entity<Form> entity = null;
-            if(searchTerms == null || searchTerms.asMap().isEmpty()) {
+            if (searchTerms == null || searchTerms.asMap().isEmpty()) {
                 target = target.queryParam("projectId", project);
-                if(filter != null) {
+                if (filter != null) {
                     target = target.queryParam("filter", filter);
                 }
             } else {
@@ -220,7 +230,7 @@ public class geomeFIMSClient {
             throw new DatabaseServiceException("No data found.", false);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, "Encountered an error communicating with " + geomeFIMSConnection.GEOME_URL, false);
-        } catch(ProcessingException e) {
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, "Encountered an error connecting to server: " + e.getMessage(), true);
         } catch (NoSuchMethodException e) {
             throw new DatabaseServiceException(e, "Failed to deserialize response. " + e.getMessage(), true);
@@ -255,13 +265,13 @@ public class geomeFIMSClient {
     private BiocodeFimsData QueryResultToData(List<QueryResult> results) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         BiocodeFimsData res = new BiocodeFimsData();
 
-        if(results.isEmpty()) {
+        if (results.isEmpty()) {
             return res;
         }
 
         //header
         List<Map<String, String>> rows = results.get(0).getContent();
-        if(rows.isEmpty() || rows.get(0) == null) {
+        if (rows.isEmpty() || rows.get(0) == null) {
             return res;
         }
         res.header = new ArrayList<String>(rows.get(0).keySet());
