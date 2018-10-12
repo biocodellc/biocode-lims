@@ -26,9 +26,10 @@ import java.util.prefs.Preferences;
 
 /**
  * @author Matthew Cheung
- *       <p />
- *       Created on 1/02/14 10:50 AM
- */public class BiocodeFIMSConnectionOptions extends PasswordOptions {
+ * <p/>
+ * Created on 1/02/14 10:50 AM
+ */
+public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
     private StringOption hostOption;
     private StringOption usernameOption;
@@ -104,7 +105,7 @@ import java.util.prefs.Preferences;
                     projectOption.setPossibleValues(optionValues);
                 }
             };
-            if(Geneious.isHeadless() || TestGeneious.isRunningTest()) {
+            if (Geneious.isHeadless() || TestGeneious.isRunningTest()) {
                 updateFields.run();
             } else {
                 SwingUtilities.invokeLater(updateFields);
@@ -146,7 +147,6 @@ import java.util.prefs.Preferences;
     }
 
     /**
-     *
      * @return A list of {@link Project}s retrieved previously or null if the cache is empty or if there
      * is a problem retrieving the cache from preferences
      */
@@ -155,7 +155,7 @@ import java.util.prefs.Preferences;
             List<Project> fromCache = new ArrayList<Project>();
             Preferences cacheNode = getCacheNode();
             String[] children = cacheNode.childrenNames();
-            if(children == null || children.length == 0) {
+            if (children == null || children.length == 0) {
                 return null;
             }
             for (String child : children) {
@@ -164,8 +164,11 @@ import java.util.prefs.Preferences;
                 String code = projectNode.get(CODE, null);
                 String title = projectNode.get(TITLE, null);
                 String xml = projectNode.get(XML, null);
-                if(id != -1 && code != null && title != null && xml != null) {
-                    fromCache.add(new Project(id, code, title, xml));
+
+                if (id != -1 && code != null && title != null && xml != null) {
+                    Project p = new Project(id, code, title, xml);
+                    if (!fromCache.contains(p))
+                        fromCache.add(new Project(id, code, title, xml));
                 }
             }
             return fromCache;
@@ -184,7 +187,7 @@ import java.util.prefs.Preferences;
         Project project;
 
         ProjectOptionValue(Project project) {
-            super(project == null ? "noValue" :  project.title,
+            super(project == null ? "noValue" : project.title,
                     project == null ? "Please login to retrieve projects " : project.title);
             this.project = project;
         }
@@ -193,10 +196,11 @@ import java.util.prefs.Preferences;
     }
 
     private static final List<OptionValue> NO_FIELDS = Collections.singletonList(new Options.OptionValue("None", "None"));
+
     public List<OptionValue> getFieldsAsOptionValues() throws DatabaseServiceException {
         List<OptionValue> fields = new ArrayList<OptionValue>();
         Project project = projectOption.getValue().project;
-        if(project == null) {
+        if (project == null) {
             return NO_FIELDS;
         }
         for (Project.Field field : project.getFields()) {
