@@ -168,8 +168,9 @@ public class geomeFIMSClient {
             }, response);
             List<Project> returnList = new ArrayList<Project>();
             for (Project project : fromService) {
-                Boolean validForLims = project.getValidForLIMS();
-                if (project.title != null && validForLims) {
+                //Boolean validForLims = project.getValidForLIMS();
+                //if (project.title != null && validForLims) {
+                if (project.title != null) {
                     returnList.add(project);
                 }
             }

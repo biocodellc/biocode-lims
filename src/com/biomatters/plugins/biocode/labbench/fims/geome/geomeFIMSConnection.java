@@ -81,7 +81,6 @@ public class geomeFIMSConnection extends FIMSConnection {
                 if (!Arrays.asList("Tissue", "Event", "Sample").contains(entity.conceptAlias)) {
                     continue;
                 }
-
                 for (Project.Field attribute : entity.attributes) {
                     allAttributes.put(attribute.uri, attribute.asDocumentField());
                     if (taxonomyFieldNames.contains(attribute.uri)) {
@@ -89,9 +88,7 @@ public class geomeFIMSConnection extends FIMSConnection {
                     } else {
                         collectionAttributes.put(attribute.uri, attribute.asDocumentField());
                     }
-
                 }
-                //  }
             }
         } catch (Exception e) {
             e.printStackTrace();
