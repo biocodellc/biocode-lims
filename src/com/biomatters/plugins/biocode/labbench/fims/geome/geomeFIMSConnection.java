@@ -60,9 +60,9 @@ public class geomeFIMSConnection extends FIMSConnection {
         geomeFIMSConnectionOptions fimsOptions = (geomeFIMSConnectionOptions) options;
         client = new geomeFIMSClient(fimsOptions.getHost(), requestTimeoutInSeconds);
         try {
-            String username=fimsOptions.getUserName();
-            String password=fimsOptions.getPassword();
-            client.login(username,password);
+            String username = fimsOptions.getUserName();
+            String password = fimsOptions.getPassword();
+            client.login(username, password);
             projects = client.getProjects(fimsOptions.includePublicProjects());
             if (projects.isEmpty()) {
                 throw new ConnectionException("You don't have access to any projects");
@@ -249,7 +249,7 @@ public class geomeFIMSConnection extends FIMSConnection {
 
             }
         }
-         return null;
+        return null;
         // if the project cannot be found, then return an error...
         //throw new ConnectionException("Project '" + term.getValues()[0] +"' cannot be found or is not a LIMS-enabled project. Please check the project code or title and try again.");
 
@@ -371,8 +371,9 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
-//        try {
-        return tissueIds.stream()
+        try {
+            /*
+            return tissueIds.stream()
                 .map(id -> sampleCache.get(id))
                 .filter(s -> s != null)
                 .map(s -> {
@@ -382,62 +383,57 @@ public class geomeFIMSConnection extends FIMSConnection {
                     return s.get();
                 })
                 .collect(Collectors.toList());
-//            List<Integer> projectIds = new ArrayList<>();
-//            // collect project ids
-//            for (Project currentProject : projects) {
-//                projectIds.add(currentProject.id);
-//            }
+                */
+            List<Integer> projectIds = new ArrayList<>();
+            // collect project ids
+            for (Project currentProject : projects) {
+                projectIds.add(currentProject.id);
+            }
 
-        //for (Project currentProject : projects) {
+            for (Project currentProject : projects) {
 
-//            Query[] tissueQueries = new Query[tissueIds.size()];
-//            for (int i = 0; i < tissueIds.size(); i++) {
-//                tissueQueries[i] = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, tissueIds.get(i));
-//            }
-//            Query tissueQuery = Query.Factory.createOrQuery(tissueQueries, Collections.emptyMap());
-//
-//            String queryString = buildQuery(tissueQuery);
+                Query[] tissueQueries = new Query[tissueIds.size()];
+                for (int i = 0; i < tissueIds.size(); i++) {
+                    tissueQueries[i] = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, tissueIds.get(i));
+                }
+                Query tissueQuery = Query.Factory.createOrQuery(tissueQueries, Collections.emptyMap());
 
-
-        // Previous method construction POST returns error
-//            Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
-//                    .queryParam("_projects_:", projectIds)
-//                    .queryParam("entity", "Tissue")
-//                    .queryParam("limit", 100000)
-//                    .queryParam("_select_:", "[Tissue,Sample,Event]")
-//                    .request();
-//
-//
-//            Form formToPost = new Form()
-//                    .param("query", queryString);
-        //.param("query", queryString + "_select_:[Tissue,Sample,Event]");
-
-//            Response response = searchRequest.post(
-//                    Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
+                String queryString = buildQuery(tissueQuery);
 
 
+                // POST Connection method... should work for large requests
+                Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
+                        .queryParam("_projects_:", projectIds)
+                        .queryParam("entity", "Tissue")
+                        .queryParam("limit", 100000)
+                        .request();
 
-            /*
-             // GET style throws mysterious error
-            Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
-                            .queryParam("_projects_:", projectIds)
-                            .queryParam("entity", "Tissue")
-                            .queryParam("limit", 100000)
-                            .queryParam("q", queryString+ "_select_:[Tissue,Sample,Event]")
-                            .request();
-            Response response = searchRequest.get();
-        */
+                Form formToPost = new Form()
+                        .param("query", queryString + "_select_:[Tissue,Sample,Event]");
 
-//            SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
-//
-//
-//            List<FimsSample> samples = transformQueryResults(tissueIds, result);
-        // }
-//
-//            return samples;
-//        } catch (DatabaseServiceException e) {
-//            throw new ConnectionException(e);
-//        }
+                Response response = searchRequest.post(
+                        Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
+                 /*
+                // GET Connection method... fails on large requests
+                Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
+                        .queryParam("_projects_:", projectIds)
+                        .queryParam("entity", "Tissue")
+                        .queryParam("limit", 100000)
+                        .queryParam("q", queryString + "_select_:[Tissue,Sample,Event]")
+                        .request();
+
+                Response response = searchRequest.get();
+                */
+                SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
+
+                List<FimsSample> samples = transformQueryResults(tissueIds, result);
+                return samples;
+            }
+
+        } catch (DatabaseServiceException e) {
+            throw new ConnectionException(e);
+        }
+        return null;
     }
 
     private List<FimsSample> transformQueryResults(List<String> tissueIds, SearchResult result) throws ConnectionException {
