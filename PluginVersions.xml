@@ -1,8 +1,8 @@
 <PluginVersions>
-    <LatestVersion>3.0.6</LatestVersion>
-    <LatestVersionURL>https://github.com/biocodellc/biocode-lims/releases/download/3.0.6/BiocodePlugin_3_0_6.gplugin</LatestVersionURL>
-    <ReleaseNotes>==Biocode Plugin 3.0.6 - 03 September 2018==
-        * Enable GeOMe project uploading
+    <LatestVersion>3.0.8</LatestVersion>
+    <LatestVersionURL>https://github.com/biocodellc/biocode-lims/releases/download/3.0.8/BiocodePlugin_3_0_8.gplugin</LatestVersionURL>
+    <ReleaseNotes>==Biocode Plugin 3.0.8 - 12 February 2019==
+        * Fix GeOMe metadata updating
     </ReleaseNotes>
     <ExtraInformation/>
 </PluginVersions>

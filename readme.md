@@ -22,7 +22,7 @@ including the user guide.
  
 ## Requirements
 * Java Development Kit 1.6+
-* Apache Ant
+* Gradle
 
 ## Installation
 ### Geneious Plugin
@@ -70,10 +70,7 @@ Many modern IDEs come with Apache Ivy integration.  If you are using such a feat
 depends on some Geneious core classes and this is not reflected in the Ivy configuration.  The main reason for this is
   that the required libraries are not provided standalone in any repositories.
 
-In the ant build, the complete Geneious runtime is downloaded and the required libraries are extracted from it.
-
-If  you do not wish to use the ant build, then you can obtain the core libraries from the Geneious Plugin Development Kit
-or any installation of Geneious.
+In the gradle build, the complete Geneious runtime is downloaded and the required libraries are extracted from it.
 
 ## Contributing
 Please contact support@mooreabiocode.org
