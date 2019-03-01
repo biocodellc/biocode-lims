@@ -241,9 +241,8 @@ public class geomeFIMSConnection extends FIMSConnection {
                 throw new ConnectionException("Only Project queries with Contains are supported");
             }
             for (Project project : projects) {
-                // query either the project title or the project code
-                if (project.title.equals(term.getValues()[0]) ||
-                        project.code.equals(term.getValues()[0])) {
+                // query the project title
+                if (project.title.equals(term.getValues()[0])) {
                     return project;
                 }
 
