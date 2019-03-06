@@ -1,1 +1,6 @@
 resources/geome_secrets.json
+.gradle/
+.build/
+.idea/
+build/
+out/
