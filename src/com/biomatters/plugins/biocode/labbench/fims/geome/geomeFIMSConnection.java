@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 public class geomeFIMSConnection extends FIMSConnection {
     private static final String HOST = "api.geome-db.org";
-    static final String GEOME_URL = "https://" + HOST;
+    public static final String GEOME_URL = "https://" + HOST;
     private geomeFIMSClient client;
 
     @Override
