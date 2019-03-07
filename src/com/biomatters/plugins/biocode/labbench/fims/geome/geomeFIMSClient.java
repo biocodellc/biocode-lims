@@ -111,7 +111,7 @@ public class geomeFIMSClient {
     }
 
     /**
-     * Retrieves the result of a REST method call to either the BiSciCol or Biocode-FIMS services.
+     * Retrieves the result of a REST method call to the GeOME server
      *
      * @param resultType The class of the entity that should be returned from the method
      * @param response   The response from the method call

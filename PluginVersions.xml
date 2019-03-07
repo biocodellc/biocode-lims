@@ -1,8 +1,9 @@
 <PluginVersions>
-    <LatestVersion>3.0.8</LatestVersion>
-    <LatestVersionURL>https://github.com/biocodellc/biocode-lims/releases/download/3.0.8/BiocodePlugin_3_0_8.gplugin</LatestVersionURL>
-    <ReleaseNotes>==Biocode Plugin 3.0.8 - 12 February 2019==
-        * Fix GeOMe metadata updating
+    <LatestVersion>3.0.9</LatestVersion>
+    <LatestVersionURL>https://github.com/biocodellc/biocode-lims/releases/download/3.0.9/BiocodePlugin_3_0_9.gplugin</LatestVersionURL>
+    <ReleaseNotes>==Biocode Plugin 3.0.9 - 6 March 2019==
+        * Fix Project search bug
+        * Add Genbank Metadata data properties to results list for Geome
     </ReleaseNotes>
     <ExtraInformation/>
 </PluginVersions>

@@ -65,4 +65,8 @@ import java.net.URL;
     public boolean includePublicProjects() {
         return includePublicProjectsOption.getValue();
     }
+
+    public void setIncludePublicProjectsOption(Boolean publicOption) { includePublicProjectsOption.setValue(publicOption); }
+
+    public void setHostOption(String host) { this.hostOption.setValue(host); }
 }

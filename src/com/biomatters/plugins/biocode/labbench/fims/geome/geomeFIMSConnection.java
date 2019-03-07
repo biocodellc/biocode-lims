@@ -13,6 +13,7 @@ import com.biomatters.plugins.biocode.labbench.TissueDocument;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
+import com.google.api.client.repackaged.org.apache.commons.codec.binary.StringUtils;
 
 
 import javax.ws.rs.client.Entity;
@@ -27,7 +28,7 @@ import java.util.stream.Collectors;
 
 public class geomeFIMSConnection extends FIMSConnection {
     private static final String HOST = "api.geome-db.org";
-    static final String GEOME_URL = "https://" + HOST;
+    public static final String GEOME_URL = "https://" + HOST;
     private geomeFIMSClient client;
 
     @Override
@@ -89,8 +90,11 @@ public class geomeFIMSConnection extends FIMSConnection {
                         collectionAttributes.put(attribute.uri, attribute.asDocumentField());
                     }
                 }
+
             }
+
         } catch (Exception e) {
+
             e.printStackTrace();
             throw new ConnectionException("Unable to connect to GeOMe: " + e.getMessage());
         }
@@ -130,9 +134,26 @@ public class geomeFIMSConnection extends FIMSConnection {
     }
 
     private static final DocumentField PROJECT_FIELD = new DocumentField("Project", "", "geomeProject", String.class, false, false);
+    private static final DocumentField GENBANK_COUNTRY_FIELD = new DocumentField("genbankCountry", "", "urn:genbankCountry", String.class, false, false);
+    private static final DocumentField GENBANK_DATE_FIELD = new DocumentField("genbankDate", "", "urn:genbankDate", String.class, false, false);
+    private static final DocumentField GENBANK_LATLNG_FIELD = new DocumentField("genbankLatLng", "", "urn:genbankLatLng", String.class, false, false);
+    // NOTE: the Genbank submission docs indicate empty attributes should be titled "misssing", however, geome commonlyl
+    // encodes this as "Unknown".  To maintain consistency with Geome, we set the BLANK_ATTRIBUTE to "Unknown"
+    private static final String BLANK_ATTRIBUTE = "Unknown";
+
 
     @Override
     protected List<DocumentField> _getCollectionAttributes() {
+        List<DocumentField> result = new ArrayList<>(collectionAttributes.values());
+        result.removeAll(_getTaxonomyAttributes());
+        result.add(PROJECT_FIELD);
+        result.add(GENBANK_COUNTRY_FIELD);
+        result.add(GENBANK_DATE_FIELD);
+        result.add(GENBANK_LATLNG_FIELD);
+        return result;
+    }
+
+    protected List<DocumentField> _getLimitedCollectionAttributesForSearch() {
         List<DocumentField> result = new ArrayList<>(collectionAttributes.values());
         result.removeAll(_getTaxonomyAttributes());
         result.add(PROJECT_FIELD);
@@ -148,7 +169,7 @@ public class geomeFIMSConnection extends FIMSConnection {
     protected List<DocumentField> _getSearchAttributes() {
         List<DocumentField> result = new ArrayList<>();
         result.addAll(_getTaxonomyAttributes());
-        result.addAll(_getCollectionAttributes());
+        result.addAll(_getLimitedCollectionAttributesForSearch());
         return result;
     }
 
@@ -241,9 +262,8 @@ public class geomeFIMSConnection extends FIMSConnection {
                 throw new ConnectionException("Only Project queries with Contains are supported");
             }
             for (Project project : projects) {
-                // query either the project title or the project code
-                if (project.title.equals(term.getValues()[0]) ||
-                        project.code.equals(term.getValues()[0])) {
+                // query the project title
+                if (project.title.equals(term.getValues()[0])) {
                     return project;
                 }
 
@@ -439,13 +459,16 @@ public class geomeFIMSConnection extends FIMSConnection {
     private List<FimsSample> transformQueryResults(List<String> tissueIds, SearchResult result) throws ConnectionException {
         List<FimsSample> samples = new ArrayList<>();
 
+        allAttributes.put("genbankCountry", GENBANK_COUNTRY_FIELD);
+        allAttributes.put("genbankDate", GENBANK_DATE_FIELD);
+        allAttributes.put("genbankLatLng", GENBANK_LATLNG_FIELD);
+
         Map<String, DocumentField> attributesByName = new HashMap<>();
         allAttributes.values().forEach(f -> attributesByName.put(f.getName(), f));
 
         Map<String, Map<String, Object>> mappedTissues = mapResults(getTissueSampleDocumentField().getName(), result.content.Tissue);
         Map<String, Map<String, Object>> mappedSamples = mapResults("materialSampleID", result.content.Sample);
         Map<String, Map<String, Object>> mappedEvents = mapResults(EVENT_ID, result.content.Event);
-
 
         for (String tissueId : tissueIds) {
             Map<String, Object> valuesForTissue = mappedTissues.get(tissueId);
@@ -454,7 +477,9 @@ public class geomeFIMSConnection extends FIMSConnection {
                 // Need to convert map from name -> value to uri -> value because that's what Geneious expects
                 Map<String, Object> valuesByCode = new HashMap<>();
 
+
                 BiConsumer<String, Object> storeByCode = (key, value) -> {
+
                     if (value == null || value instanceof String && value.toString().trim().length() == 0) {
                         return;
                     }
@@ -473,7 +498,9 @@ public class geomeFIMSConnection extends FIMSConnection {
                             } else {
                                 valueToStore = value.toString();
                             }
+
                             valuesByCode.put(documentField.getCode(), valueToStore);
+
                         } catch (NumberFormatException e) {
                             System.out.println("Invalid value for " + documentField.getValueType() + " was " + value);
                         }
@@ -482,6 +509,8 @@ public class geomeFIMSConnection extends FIMSConnection {
                         //                        System.out.println("missing DocumentField for " + key);
                     }
                 };
+
+
                 valuesForTissue.forEach(storeByCode);
                 Object sampleId = valuesForTissue.get(allAttributes.get(SAMPLE_URN).getName());
                 String eventId = null;
@@ -498,6 +527,23 @@ public class geomeFIMSConnection extends FIMSConnection {
                 }
 
                 Map<String, Object> eventValues = mappedEvents.get(eventId);
+
+                eventValues.put("genbankCountry", getGenbankCountryValue(
+                        (String) eventValues.get(allAttributes.get("urn:country").getName()),
+                        (String) eventValues.get(allAttributes.get("urn:locality").getName())
+                ));
+
+                eventValues.put("genbankLatLng", getGenbankLatLong(
+                        (String) eventValues.get(allAttributes.get("urn:decimalLatitude").getName()),
+                        (String) eventValues.get(allAttributes.get("urn:decimalLongitude").getName())
+                ));
+
+                eventValues.put("genbankDate", getGenbankCollectionDate(
+                        (String) eventValues.get(allAttributes.get("urn:yearCollected").getName()),
+                        (String) eventValues.get(allAttributes.get("urn:monthCollected").getName()),
+                        (String) eventValues.get(allAttributes.get("urn:dayCollected").getName())
+                ));
+
                 if (eventValues != null) {
                     eventValues.forEach(storeByCode);
                 } else {
@@ -543,4 +589,125 @@ public class geomeFIMSConnection extends FIMSConnection {
     public boolean hasPhotos() {
         return false;
     }
+
+    /**
+     * if both lat and long are present, return a string containing the abs(decimalDegree) + Compass Direction
+     * <p>
+     * ex.
+     * <p>
+     * lat = -8, long = 140 would return "8 S 140 W"
+     */
+    private String getGenbankLatLong(String latText, String lngText) {
+        StringBuilder latLongSb = new StringBuilder();
+
+        if (!latText.equals("") &&
+                !lngText.equals("")) {
+
+            try {
+                Double lat = Double.parseDouble(latText);
+
+                if (lat < 0) {
+                    latLongSb.append(Math.abs(lat)).append(" S");
+                } else {
+                    latLongSb.append(lat).append(" N");
+                }
+
+                latLongSb.append(" ");
+
+                Double lng = Double.parseDouble(lngText);
+
+                if (lng < 0) {
+                    latLongSb.append(Math.abs(lng)).append(" W");
+                } else {
+                    latLongSb.append(lng).append(" E");
+                }
+            } catch (NumberFormatException e) {
+                latLongSb = new StringBuilder()
+                        .append(latText)
+                        .append(" ")
+                        .append(lngText);
+            }
+        }
+
+        if (latLongSb.toString().equals("")) {
+            return BLANK_ATTRIBUTE;
+        } else {
+            return latLongSb.toString();
+        }
+    }
+
+    /**
+     * Format the genbank Country field
+     *
+     * @param country
+     * @param locality
+     *
+     * @return
+     */
+    private String getGenbankCountryValue(String country, String locality) {
+        String genbankCountryValue = "";
+        // Assign the country portion of the Genbank country field
+        if (country != null) {
+            genbankCountryValue = country.trim();
+        }
+        // Assign the locality portion of the Genbank country field
+        if (locality != null &&
+                country != null &&
+                !locality.trim().equalsIgnoreCase(country.trim()) &&
+                !locality.trim().equals("")) {
+            // In some cases, the country name has already been mapped into the locality
+            // causing an unusual cascade of country names in the genbankCountry Field.
+            // This conditional statement attempts to catch and fix this situation.
+            if (locality.trim().startsWith(country.trim()) &&
+                    !locality.trim().equalsIgnoreCase(country.trim())) {
+                // remove the country name
+                String tempLocalityField = locality.trim().replaceFirst(country.trim(), "");
+                // remove colons since they will be confusing in this context
+                tempLocalityField = tempLocalityField.replace(":","");
+                genbankCountryValue += ":" + tempLocalityField;
+            } else {
+                genbankCountryValue += ":" + locality.trim();
+            }
+        }
+        // Return the blank attribute if we do not have any content
+        if (genbankCountryValue.equals("")) {
+            return BLANK_ATTRIBUTE;
+        } else {
+            return genbankCountryValue;
+        }
+    }
+
+    /**
+     * Format the genbank collection date field
+     *
+     * @param yearCollected
+     * @param monthCollected
+     * @param dayCollected
+     *
+     * @return
+     */
+    private String getGenbankCollectionDate(String yearCollected, String monthCollected, String dayCollected) {
+        StringBuilder collectionDate = new StringBuilder();
+
+        collectionDate.append(yearCollected);
+
+
+        if (monthCollected != null && !monthCollected.equals("")) {
+
+            collectionDate.append("-");
+            collectionDate.append(monthCollected);
+
+            if (dayCollected != null && !dayCollected.equals("")) {
+                collectionDate.append("-");
+                collectionDate.append(dayCollected);
+            }
+        }
+
+        if (collectionDate.toString().equals("")) {
+            return BLANK_ATTRIBUTE;
+        } else {
+            return collectionDate.toString();
+        }
+    }
+
 }
