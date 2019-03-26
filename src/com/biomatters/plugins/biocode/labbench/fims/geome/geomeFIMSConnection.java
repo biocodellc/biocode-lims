@@ -242,9 +242,11 @@ public class geomeFIMSConnection extends FIMSConnection {
 
 
         if (query instanceof CompoundSearchQuery) {
-            if (((CompoundSearchQuery) query).getOperator() != CompoundSearchQuery.Operator.AND) {
-                throw new ConnectionException("OR queries with Project unsupported");
-            }
+            // JBD: removing the restriction on OR queries from Geome... these DO work.
+            // However, i'm not certain why this restriction was placed here in the first place
+            //if (((CompoundSearchQuery) query).getOperator() != CompoundSearchQuery.Operator.AND) {
+            //    throw new ConnectionException("OR queries with Project unsupported");
+            //}
             for (Query childQuery : ((CompoundSearchQuery) query).getChildren()) {
                 if (childQuery instanceof AdvancedSearchQueryTerm) {
                     Project project = getProjectFromSearchTerm((AdvancedSearchQueryTerm) childQuery);

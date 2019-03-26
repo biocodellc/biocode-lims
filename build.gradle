@@ -17,7 +17,7 @@ println "Gradle " + GradleVersion.current().getVersion() + ' - ' + GradleVersion
 apply plugin: "java"
 apply plugin: "idea"
 
-version = '3.0.9'
+version = '3.0.10'
 
 defaultTasks 'createPlugin';
 
