@@ -1,3 +1,6 @@
+==Biocode Plugin 3.0.11 - 5 Aprils 2019==
+* Fixes error in fetching REF assemblies
+
 ==Biocode Plugin 3.0.10 - 26 March 2019==
 * Enabled OR queries for Geome
 

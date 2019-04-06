@@ -1,8 +1,8 @@
 <PluginVersions>
-    <LatestVersion>3.0.10</LatestVersion>
-    <LatestVersionURL>https://github.com/biocodellc/biocode-lims/releases/download/3.0.10/BiocodePlugin_3_0_10.gplugin</LatestVersionURL>
-    <ReleaseNotes>==Biocode Plugin 3.0.10 - 26 March 2019==
-        * Enable OR queries for Geome... fixes issues in not being able to annotate more than one Tissue
+    <LatestVersion>3.0.11</LatestVersion>
+    <LatestVersionURL>https://github.com/biocodellc/biocode-lims/releases/download/3.0.11/BiocodePlugin_3_0_11.gplugin</LatestVersionURL>
+    <ReleaseNotes>==Biocode Plugin 3.0.11 - 5 April 2019==
+        * Fixes error in fetching REF assemblies
     </ReleaseNotes>
     <ExtraInformation/>
 </PluginVersions>
