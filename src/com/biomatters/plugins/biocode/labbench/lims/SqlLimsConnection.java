@@ -23,9 +23,11 @@ import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import javax.sql.DataSource;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.*;
@@ -39,8 +41,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * An SQL based {@link LIMSConnection}
  *
  * @author Matthew Cheung
- *          <p/>
- *          Created on 1/04/14 4:45 PM
+ * <p/>
+ * Created on 1/04/14 4:45 PM
  */
 public abstract class SqlLimsConnection extends LIMSConnection {
 
@@ -59,7 +61,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
     private DataSource dataSource;
 
-    public synchronized DataSource getDataSource() throws SQLException{
+    public synchronized DataSource getDataSource() throws SQLException {
         if (dataSource == null)
             throw new SQLException("LIMS database is disconnected, please try to relogin.");
 
@@ -91,9 +93,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     private Connection legacyConnection;
+
     @Override
     protected synchronized Connection getConnectionInternal() throws SQLException {
-        if(legacyConnection == null) {
+        if (legacyConnection == null) {
             // By pass the new way of getting connections.  Get one directly from the pool.
             legacyConnection = getDataSource().getConnection();
         }
@@ -106,7 +109,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     /**
      * @return A {@link com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection.ConnectionWrapper} from the
      * connection pool.  Should be returned after use with {@link #returnConnection(com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection.ConnectionWrapper)}
-     * 
+     *
      * @throws SQLException if the connection could not be established
      */
     protected ConnectionWrapper getConnection() throws SQLException {
@@ -117,7 +120,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
         synchronized (connectionCounts) {
             Integer current = connectionCounts.get(toReturn);
-            if(current == null) {
+            if (current == null) {
                 current = 1;
             } else {
                 current = current + 1;
@@ -126,12 +129,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
         return toReturn;
     }
-    
+
     private final Map<ConnectionWrapper, Integer> connectionCounts = new HashMap<ConnectionWrapper, Integer>();
+
     protected void returnConnection(ConnectionWrapper connection) {
         synchronized (connectionCounts) {
             Integer current = connectionCounts.get(connection);
-            if(current == null) {
+            if (current == null) {
                 ConnectionWrapper.closeConnection(connection);
             } else {
                 current = current - 1;
@@ -155,7 +159,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
         //we used to explicitly close the SQL connection, but this was causing crashes if the user logged out while a query was in progress.
         //now we remove all references to it and let the garbage collector close it when the queries have finished.
-        if(legacyConnection != null) {
+        if (legacyConnection != null) {
             legacyConnection = null;
         }
         dataSource = null;
@@ -206,13 +210,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             String lastStartedString = getProperty(BACKGROUND_TASKS_STARTED_KEY);
             long lastStarted;
             try {
-                lastStarted= lastStartedString == null || lastStartedString.trim().length() == 0 ?
+                lastStarted = lastStartedString == null || lastStartedString.trim().length() == 0 ?
                         0 : Long.parseLong(lastStartedString);
             } catch (NumberFormatException e) {
                 lastStarted = 0;
             }
             int oneDayInMilliseconds = 24 * 60 * 60 * 1000;
-            if(lastStarted > System.currentTimeMillis() - oneDayInMilliseconds) {
+            if (lastStarted > System.currentTimeMillis() - oneDayInMilliseconds) {
                 return;
             }
             setProperty(BACKGROUND_TASKS_STARTED_KEY, String.valueOf(System.currentTimeMillis()));
@@ -242,7 +246,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         try {
             String numFailString = getProperty(NUM_BACKGROUND_TASK_FAILS);
             int numFails = 0;
-            if(numFailString != null && numFailString.trim().length() > 0) {
+            if (numFailString != null && numFailString.trim().length() > 0) {
                 try {
                     numFails = Integer.parseInt(numFailString);
                 } catch (NumberFormatException e1) {
@@ -253,10 +257,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             numFails++;
             setProperty(NUM_BACKGROUND_TASK_FAILS, String.valueOf(numFails));
 
-            if(numFails > 10) {
+            if (numFails > 10) {
                 BiocodeUtilities.displayExceptionDialog("Biocode Background Maintenance Tasks Failed",
                         "The Biocode plugin has failed to perform background maintenance tasks the last <b>" + numFails +
-                        "</b> times it has tried.  Please contact " + BiocodePlugin.SUPPORT_EMAIL + " with these error details.", e, null);
+                                "</b> times it has tried.  Please contact " + BiocodePlugin.SUPPORT_EMAIL + " with these error details.", e, null);
             }
         } catch (DatabaseServiceException e1) {
             // Can't do much in this case since we're trying to handle an error.  Just print out exception to stderr
@@ -270,7 +274,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         ReactionDesc toFindPairOf = sameEditRecord.get(0);
         Collection<ReactionDesc> reactions = workflowToReaction.get(toFindPairOf.workflow);
         for (ReactionDesc reaction : reactions) {
-            if(reaction.reactionId != toFindPairOf.reactionId && !reaction.direction.equals(toFindPairOf.direction)) {
+            if (reaction.reactionId != toFindPairOf.reactionId && !reaction.direction.equals(toFindPairOf.direction)) {
                 sameEditRecord.add(reaction);
             }
         }
@@ -340,18 +344,19 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
     /**
      * <p>
-     *     The assembly table has a workflow column that may become inconsistent with the reaction the assembly belongs to.
-     *     In the future schema update we should remove this column.
+     * The assembly table has a workflow column that may become inconsistent with the reaction the assembly belongs to.
+     * In the future schema update we should remove this column.
      * </p>
      * <p>
-     *     We make sure to ignore this column when creating new sequences.  However we we will still fix it up on start
-     *     up so that any external systems that make use of the LIMS database directly don't get inconsistent data.
+     * We make sure to ignore this column when creating new sequences.  However we we will still fix it up on start
+     * up so that any external systems that make use of the LIMS database directly don't get inconsistent data.
      * </p>
      * <p>
-     *     This method can be removed once the column is removed in a schema update.
+     * This method can be removed once the column is removed in a schema update.
      * </p>
      *
      * @param connection
+     *
      * @throws SQLException
      */
     private void makeAssemblyTablesWorkflowColumnConsistent(ConnectionWrapper connection) throws SQLException {
@@ -380,12 +385,12 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 }
             }
             inconsistentRowsSet.close();
-        } catch(SQLException e) {
-            if(e instanceof BatchUpdateException) {
+        } catch (SQLException e) {
+            if (e instanceof BatchUpdateException) {
                 BatchUpdateException batchException = (BatchUpdateException) e;
-                for(SQLException ex = batchException.getNextException(); ex != null; ex = ex.getNextException()) {
+                for (SQLException ex = batchException.getNextException(); ex != null; ex = ex.getNextException()) {
                     String errorMessage = ex.getMessage();
-                    if(errorMessage != null && errorMessage.trim().length() > 0) {
+                    if (errorMessage != null && errorMessage.trim().length() > 0) {
                         System.out.println(errorMessage);
                     }
                 }
@@ -409,7 +414,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     /**
      * Creates a {@link org.apache.commons.dbcp.BasicDataSource} using a custom ClassLoader.
      * <p/>
-     * <b>Note</b>:This method is required because there is an older version of commons-dbcp in Geneious core class loader.  This
+     * <b>Note</b>:This method is required because there is an older version of commons-dbcp in Geneious core class
+     * loader.  This
      * means the class uses that class loader when looking for the JDBC driver class and cannot access the MySQL driver
      * bundled in the Biocode plugin.
      * <p/>
@@ -420,12 +426,14 @@ public abstract class SqlLimsConnection extends LIMSConnection {
      *
      * @param connectionUrl The URL to connect to
      * @param username
-     *@param password @return A {@link javax.sql.DataSource} for the specified parameters.
+     * @param password      @return A {@link javax.sql.DataSource} for the specified parameters.
+     *
      * @throws com.biomatters.plugins.biocode.labbench.ConnectionException
      */
     public static DataSource createBasicDataSource(String connectionUrl, Driver driver, String username, String password) throws ConnectionException {
+
         ClassLoader pluginClassLoader = SqlLimsConnection.class.getClassLoader();
-        if(pluginClassLoader instanceof URLClassLoader) {
+        if (pluginClassLoader instanceof URLClassLoader) {
             URLClassLoader urlClassLoader = (URLClassLoader) pluginClassLoader;
             URL rootResource = urlClassLoader.getResource(".");
             System.out.println(rootResource);
@@ -441,32 +449,33 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             List<URL> urlsOfJar = new ArrayList<URL>();
             for (URL url : (urlClassLoader).getURLs()) {
                 for (Dependency toCheckAgainst : required) {
-                    if(url.toString().contains(toCheckAgainst.name) && url.toString().contains(toCheckAgainst.version)) {
+                    if (url.toString().contains(toCheckAgainst.name) && url.toString().contains(toCheckAgainst.version)) {
                         urlsOfJar.add(url);
                     }
                 }
             }
             ClassLoader bootstrapClassLoader = ClassLoader.getSystemClassLoader().getParent();
-            if(bootstrapClassLoader == null) {
+            if (bootstrapClassLoader == null) {
                 throw new IllegalStateException("Expected system class loader to have a parent");
             }
             // We specify the parent class loader of our new one as the bootstrap classloader so it wont' be able to load
             // Geneious core classes.
             URLClassLoader classLoaderForPluginLibsOnly = new URLClassLoader(urlsOfJar.toArray(new URL[1]), bootstrapClassLoader);
+
             try {
                 Class<?> dataSourceClass = classLoaderForPluginLibsOnly.loadClass("org.apache.commons.dbcp.BasicDataSource");
-                DataSource dataSource = (DataSource)dataSourceClass.newInstance();
+                DataSource dataSource = (DataSource) dataSourceClass.newInstance();
                 // We have to use reflection here because we can't cast the class we created to the one loaded by Geneious core
                 dataSourceClass.getDeclaredMethod("setDriverClassName", String.class).invoke(dataSource, driver.getClass().getName());
                 dataSourceClass.getDeclaredMethod("setUrl", String.class).invoke(dataSource, connectionUrl);
-                if(username != null) {
+                if (username != null) {
                     dataSourceClass.getDeclaredMethod("setUsername", String.class).invoke(dataSource, username);
                 }
-                if(password != null) {
+                if (password != null) {
                     dataSourceClass.getDeclaredMethod("setPassword", String.class).invoke(dataSource, password);
                 }
 
-                if(Geneious.isHeadless()) {
+                if (Geneious.isHeadless()) {
                     dataSourceClass.getDeclaredMethod("setMaxActive", int.class).invoke(dataSource, 25);
                 }
                 return dataSource;
@@ -496,6 +505,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
      * {@link #canUpgradeDatabase()}
      *
      * @param currentVersion
+     *
      * @throws SQLException if a database problem occurs during the upgrade
      */
     protected void upgradeDatabase(String currentVersion) throws ConnectionException {
@@ -523,10 +533,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             connection = dataSource.getConnection();
 
             String selectFkTracesConstraintQuery = "SELECT * " +
-                                                   "FROM information_schema.referential_constraints " +
-                                                   "WHERE table_name=? " +
-                                                   "AND referenced_table_name=? " +
-                                                   "AND constraint_schema IN (SELECT DATABASE())";
+                    "FROM information_schema.referential_constraints " +
+                    "WHERE table_name=? " +
+                    "AND referenced_table_name=? " +
+                    "AND constraint_schema IN (SELECT DATABASE())";
 
             selectFkTracesConstraintStatement = connection.prepareStatement(selectFkTracesConstraintQuery);
 
@@ -535,7 +545,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             selectFkTracesConstraintStatement.setObject(2, "cyclesequencing");
             selectFkTracesContraintResult = selectFkTracesConstraintStatement.executeQuery();
 
-            if (!selectFkTracesContraintResult.next())             {
+            if (!selectFkTracesContraintResult.next()) {
                 System.err.println("Invalid database schema: missing constraint 'Fktraces' between the traces table and the cyclesequencing table.");
                 return;
             }
@@ -547,14 +557,14 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             String constraintName = selectFkTracesContraintResult.getString("CONSTRAINT_NAME");
 
             String dropExistingFkTracesConstraintQuery = "ALTER TABLE lims.traces " +
-                                                         "DROP FOREIGN KEY " + constraintName;
-            
+                    "DROP FOREIGN KEY " + constraintName;
+
             String addNewFkTracesConstraintQuery = "ALTER TABLE lims.traces " +
-                                                   "ADD CONSTRAINT " + constraintName +
-                                                   "    FOREIGN KEY (reaction)" +
-                                                   "    REFERENCES lims.cyclesequencing (id)" +
-                                                   "    ON UPDATE CASCADE" +
-                                                   "    ON DELETE CASCADE";
+                    "ADD CONSTRAINT " + constraintName +
+                    "    FOREIGN KEY (reaction)" +
+                    "    REFERENCES lims.cyclesequencing (id)" +
+                    "    ON UPDATE CASCADE" +
+                    "    ON DELETE CASCADE";
 
 
             PreparedStatement getTraceCount = connection.prepareStatement("SELECT COUNT(id) FROM traces");
@@ -562,7 +572,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             traceCountResultSet.next();
             int numTraces = traceCountResultSet.getInt(1);
 
-            if(!Geneious.isHeadless()) {
+            if (!Geneious.isHeadless()) {
                 int estimateInMinutes = numTraces / 1000;
                 String estimate;
                 if (estimateInMinutes < 5) {
@@ -622,7 +632,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
 
             System.out.println("Successfully updated database schema.");
-        } catch(SQLException e) {
+        } catch (SQLException e) {
             StringWriter stacktrace = new StringWriter();
             e.printStackTrace(new PrintWriter(stacktrace));
 
@@ -655,6 +665,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
     /**
      * @return an error message or null if everything is OK
+     *
      * @throws ConnectionException
      */
     private String verifyDatabaseVersionAndUpgradeIfNecessary(ConnectionWrapper connection) throws ConnectionException {
@@ -738,7 +749,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         List<AdvancedSearchQueryTerm> terms = new ArrayList<AdvancedSearchQueryTerm>();
         CompoundSearchQuery.Operator operator;
         if (processedQuery instanceof CompoundSearchQuery) {
-            CompoundSearchQuery compoundQuery = (CompoundSearchQuery)processedQuery;
+            CompoundSearchQuery compoundQuery = (CompoundSearchQuery) processedQuery;
             operator = compoundQuery.getOperator();
             for (Query innerQuery : compoundQuery.getChildren()) {
                 if (isCompatibleSearchQueryTerm(innerQuery)) {
@@ -747,7 +758,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
         } else {
             if (isCompatibleSearchQueryTerm(processedQuery)) {
-                AdvancedSearchQueryTerm advancedQuery = (AdvancedSearchQueryTerm)processedQuery;
+                AdvancedSearchQueryTerm advancedQuery = (AdvancedSearchQueryTerm) processedQuery;
                 terms.add(advancedQuery);
             }
             operator = CompoundSearchQuery.Operator.AND;
@@ -832,17 +843,17 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 }
 
                 String tissue = resultSet.getString("sampleId");
-                if(tissue != null) {
+                if (tissue != null) {
                     result.addTissueSample(tissue);
                 }
 
                 int plateId = resultSet.getInt("plateId");
-                if(!resultSet.wasNull()) {
+                if (!resultSet.wasNull()) {
                     result.addPlate(plateId);
                 }
 
                 int workflowId = resultSet.getInt("workflow.id");
-                if(!resultSet.wasNull()) {
+                if (!resultSet.wasNull()) {
                     result.addWorkflow(workflowId);
                 }
 
@@ -862,13 +873,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
     private String getPcrAndSequencingPlatesWithNoWorkflowQuery(CompoundSearchQuery.Operator operator, QueryPart workflowQueryConditions,
                                                                 QueryPart extractionQueryConditions, QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
-        if(operator == CompoundSearchQuery.Operator.AND && (workflowQueryConditions != null || extractionQueryConditions != null)) {
+        if (operator == CompoundSearchQuery.Operator.AND && (workflowQueryConditions != null || extractionQueryConditions != null)) {
             // No point doing an AND query. Because either:
             // 1. Retrieving workflows require workflow links which are non-existent
             // 2. Retrieving based on extractions which are covered by the main query
             return null;
         }
-        if(workflowQueryConditions != null && extractionQueryConditions == null && plateQueryConditions == null && assemblyQueryConditions == null) {
+        if (workflowQueryConditions != null && extractionQueryConditions == null && plateQueryConditions == null && assemblyQueryConditions == null) {
             // If workflows are the only thing that are being queried then return nothing.
             return null;
         }
@@ -893,13 +904,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         );
 
         List<String> conditions = new ArrayList<String>();
-        if(plateQueryConditions != null) {
+        if (plateQueryConditions != null) {
             conditions.add("(" + plateQueryConditions + ")");
         }
-        if(assemblyQueryConditions != null) {
+        if (assemblyQueryConditions != null) {
             conditions.add("(" + assemblyQueryConditions + ")");
         }
-        if(!conditions.isEmpty()) {
+        if (!conditions.isEmpty()) {
             queryBuilder.append(" AND (").append(StringUtilities.join(operator.toString(), conditions)).append(")");
         }
 
@@ -908,12 +919,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
 
-
     private void setInitialTraceCountsForWorkflowDocuments(Collection<WorkflowDocument> workflows) throws SQLException {
         Map<Integer, CycleSequencingReaction> sequencingReactions = new HashMap<Integer, CycleSequencingReaction>();
         for (WorkflowDocument workflowDocument : workflows) {
             for (Reaction reaction : workflowDocument.getReactions(Reaction.Type.CycleSequencing)) {
-                sequencingReactions.put(reaction.getId(), (CycleSequencingReaction)reaction);
+                sequencingReactions.put(reaction.getId(), (CycleSequencingReaction) reaction);
             }
         }
         setInitialTraceCountsForCycleSequencingReactions(sequencingReactions);
@@ -932,7 +942,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     private void setInitialTraceCountsForCycleSequencingReactions(Map<Integer, CycleSequencingReaction> idToReactionMap) throws SQLException {
-        if(idToReactionMap.isEmpty()) {
+        if (idToReactionMap.isEmpty()) {
             return;
         }
         List<Integer> cyclesequencingIds = new ArrayList<Integer>(idToReactionMap.keySet());
@@ -969,12 +979,15 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     /**
      * Builds a LIMS SQL query from {@link Query}.  Can be used to create workflows and a list of plates that match
      * the query.
-     *  @param tissueIdsToMatch          The samples to match
-     * @param operator                  The {@link com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery.Operator} to use for the query
+     *
+     * @param tissueIdsToMatch          The samples to match
+     * @param operator                  The {@link com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery.Operator}
+     *                                  to use for the query
      * @param workflowQueryConditions   Conditions to search workflow on
      * @param extractionQueryConditions Conditions to search extraction on
      * @param plateQueryConditions      Conditions to search plate on
-     * @param assemblyQueryConditions   Conditions to search assembly on       @return A SQL string that can be used to query the MySQL LIMS
+     * @param assemblyQueryConditions   Conditions to search assembly on       @return A SQL string that can be used to
+     *                                  query the MySQL LIMS
      */
     private StringBuilder constructLimsQueryString(Collection<String> tissueIdsToMatch, CompoundSearchQuery.Operator operator,
                                                    QueryPart workflowQueryConditions, QueryPart extractionQueryConditions,
@@ -994,19 +1007,19 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 queryBuilder.append("(SELECT * FROM extraction WHERE ");
             }
 
-            if(filterOnTissues) {
+            if (filterOnTissues) {
                 String sampleColumn = isLocal() ? "LOWER(sampleId)" : "sampleId";  // MySQL is case insensitive by default
                 conditionBuilder.append(sampleColumn).append(" IN ");
                 SqlUtilities.appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
             }
-            if(filterOnTissues && extractionQueryConditions != null) {
+            if (filterOnTissues && extractionQueryConditions != null) {
                 conditionBuilder.append(operatorString);
             }
-            if(extractionQueryConditions != null) {
+            if (extractionQueryConditions != null) {
                 conditionBuilder.append("(").append(extractionQueryConditions).append(")");
             }
 
-            if(operator == CompoundSearchQuery.Operator.AND) {
+            if (operator == CompoundSearchQuery.Operator.AND) {
                 queryBuilder.append(")");
             }
             queryBuilder.append(" extraction ");
@@ -1025,7 +1038,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
 
         queryBuilder.append(" LEFT OUTER JOIN ").append(GelQuantificationReaction.DB_TABLE_NAME).append(" ON ")
-                    .append(GelQuantificationReaction.DB_TABLE_NAME).append(".extractionId = extraction.id");
+                .append(GelQuantificationReaction.DB_TABLE_NAME).append(".extractionId = extraction.id");
         queryBuilder.append(" LEFT OUTER JOIN ").append("pcr ON pcr.workflow = workflow.id ");
         queryBuilder.append(" LEFT OUTER JOIN ").append("cyclesequencing ON cyclesequencing.workflow = workflow.id ");
 
@@ -1159,7 +1172,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     public Set<String> getAllExtractionIdsForTissueIds_(List<String> tissueIds) throws DatabaseServiceException {
-        if(tissueIds.isEmpty()) {
+        if (tissueIds.isEmpty()) {
             return Collections.emptySet();
         }
         List<String> queries = new ArrayList<String>();
@@ -1233,11 +1246,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     public Collection<String> getPlatesUsingCocktail(Reaction.Type type, int cocktailId) throws DatabaseServiceException {
-        if(cocktailId < 0) {
+        if (cocktailId < 0) {
             return Collections.emptyList();
         }
         String tableName;
-        switch(type) {
+        switch (type) {
             case PCR:
                 tableName = "pcr";
                 break;
@@ -1245,16 +1258,16 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 tableName = "cyclesequencing";
                 break;
             default:
-                throw new RuntimeException(type+" reactions cannot have a cocktail");
+                throw new RuntimeException(type + " reactions cannot have a cocktail");
         }
-        String sql = "SELECT plate.name FROM plate, "+tableName+" WHERE "+tableName+".plate = plate.id AND "+tableName+".cocktail = "+cocktailId;
+        String sql = "SELECT plate.name FROM plate, " + tableName + " WHERE " + tableName + ".plate = plate.id AND " + tableName + ".cocktail = " + cocktailId;
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
             ResultSet resultSet = connection.executeQuery(sql);
 
             Set<String> plateNames = new LinkedHashSet<String>();
-            while(resultSet.next()) {
+            while (resultSet.next()) {
                 plateNames.add(resultSet.getString(1));
             }
             return plateNames;
@@ -1266,17 +1279,17 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     public List<String> getPlatesUsingThermocycle(int thermocycleId) throws DatabaseServiceException {
-        if(thermocycleId < 0) {
+        if (thermocycleId < 0) {
             return Collections.emptyList();
         }
-        String sql = "SELECT name FROM plate WHERE thermocycle = "+thermocycleId;
+        String sql = "SELECT name FROM plate WHERE thermocycle = " + thermocycleId;
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
             ResultSet resultSet = connection.executeQuery(sql);
 
             List<String> plateNames = new ArrayList<String>();
-            while(resultSet.next()) {
+            while (resultSet.next()) {
                 plateNames.add(resultSet.getString(1));
             }
             return plateNames;
@@ -1330,11 +1343,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         return plateIds;
     }
 
-private void deleteReactions(ProgressListener progress, Plate plate) throws DatabaseServiceException {
+    private void deleteReactions(ProgressListener progress, Plate plate) throws DatabaseServiceException {
         progress.setMessage("deleting reactions");
 
         String tableName;
-        switch(plate.getReactionType()) {
+        switch (plate.getReactionType()) {
             case Extraction:
                 tableName = "extraction";
                 break;
@@ -1351,8 +1364,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
 
         ArrayList<Integer> terms = new ArrayList<Integer>();
-        for(Reaction r : plate.getReactions()) {
-            if(r.getId() >= 0) {
+        for (Reaction r : plate.getReactions()) {
+            if (r.getId() >= 0) {
                 terms.add(r.getId());
             }
         }
@@ -1360,7 +1373,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         deleteRecords(tableName, "id", terms);
     }
 
-    public void renamePlate(int id, String newName) throws DatabaseServiceException{
+    public void renamePlate(int id, String newName) throws DatabaseServiceException {
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
@@ -1431,6 +1444,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
      * then it will not be included in the results.
      *
      * @param terms A list of terms to filter
+     *
      * @return A mapping from LIMS table to query term
      */
     Map<String, List<AdvancedSearchQueryTerm>> mapQueryTermsToTable(List<AdvancedSearchQueryTerm> terms) {
@@ -1475,8 +1489,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             ResultSet workflowsSet = selectWorkflow.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (workflows) query");
 
-            while(workflowsSet.next()) {
-                if(cancelable.isCanceled()) {
+            while (workflowsSet.next()) {
+                if (cancelable.isCanceled()) {
                     return Collections.emptyList();
                 }
                 int workflowId = workflowsSet.getInt("workflow.id");
@@ -1496,7 +1510,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             workflowsSet.close();
             setInitialTraceCountsForWorkflowDocuments(byId.values());
         } catch (SQLException e) {
-            throw new DatabaseServiceException(e, "Failed to retrieve workflow documents: " + e.getMessage(),false);
+            throw new DatabaseServiceException(e, "Failed to retrieve workflow documents: " + e.getMessage(), false);
         } finally {
             SqlUtilities.cleanUpStatements(selectWorkflow);
             returnConnection(connection);
@@ -1525,7 +1539,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     public List<Plate> getPlates_(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException {
-        if(plateIds.isEmpty()) {
+        if (plateIds.isEmpty()) {
             return Collections.emptyList();
         }
         ConnectionWrapper connection = null;
@@ -1585,7 +1599,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
         int previousId = -1;
         while (resultSet.next()) {
-            if(cancelable.isCanceled()) {
+            if (cancelable.isCanceled()) {
                 return Collections.emptyList();
             }
             Plate plate;
@@ -1657,6 +1671,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
      *
      * @param key   The name of the property
      * @param value The value to set for the property
+     *
      * @throws SQLException if something goes wrong communicating with the database.
      */
     public void setProperty(String key, String value) throws DatabaseServiceException {
@@ -1686,10 +1701,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     /**
-     * Retrieves a property from the database previously set by calling {@link LIMSConnection#setProperty(String, String)}
+     * Retrieves a property from the database previously set by calling {@link LIMSConnection#setProperty(String,
+     * String)}
      *
      * @param key The name of the property to retrieve
+     *
      * @return value of the property or null if it does not exist
+     *
      * @throws SQLException if something goes wrong communicating with the database.
      */
     public String getProperty(String key) throws DatabaseServiceException {
@@ -1723,9 +1741,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(locus, extractionId, date) VALUES (?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
             PreparedStatement statement2 = isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
             PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = ? WHERE id=?");
-            for(int i=0; i < reactions.size(); i++) {
-                if(progress != null) {
-                    progress.setMessage("Creating new workflow "+(i+1)+" of "+reactions.size());
+            for (int i = 0; i < reactions.size(); i++) {
+                if (progress != null) {
+                    progress.setMessage("Creating new workflow " + (i + 1) + " of " + reactions.size());
                 }
                 statement.setString(2, reactions.get(i).getExtractionId());
                 statement.setString(1, reactions.get(i).getLocus());
@@ -1734,8 +1752,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 ResultSet resultSet = statement2.executeQuery();
                 resultSet.next();
                 int workflowId = resultSet.getInt(1);
-                workflows.add(new Workflow(workflowId, "workflow"+workflowId, reactions.get(i).getExtractionId(), reactions.get(i).getLocus(), new Date()));
-                statement3.setString(1, reactions.get(i).getLocus()+"_workflow"+workflowId);
+                workflows.add(new Workflow(workflowId, "workflow" + workflowId, reactions.get(i).getExtractionId(), reactions.get(i).getLocus(), new Date()));
+                statement3.setString(1, reactions.get(i).getLocus() + "_workflow" + workflowId);
                 statement3.setInt(2, workflowId);
                 statement3.execute();
             }
@@ -1745,7 +1763,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             statement3.close();
             connection.endTransaction();
             return workflows;
-        } catch(SQLException e) {
+        } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             returnConnection(connection);
@@ -1815,7 +1833,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     @Override
     public List<Workflow> getWorkflowsByName(Collection<String> workflowNames) throws DatabaseServiceException {
-        if(workflowNames.isEmpty()) {
+        if (workflowNames.isEmpty()) {
             return Collections.emptyList();
         }
         ConnectionWrapper connection = null;
@@ -1846,7 +1864,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
             statement.close();
             return result;
-        } catch(SQLException e) {
+        } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             returnConnection(connection);
@@ -1857,7 +1875,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     public Map<String, String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws DatabaseServiceException {
         StringBuilder sqlBuilder = new StringBuilder();
         List<String> values = new ArrayList<String>();
-        switch(reactionType) {
+        switch (reactionType) {
             case Extraction:
                 throw new RuntimeException("You should not be adding extractions to existing workflows!");
             case GelQuantification:
@@ -1866,17 +1884,16 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             case CycleSequencing:
                 sqlBuilder.append("SELECT extraction.extractionId AS id, workflow.name AS workflow, workflow.date AS date, workflow.id AS workflowId, extraction.date FROM extraction, workflow WHERE workflow.extractionId = extraction.id AND (");
                 for (int i = 0; i < idsToCheck.size(); i++) {
-                    if(loci.get(i) != null && loci.get(i).length() > 0) {
+                    if (loci.get(i) != null && loci.get(i).length() > 0) {
                         sqlBuilder.append("(extraction.extractionId = ? AND locus = ?)");
                         values.add(idsToCheck.get(i));
                         values.add(loci.get(i));
-                    }
-                    else {
+                    } else {
                         sqlBuilder.append("extraction.extractionId = ?");
                         values.add(idsToCheck.get(i));
                     }
 
-                    if(i < idsToCheck.size()-1) {
+                    if (i < idsToCheck.size() - 1) {
                         sqlBuilder.append(" OR ");
                     }
                 }
@@ -2066,7 +2083,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         seq.reversePrimerName = resultSet.getString("revPrName");
         seq.reversePrimerSequence = resultSet.getString("revPrSequence");
         java.sql.Date created = resultSet.getDate("date");
-        if(created != null) {
+        if (created != null) {
             seq.date = created.getTime();
         }
         seq.forwardPlate = resultSet.getString("forwardPlate");
@@ -2153,7 +2170,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
          */
         if (Date.class.isAssignableFrom(value.getClass())) {
             GregorianCalendar date = new GregorianCalendar();
-            date.setTime((Date)value);
+            date.setTime((Date) value);
             switch (condition) {
                 case DATE_BEFORE:
                 case DATE_AFTER_OR_ON:
@@ -2172,7 +2189,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 default:
                     break;
             }
-            value = (Object)date.getTime();
+            value = (Object) date.getTime();
         }
         if (value instanceof String) {
             inserts.add(termSurrounder.getPrepend() + valueString + termSurrounder.getAppend());
@@ -2227,7 +2244,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             PreparedStatement statement = plateToSQL(connection, plate);
             statement.execute();
             statement.close();
-            if(plate.getId() < 0) {
+            if (plate.getId() < 0) {
                 PreparedStatement statement1 = isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
                 ResultSet resultSet = statement1.executeQuery();
                 resultSet.next();
@@ -2237,13 +2254,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
 
             //replace the images
-            if(plate.gelImagesHaveBeenDownloaded()) { //don't modify the gel images if we haven't downloaded them from the server or looked at them...
-                if(!BiocodeService.getInstance().deleteAllowed("gelimages")) {
+            if (plate.gelImagesHaveBeenDownloaded()) { //don't modify the gel images if we haven't downloaded them from the server or looked at them...
+                if (!BiocodeService.getInstance().deleteAllowed("gelimages")) {
                     throw new SQLException("It appears that you do not have permission to delete GEL Images.  Please contact your System Administrator for assistance");
                 }
                 PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE FROM gelimages WHERE plate=" + plate.getId());
                 deleteImagesStatement.execute();
-                for(GelImage image : plate.getImages()) {
+                for (GelImage image : plate.getImages()) {
                     PreparedStatement statement1 = gelToSql(connection, image);
                     statement1.execute();
                     statement1.close();
@@ -2252,7 +2269,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
 
             saveReactions(plate.getReactions(), plate.getReactionType(), progress);
-            if(plate.getReactionType() != Reaction.Type.GelQuantification) {
+            if (plate.getReactionType() != Reaction.Type.GelQuantification) {
                 updateWorkflows(connection, plate);
             }
 
@@ -2301,7 +2318,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
 
         //update the last-modified on the workflows associated with this plate...
-        if(plate.getReactionType() != Reaction.Type.GelQuantification) {
+        if (plate.getReactionType() != Reaction.Type.GelQuantification) {
             String sql;
             if (plate.getReactionType() == Reaction.Type.Extraction) {
                 sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id=" + plate.getId() + ") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate=" + plate.getId() + ")";
@@ -2327,17 +2344,16 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         return statement;
     }
 
-    private static PreparedStatement plateToSQL(ConnectionWrapper connection, Plate plate) throws SQLException{
+    private static PreparedStatement plateToSQL(ConnectionWrapper connection, Plate plate) throws SQLException {
         String name = plate.getName();
-        if(name == null || name.trim().length() == 0) {
+        if (name == null || name.trim().length() == 0) {
             throw new SQLException("Plates cannot have empty names");
         }
         PreparedStatement statement;
         int id = plate.getId();
-        if(id < 0) {
+        if (id < 0) {
             statement = connection.prepareStatement("INSERT INTO plate (name, size, type, thermocycle, date) VALUES (?, ?, ?, ?, ?)");
-        }
-        else {
+        } else {
             statement = connection.prepareStatement("UPDATE plate SET name=?, size=?, type=?, thermocycle=?, date=? WHERE id=?");
             statement.setInt(6, id);
         }
@@ -2345,10 +2361,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         statement.setInt(2, plate.getReactions().length);
         statement.setString(3, plate.getReactionType().toString());
         Thermocycle tc = plate.getThermocycle();
-        if(tc != null) {
+        if (tc != null) {
             statement.setInt(4, tc.getId());
-        }
-        else {
+        } else {
             statement.setInt(4, plate.getThermocycleId());
         }
         statement.setDate(5, new java.sql.Date(new Date().getTime()));
@@ -2368,7 +2383,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 }
                 plateCheckStatement.close();
             }
-            if  (plate.getThermocycle() == null && plate.getReactionType().hasThermocycles()) {
+            if (plate.getThermocycle() == null && plate.getReactionType().hasThermocycles()) {
                 throw new BadDataException("The plate has no thermocycle set");
             }
         } catch (BadDataException e) {
@@ -2379,7 +2394,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     public List<Plate> getEmptyPlates(Collection<Integer> plateIds) throws DatabaseServiceException {
-        if(plateIds == null || plateIds.size() == 0) {
+        if (plateIds == null || plateIds.size() == 0) {
             return Collections.emptyList();
         }
 
@@ -2388,13 +2403,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
 
         List<String> idMatches = new ArrayList<String>();
-        for(Integer num : plateIds) {
-            idMatches.add("id="+num);
+        for (Integer num : plateIds) {
+            idMatches.add("id=" + num);
         }
 
         String termString = StringUtilities.join(" OR ", idMatches);
-        if(termString.length() > 0) {
-            sql += " AND ("+termString+")";
+        if (termString.length() > 0) {
+            sql += " AND (" + termString + ")";
         }
 
         ConnectionWrapper connection = null;
@@ -2402,7 +2417,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             connection = getConnection();
             ResultSet resultSet = connection.executeQuery(sql);
             List<Plate> result = new ArrayList<Plate>();
-            while(resultSet.next()) {
+            while (resultSet.next()) {
                 Plate plate = new Plate(resultSet);
                 plate.initialiseReactions();
                 result.add(plate);
@@ -2479,28 +2494,27 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             connection = getConnection();
             PreparedStatement getLastId = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ?
                     connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
-            switch(type) {
+            switch (type) {
                 case Extraction:
                     String insertSQL;
                     String updateSQL;
-                    insertSQL  = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician, concentrationStored, concentration, gelimage, control) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                    updateSQL  = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=?, gelImage=?, control=? WHERE id=?";
+                    insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician, concentrationStored, concentration, gelimage, control) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=?, gelImage=?, control=? WHERE id=?";
 
                     PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
                     PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
                     for (int i = 0; i < reactions.length; i++) {
                         Reaction reaction = reactions[i];
-                        if(progress != null) {
-                            progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
+                        if (progress != null) {
+                            progress.setMessage("Saving reaction " + (i + 1) + " of " + reactions.length);
                         }
                         if (!reaction.isEmpty() && reaction.getPlateId() >= 0) {
                             PreparedStatement statement;
                             boolean isUpdateNotInsert = reaction.getId() >= 0;
-                            if(isUpdateNotInsert) { //the reaction is already in the database
+                            if (isUpdateNotInsert) { //the reaction is already in the database
                                 statement = updateStatement;
                                 statement.setInt(19, reaction.getId());
-                            }
-                            else {
+                            } else {
                                 statement = insertStatement;
                             }
                             ReactionOptions options = reaction.getOptions();
@@ -2516,20 +2530,20 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                             statement.setString(10, options.getValueAsString("notes"));
                             statement.setString(11, options.getValueAsString("previousPlate"));
                             statement.setString(12, options.getValueAsString("previousWell"));
-                            statement.setDate(13, new java.sql.Date(((Date)options.getValue("date")).getTime()));
+                            statement.setDate(13, new java.sql.Date(((Date) options.getValue("date")).getTime()));
                             statement.setString(14, options.getValueAsString("technician"));
                             statement.setInt(15, "yes".equals(options.getValueAsString("concentrationStored")) ? 1 : 0);
-                            statement.setDouble(16, (Double)options.getValue("concentration"));
+                            statement.setDouble(16, (Double) options.getValue("concentration"));
                             GelImage image = reaction.getGelImage();
                             statement.setBytes(17, image != null ? image.getImageBytes() : null);
                             statement.setString(18, options.getValueAsString("control"));
 
-                            if(isUpdateNotInsert) {
+                            if (isUpdateNotInsert) {
                                 updateStatement.executeUpdate();
                             } else {
                                 insertStatement.executeUpdate();
                                 ResultSet resultSet = getLastId.executeQuery();
-                                if(resultSet.next()) {
+                                if (resultSet.next()) {
                                     reaction.setId(resultSet.getInt(1));
                                 }
                                 resultSet.close();
@@ -2547,63 +2561,59 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     int saveCount = 0;
                     for (int i = 0; i < reactions.length; i++) {
                         Reaction reaction = reactions[i];
-                        if(progress != null) {
-                            progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
+                        if (progress != null) {
+                            progress.setMessage("Saving reaction " + (i + 1) + " of " + reactions.length);
                         }
                         if (!reaction.isEmpty() && reaction.getPlateId() >= 0) {
                             PreparedStatement statement;
-                            if(reaction.getId() >= 0) { //the reaction is already in the database
+                            if (reaction.getId() >= 0) { //the reaction is already in the database
                                 statement = updateStatement;
                                 statement.setInt(18, reaction.getId());
-                            }
-                            else {
+                            } else {
                                 statement = insertStatement;
                             }
 
                             ReactionOptions options = reaction.getOptions();
                             Options.Option option = options.getOption(PCROptions.PRIMER_OPTION_ID);
-                            if(!(option instanceof DocumentSelectionOption)) {
-                                throw new SQLException("Could not save reactions - expected primer type "+DocumentSelectionOption.class.getCanonicalName()+" but found a "+option.getClass().getCanonicalName());
+                            if (!(option instanceof DocumentSelectionOption)) {
+                                throw new SQLException("Could not save reactions - expected primer type " + DocumentSelectionOption.class.getCanonicalName() + " but found a " + option.getClass().getCanonicalName());
                             }
-                            List<AnnotatedPluginDocument> primerOptionValue = ((DocumentSelectionOption)option).getDocuments();
-                            if(primerOptionValue.size() == 0) {
+                            List<AnnotatedPluginDocument> primerOptionValue = ((DocumentSelectionOption) option).getDocuments();
+                            if (primerOptionValue.size() == 0) {
                                 statement.setString(1, "None");
                                 statement.setString(2, "");
-                            }
-                            else {
+                            } else {
                                 AnnotatedPluginDocument selectedDoc = primerOptionValue.get(0);
-                                NucleotideSequenceDocument sequence = (NucleotideSequenceDocument)selectedDoc.getDocumentOrThrow(SQLException.class);
+                                NucleotideSequenceDocument sequence = (NucleotideSequenceDocument) selectedDoc.getDocumentOrThrow(SQLException.class);
                                 statement.setString(1, selectedDoc.getName());
                                 statement.setString(2, sequence.getSequenceString());
                             }
                             //statement.setInt(3, (Integer)options.getValue("prAmount"));
 
                             Options.Option option2 = options.getOption(PCROptions.PRIMER_REVERSE_OPTION_ID);
-                            if(!(option2 instanceof DocumentSelectionOption)) {
-                                throw new SQLException("Could not save reactions - expected primer type "+DocumentSelectionOption.class.getCanonicalName()+" but found a "+option2.getClass().getCanonicalName());
+                            if (!(option2 instanceof DocumentSelectionOption)) {
+                                throw new SQLException("Could not save reactions - expected primer type " + DocumentSelectionOption.class.getCanonicalName() + " but found a " + option2.getClass().getCanonicalName());
                             }
-                            List<AnnotatedPluginDocument> primerOptionValue2 = ((DocumentSelectionOption)option2).getDocuments();
-                            if(primerOptionValue2.size() == 0) {
+                            List<AnnotatedPluginDocument> primerOptionValue2 = ((DocumentSelectionOption) option2).getDocuments();
+                            if (primerOptionValue2.size() == 0) {
                                 statement.setString(13, "None");
                                 statement.setString(14, "");
-                            }
-                            else {
+                            } else {
                                 AnnotatedPluginDocument selectedDoc = primerOptionValue2.get(0);
-                                NucleotideSequenceDocument sequence = (NucleotideSequenceDocument)selectedDoc.getDocumentOrThrow(SQLException.class);
+                                NucleotideSequenceDocument sequence = (NucleotideSequenceDocument) selectedDoc.getDocumentOrThrow(SQLException.class);
                                 statement.setString(13, selectedDoc.getName());
                                 statement.setString(14, sequence.getSequenceString());
                             }
-                            statement.setDate(15, new java.sql.Date(((Date)options.getValue("date")).getTime()));
+                            statement.setDate(15, new java.sql.Date(((Date) options.getValue("date")).getTime()));
                             statement.setString(16, options.getValueAsString("technician"));
-    //                        statement.setInt(14, (Integer)options.getValue("revPrAmount"));
-    //                        if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
-    //                            throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
-    //                        }
+                            //                        statement.setInt(14, (Integer)options.getValue("revPrAmount"));
+                            //                        if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
+                            //                            throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
+                            //                        }
                             //statement.setInt(4, reaction.getWorkflow() != null ? reaction.getWorkflow().getId() : 0);
-                            if(reaction.getWorkflow() != null) {
+                            if (reaction.getWorkflow() != null) {
                                 statement.setInt(3, reaction.getWorkflow().getId());
-                            }
-                            else {
+                            } else {
                                 statement.setObject(3, null);
                             }
                             statement.setInt(4, reaction.getPlateId());
@@ -2612,23 +2622,21 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                             Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");
                             try {
                                 cocktailId = Integer.parseInt(cocktailValue.getName());
+                            } catch (NumberFormatException ex) {
+                                throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail (" + cocktailValue.getLabel() + ", " + cocktailValue.getName() + ").");
                             }
-                            catch(NumberFormatException ex) {
-                                throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+ cocktailValue.getLabel()+", "+cocktailValue.getName()+").");
-                            }
-                            if(cocktailId < 0) {
-                                throw new SQLException("The reaction " + reaction.getPosition() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
+                            if (cocktailId < 0) {
+                                throw new SQLException("The reaction " + reaction.getPosition() + " does not have a valid cocktail (" + cocktailValue.getName() + ").");
                             }
 
                             statement.setInt(6, cocktailId);
-                            statement.setString(7, ((Options.OptionValue)options.getValue(ReactionOptions.RUN_STATUS)).getLabel());
-                            if(reaction.getThermocycle() != null) {
+                            statement.setString(7, ((Options.OptionValue) options.getValue(ReactionOptions.RUN_STATUS)).getLabel());
+                            if (reaction.getThermocycle() != null) {
                                 statement.setInt(8, reaction.getThermocycle().getId());
-                            }
-                            else {
+                            } else {
                                 statement.setInt(8, -1);
                             }
-                            statement.setInt(9, ((Options.OptionValue)options.getValue("cleanupPerformed")).getName().equals("true") ? 1 : 0);
+                            statement.setInt(9, ((Options.OptionValue) options.getValue("cleanupPerformed")).getName().equals("true") ? 1 : 0);
                             statement.setString(10, options.getValueAsString("cleanupMethod"));
                             statement.setString(11, reaction.getExtractionId());
                             System.out.println(reaction.getExtractionId());
@@ -2637,9 +2645,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                             statement.setBytes(17, image != null ? image.getImageBytes() : null);
                             statement.execute();
 
-                            if(reaction.getId() < 0) {
+                            if (reaction.getId() < 0) {
                                 ResultSet resultSet = getLastId.executeQuery();
-                                if(resultSet.next()) {
+                                if (resultSet.next()) {
                                     reaction.setId(resultSet.getInt(1));
                                 }
                                 resultSet.close();
@@ -2649,7 +2657,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     }
                     insertStatement.close();
                     updateStatement.close();
-                    System.out.println(saveCount+" reactions saved...");
+                    System.out.println(saveCount + " reactions saved...");
                     break;
                 case CycleSequencing:
                     insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, direction, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, date, technician, gelimage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -2663,42 +2671,39 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     PreparedStatement insertTracesStatement = connection.prepareStatement(insertTracesSQL);
                     for (int i = 0; i < reactions.length; i++) {
                         Reaction reaction = reactions[i];
-                        if(progress != null) {
-                            progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
+                        if (progress != null) {
+                            progress.setMessage("Saving reaction " + (i + 1) + " of " + reactions.length);
                         }
                         if (!reaction.isEmpty() && reaction.getPlateId() >= 0) {
 
                             PreparedStatement statement;
-                            if(reaction.getId() >= 0) { //the reaction is already in the database
+                            if (reaction.getId() >= 0) { //the reaction is already in the database
                                 statement = updateStatement;
                                 statement.setInt(17, reaction.getId());
-                            }
-                            else {
+                            } else {
                                 statement = insertStatement;
                             }
 
                             ReactionOptions options = reaction.getOptions();
                             Options.Option option = options.getOption(PCROptions.PRIMER_OPTION_ID);
-                            if(!(option instanceof DocumentSelectionOption)) {
-                                throw new SQLException("Could not save reactions - expected primer type "+DocumentSelectionOption.class.getCanonicalName()+" but found a "+option.getClass().getCanonicalName());
+                            if (!(option instanceof DocumentSelectionOption)) {
+                                throw new SQLException("Could not save reactions - expected primer type " + DocumentSelectionOption.class.getCanonicalName() + " but found a " + option.getClass().getCanonicalName());
                             }
-                            List<AnnotatedPluginDocument> primerOptionValue = ((DocumentSelectionOption)option).getDocuments();
-                            if(primerOptionValue.size() == 0) {
+                            List<AnnotatedPluginDocument> primerOptionValue = ((DocumentSelectionOption) option).getDocuments();
+                            if (primerOptionValue.size() == 0) {
                                 statement.setString(1, "None");
                                 statement.setString(2, "");
-                            }
-                            else {
+                            } else {
                                 AnnotatedPluginDocument selectedDoc = primerOptionValue.get(0);
-                                NucleotideSequenceDocument sequence = (NucleotideSequenceDocument)selectedDoc.getDocumentOrThrow(SQLException.class);
+                                NucleotideSequenceDocument sequence = (NucleotideSequenceDocument) selectedDoc.getDocumentOrThrow(SQLException.class);
                                 statement.setString(1, selectedDoc.getName());
                                 statement.setString(2, sequence.getSequenceString());
                             }
                             statement.setString(3, options.getValueAsString("direction"));
                             //statement.setInt(3, (Integer)options.getValue("prAmount"));
-                            if(reaction.getWorkflow() != null) {
+                            if (reaction.getWorkflow() != null) {
                                 statement.setInt(4, reaction.getWorkflow().getId());
-                            }
-                            else {
+                            } else {
                                 statement.setObject(4, null);
                             }
                             statement.setInt(5, reaction.getPlateId());
@@ -2707,77 +2712,75 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                             Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");
                             try {
                                 cocktailId = Integer.parseInt(cocktailValue.getName());
+                            } catch (NumberFormatException ex) {
+                                throw new SQLException("The reaction " + reaction.getLocationString() + " does not have a valid cocktail (" + cocktailValue.getLabel() + ", " + cocktailValue.getName() + ").");
                             }
-                            catch(NumberFormatException ex) {
-                                throw new SQLException("The reaction " + reaction.getLocationString() + " does not have a valid cocktail ("+ cocktailValue.getLabel()+", "+cocktailValue.getName()+").");
-                            }
-                            if(cocktailId < 0) {
-                                throw new SQLException("The reaction " + reaction.getLocationString() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
+                            if (cocktailId < 0) {
+                                throw new SQLException("The reaction " + reaction.getLocationString() + " does not have a valid cocktail (" + cocktailValue.getName() + ").");
                             }
                             statement.setInt(7, cocktailId);
-                            statement.setString(8, ((Options.OptionValue)options.getValue(ReactionOptions.RUN_STATUS)).getLabel());
-                            if(reaction.getThermocycle() != null) {
+                            statement.setString(8, ((Options.OptionValue) options.getValue(ReactionOptions.RUN_STATUS)).getLabel());
+                            if (reaction.getThermocycle() != null) {
                                 statement.setInt(9, reaction.getThermocycle().getId());
-                            }
-                            else {
+                            } else {
                                 statement.setInt(9, -1);
                             }
-                            statement.setInt(10, ((Options.OptionValue)options.getValue("cleanupPerformed")).getName().equals("true") ? 1 : 0);
+                            statement.setInt(10, ((Options.OptionValue) options.getValue("cleanupPerformed")).getName().equals("true") ? 1 : 0);
                             statement.setString(11, options.getValueAsString("cleanupMethod"));
                             statement.setString(12, reaction.getExtractionId());
                             statement.setString(13, options.getValueAsString("notes"));
-                            statement.setDate(14, new java.sql.Date(((Date)options.getValue("date")).getTime()));
+                            statement.setDate(14, new java.sql.Date(((Date) options.getValue("date")).getTime()));
                             statement.setString(15, options.getValueAsString("technician"));
                             GelImage image = reaction.getGelImage();
                             statement.setBytes(16, image != null ? image.getImageBytes() : null);
 
-    //                        List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions)options).getTraces();
-    //                        String sequenceString = "";
-    //                        if(sequences != null && sequences.size() > 0) {
-    //                            DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
-    //                            Element element = XMLSerializer.classToXML("sequences", sequenceList);
-    //                            XMLOutputter out = new XMLOutputter(Format.getCompactFormat());
-    //                            StringWriter writer = new StringWriter();
-    //                            try {
-    //                                out.output(element, writer);
-    //                                sequenceString = writer.toString();
-    //                            } catch (IOException e) {
-    //                                throw new SQLException("Could not write the sequences to the database: "+e.getMessage());
-    //                            }
-    //                        }
-    //
-    //                        statement.setString(14, sequenceString);
+                            //                        List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions)options).getTraces();
+                            //                        String sequenceString = "";
+                            //                        if(sequences != null && sequences.size() > 0) {
+                            //                            DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
+                            //                            Element element = XMLSerializer.classToXML("sequences", sequenceList);
+                            //                            XMLOutputter out = new XMLOutputter(Format.getCompactFormat());
+                            //                            StringWriter writer = new StringWriter();
+                            //                            try {
+                            //                                out.output(element, writer);
+                            //                                sequenceString = writer.toString();
+                            //                            } catch (IOException e) {
+                            //                                throw new SQLException("Could not write the sequences to the database: "+e.getMessage());
+                            //                            }
+                            //                        }
+                            //
+                            //                        statement.setString(14, sequenceString);
                             statement.execute();
-                            if(reaction.getId() < 0) {
+                            if (reaction.getId() < 0) {
                                 ResultSet resultSet = getLastId.executeQuery();
-                                if(resultSet.next()) {
+                                if (resultSet.next()) {
                                     reaction.setId(resultSet.getInt(1));
                                 }
                                 resultSet.close();
                             }
 
-                            if(((CycleSequencingReaction)reaction).getTraces() != null) {
+                            if (((CycleSequencingReaction) reaction).getTraces() != null) {
                                 int reactionId = reaction.getId();
-                                for(Integer traceId : ((CycleSequencingReaction)reaction).getTracesToRemoveOnSave()) {
-                                    if(!BiocodeService.getInstance().deleteAllowed("traces")) {
+                                for (Integer traceId : ((CycleSequencingReaction) reaction).getTracesToRemoveOnSave()) {
+                                    if (!BiocodeService.getInstance().deleteAllowed("traces")) {
                                         throw new SQLException("It appears that you do not have permission to delete traces.  Please contact your System Administrator for assistance");
                                     }
                                     clearTracesStatement.setInt(1, traceId);
                                     clearTracesStatement.execute();
                                 }
-                                ((CycleSequencingReaction)reaction).clearTracesToRemoveOnSave();
-                                if(reactionId < 0) {
+                                ((CycleSequencingReaction) reaction).clearTracesToRemoveOnSave();
+                                if (reactionId < 0) {
                                     reactionId = getLastInsertId();
                                 }
 
-                                List<Trace> traces = ((CycleSequencingReaction)reaction).getTraces();
-                                if(traces != null) {
-                                    for(Trace trace : traces) {
-                                        if(trace.getId() >= 0) {
+                                List<Trace> traces = ((CycleSequencingReaction) reaction).getTraces();
+                                if (traces != null) {
+                                    for (Trace trace : traces) {
+                                        if (trace.getId() >= 0) {
                                             continue; //already added these...
                                         }
                                         MemoryFile file = trace.getFile();
-                                        if(file != null) {
+                                        if (file != null) {
                                             insertTracesStatement.setInt(1, reactionId);
                                             insertTracesStatement.setString(2, file.getName());
                                             insertTracesStatement.setBytes(3, file.getData());
@@ -2788,7 +2791,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                                 }
                             }
                             FailureReason reason = FailureReason.getReasonFromOptions(options);
-                            if(reason != null) {
+                            if (reason != null) {
                                 // Requires schema 10.  This won't work for reactions that don't have an assembly.
                                 PreparedStatement update = connection.prepareStatement(
                                         "UPDATE assembly SET failure_reason = ? WHERE id IN (" +
@@ -2820,16 +2823,16 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     ReactionOptions optionsTemplate = reactions[0].getOptions();
                     List<String> optionNames = new ArrayList<String>();
                     for (Options.Option option : optionsTemplate.getOptions()) {
-                        if(option instanceof ButtonOption || option instanceof Options.LabelOption) {
+                        if (option instanceof ButtonOption || option instanceof Options.LabelOption) {
                             continue;
                         }
-                        if(!Arrays.asList("id", "tissueId", "parentExtractionId").contains(option.getName())
+                        if (!Arrays.asList("id", "tissueId", "parentExtractionId").contains(option.getName())
                                 && !optionsTemplate.fieldIsFinal(option.getName())) {
                             optionNames.add(option.getName());
                         }
                     }
-                    insertSQL  = "INSERT INTO " + GelQuantificationReaction.DB_TABLE_NAME + " (" + StringUtilities.join(",", optionNames) + ",plate,location,gelImage) VALUES" + getQuestionMarksList(optionNames.size()+3);
-                    updateSQL  = "UPDATE " + GelQuantificationReaction.DB_TABLE_NAME + " SET ";
+                    insertSQL = "INSERT INTO " + GelQuantificationReaction.DB_TABLE_NAME + " (" + StringUtilities.join(",", optionNames) + ",plate,location,gelImage) VALUES" + getQuestionMarksList(optionNames.size() + 3);
+                    updateSQL = "UPDATE " + GelQuantificationReaction.DB_TABLE_NAME + " SET ";
 
                     for (String optionName : optionNames) {
                         updateSQL += optionName + "=?,";
@@ -2840,27 +2843,26 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     updateStatement = connection.prepareStatement(updateSQL);
                     for (int i = 0; i < reactions.length; i++) {
                         Reaction reaction = reactions[i];
-                        if(progress != null) {
-                            progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
+                        if (progress != null) {
+                            progress.setMessage("Saving reaction " + (i + 1) + " of " + reactions.length);
                         }
                         if (!reaction.isEmpty() && reaction.getPlateId() >= 0) {
                             PreparedStatement statement;
                             boolean isUpdateNotInsert = reaction.getId() >= 0;
-                            if(isUpdateNotInsert) { //the reaction is already in the database
+                            if (isUpdateNotInsert) { //the reaction is already in the database
                                 statement = updateStatement;
-                            }
-                            else {
+                            } else {
                                 statement = insertStatement;
                             }
 
                             ReactionOptions options = reaction.getOptions();
                             int columnIndex = 1;
                             for (; columnIndex <= optionNames.size(); columnIndex++) {
-                                String optionName = optionNames.get(columnIndex-1);
+                                String optionName = optionNames.get(columnIndex - 1);
                                 Object value = options.getValue(optionName);
                                 if (value instanceof Date) {
                                     value = new java.sql.Date(((Date) value).getTime());
-                                } else if(Reaction.EXTRACTION_FIELD.getCode().equals(optionName)) {
+                                } else if (Reaction.EXTRACTION_FIELD.getCode().equals(optionName)) {
                                     value = userIdToDatabaseId.get(value);
                                 }
                                 statement.setObject(columnIndex, value);
@@ -2870,16 +2872,16 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                             GelImage image = reaction.getGelImage();
                             statement.setBytes(columnIndex++, image != null ? image.getImageBytes() : null);
 
-                            if(isUpdateNotInsert) {
+                            if (isUpdateNotInsert) {
                                 statement.setInt(columnIndex++, reaction.getId());
                             }
 
-                            if(isUpdateNotInsert) {
+                            if (isUpdateNotInsert) {
                                 updateStatement.executeUpdate();
                             } else {
                                 insertStatement.executeUpdate();
                                 ResultSet resultSet = getLastId.executeQuery();
-                                if(resultSet.next()) {
+                                if (resultSet.next()) {
                                     reaction.setId(resultSet.getInt(1));
                                 }
                                 resultSet.close();
@@ -2908,7 +2910,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         try {
             connection = getConnection();
             statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
-                "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord, failure_reason, failure_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)");
+                    "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord, failure_reason, failure_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)");
             updateReaction = connection.prepareStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
 
             statement2 = isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
@@ -2945,17 +2947,15 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 statement.setString(8, seq.reverseTrimParameters);
             }
             statement.setInt(9, seq.numOfEdits);
-            if(seq.assemblyParameters != null) {
+            if (seq.assemblyParameters != null) {
                 statement.setString(10, seq.assemblyParameters); //params
-            }
-            else {
+            } else {
                 statement.setNull(10, Types.LONGVARCHAR); //params
             }
             statement.setNull(11, Types.INTEGER); //reference_seq_id
-            if(seq.confidenceScore != null) {
+            if (seq.confidenceScore != null) {
                 statement.setString(12, seq.confidenceScore);
-            }
-            else {
+            } else {
                 statement.setNull(12, Types.LONGVARCHAR); //confidence_scores
             }
             statement.setNull(13, Types.LONGVARCHAR); //other_processing_fwd
@@ -2967,25 +2967,23 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             //technician, date, bin, ambiguities
             statement.setString(16, technician);
 
-            if(seq.bin != null) {
+            if (seq.bin != null) {
                 statement.setString(17, seq.bin);
-            }
-            else {
+            } else {
                 statement.setNull(17, Types.LONGVARCHAR);
             }
-            if(seq.numberOfAmbiguities != null) {
+            if (seq.numberOfAmbiguities != null) {
                 statement.setInt(18, seq.numberOfAmbiguities);
-            }
-            else {
+            } else {
                 statement.setNull(18, Types.INTEGER);
             }
             statement.setString(19, seq.editRecord);
-            if(failureReason == null) {
+            if (failureReason == null) {
                 statement.setObject(20, null);
             } else {
                 statement.setInt(20, failureReason.getId());
             }
-            if(failureNotes == null) {
+            if (failureNotes == null) {
                 statement.setObject(21, null);
             } else {
                 statement.setString(21, failureNotes);
@@ -2996,8 +2994,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             ResultSet resultSet = statement2.executeQuery();
             resultSet.next();
             int sequenceId = resultSet.getInt(1);
-            updateReaction.setObject(1,sequenceId);
-            for(int reactionId: reactionIds) {
+            updateReaction.setObject(1, sequenceId);
+            for (int reactionId : reactionIds) {
                 updateReaction.setObject(2, reactionId);
                 updateReaction.executeUpdate();
             }
@@ -3008,9 +3006,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             throw new DatabaseServiceException(e, "Failed to park as pass/fail in LIMS: " + e.getMessage(), false);
         } finally {
             try {
-                if(statement != null)
+                if (statement != null)
                     statement.close();
-                if(statement2 != null)
+                if (statement2 != null)
                     statement2.close();
             } catch (SQLException e) {
                 // If we failed to close statements, we'll have to let the garbage collector handle it
@@ -3026,7 +3024,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     private boolean privilegeAllowed(String tableName, String grantToCheckFor) {
-        if(isLocal() || getUsername().toLowerCase().equals("root")) {
+        if (isLocal() || getUsername().toLowerCase().equals("root")) {
             return true;
         }
 
@@ -3037,16 +3035,15 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
             ResultSet resultSet = createStatement("SHOW GRANTS FOR CURRENT_USER").executeQuery();
 
-            while(resultSet.next()) {
+            while (resultSet.next()) {
                 String grantString = resultSet.getString(1);
-                if(isGrantStringForMySQLDatabase(grantString, databaseName, tableName)) {
-                    if(grantString.contains("ALL") || grantString.matches(".*" + grantToCheckFor + "(,|\\s+ON).*")) {
+                if (isGrantStringForMySQLDatabase(grantString, databaseName, tableName)) {
+                    if (grantString.contains("ALL") || grantString.matches(".*" + grantToCheckFor + "(,|\\s+ON).*")) {
                         return true;
                     }
                 }
             }
-        }
-        catch(SQLException ex) {
+        } catch (SQLException ex) {
             // todo
             ex.printStackTrace();
             assert false : ex.getMessage();
@@ -3104,7 +3101,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
-            for(Cocktail cocktail : cocktails) {
+            for (Cocktail cocktail : cocktails) {
                 connection.executeUpdate(cocktail.getSQLString());
             }
             connection.close();
@@ -3120,22 +3117,22 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
-            if(!BiocodeService.getInstance().deleteAllowed("cocktail")) {
+            if (!BiocodeService.getInstance().deleteAllowed("cocktail")) {
                 throw new DatabaseServiceException("It appears that you do not have permission to delete cocktails.  Please contact your System Administrator for assistance", false);
             }
-            for(Cocktail cocktail : deletedCocktails) {
-                String sql = "DELETE FROM "+cocktail.getTableName()+" WHERE id = ?";
+            for (Cocktail cocktail : deletedCocktails) {
+                String sql = "DELETE FROM " + cocktail.getTableName() + " WHERE id = ?";
                 PreparedStatement statement = connection.prepareStatement(sql);
-                if(cocktail.getId() >= 0) {
-                    if(getPlatesUsingCocktail(cocktail.getReactionType(), cocktail.getId()).size() > 0) {
-                        throw new DatabaseServiceException("The cocktail "+cocktail.getName()+" is in use by reactions in your database.  Only unused cocktails can be removed.", false);
+                if (cocktail.getId() >= 0) {
+                    if (getPlatesUsingCocktail(cocktail.getReactionType(), cocktail.getId()).size() > 0) {
+                        throw new DatabaseServiceException("The cocktail " + cocktail.getName() + " is in use by reactions in your database.  Only unused cocktails can be removed.", false);
                     }
                     statement.setInt(1, cocktail.getId());
                     statement.executeUpdate();
                 }
             }
         } catch (SQLException e) {
-            throw new DatabaseServiceException(e, "Could not delete cocktails: "+e.getMessage(), false);
+            throw new DatabaseServiceException(e, "Could not delete cocktails: " + e.getMessage(), false);
         } finally {
             returnConnection(connection);
         }
@@ -3147,12 +3144,11 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         try {
             connection = getConnection();
             ResultSet resultSet = connection.executeQuery("SELECT * FROM pcr_cocktail");
-            while(resultSet.next()) {
+            while (resultSet.next()) {
                 cocktails.add(new PCRCocktail(resultSet));
             }
             resultSet.getStatement().close();
-        }
-        catch(SQLException ex) {
+        } catch (SQLException ex) {
             ex.printStackTrace();
             throw new DatabaseServiceException(ex, "Could not query PCR Cocktails from the database", false);
         } finally {
@@ -3168,12 +3164,11 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         try {
             connection = getConnection();
             ResultSet resultSet = connection.executeQuery("SELECT * FROM cyclesequencing_cocktail");
-            while(resultSet.next()) {
+            while (resultSet.next()) {
                 cocktails.add(new CycleSequencingCocktail(resultSet));
             }
             resultSet.getStatement().close();
-        }
-        catch(SQLException ex) {
+        } catch (SQLException ex) {
             throw new DatabaseServiceException(ex, "Could not query CycleSequencing Cocktails from the database", false);
         } finally {
             returnConnection(connection);
@@ -3182,7 +3177,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     public List<Thermocycle> getThermocyclesFromDatabase(Thermocycle.Type type) throws DatabaseServiceException {
-        String sql = "SELECT * FROM "+type.databaseTable+" LEFT JOIN thermocycle ON (thermocycle.id = "+type.databaseTable+".cycle) LEFT JOIN cycle ON (thermocycle.id = cycle.thermocycleId) LEFT JOIN state ON (cycle.id = state.cycleId);";
+        String sql = "SELECT * FROM " + type.databaseTable + " LEFT JOIN thermocycle ON (thermocycle.id = " + type.databaseTable + ".cycle) LEFT JOIN cycle ON (thermocycle.id = cycle.thermocycleId) LEFT JOIN state ON (cycle.id = state.cycleId);";
         System.out.println(sql);
 
         List<Thermocycle> tCycles = new ArrayList<Thermocycle>();
@@ -3192,22 +3187,20 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             connection = getConnection();
             ResultSet resultSet = connection.executeQuery(sql);
             resultSet.next();
-            while(true) {
+            while (true) {
                 try {
                     Thermocycle thermocycle = Thermocycle.fromSQL(resultSet);
-                    if(thermocycle != null) {
+                    if (thermocycle != null) {
                         tCycles.add(thermocycle);
-                    }
-                    else {
+                    } else {
                         break;
                     }
-                }
-                catch(SQLException e) {
+                } catch (SQLException e) {
                     break;
                 }
             }
             resultSet.getStatement().close();
-        } catch(SQLException ex) {
+        } catch (SQLException ex) {
             throw new DatabaseServiceException(ex, "could not read thermocycles from the database", false);
         } finally {
             returnConnection(connection);
@@ -3222,7 +3215,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         try {
             connection = getConnection();
             connection.beginTransaction();
-            for(Thermocycle tCycle : cycles) {
+            for (Thermocycle tCycle : cycles) {
                 int id = addThermoCycle(connection, tCycle);
                 PreparedStatement statement = connection.prepareStatement("INSERT INTO " + type.databaseTable + " (cycle) VALUES (" + id + ");\n");
                 statement.execute();
@@ -3230,7 +3223,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
             connection.endTransaction();
         } catch (SQLException e) {
-            throw new DatabaseServiceException(e, "Could not add thermocycle(s): "+e.getMessage(), false);
+            throw new DatabaseServiceException(e, "Could not add thermocycle(s): " + e.getMessage(), false);
         } finally {
             returnConnection(connection);
         }
@@ -3253,7 +3246,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         int thermoId = resultSet.getInt(1);
         statement.close();
 
-        for(Thermocycle.Cycle cycle : thermocycle.getCycles()) {
+        for (Thermocycle.Cycle cycle : thermocycle.getCycles()) {
             //create a cycle record
             PreparedStatement statement2 = connection.prepareStatement("INSERT INTO cycle (thermocycleid, repeats) VALUES (" + thermoId + ", " + cycle.getRepeats() + ");\n");
             statement2.execute();
@@ -3261,14 +3254,14 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
             //get the id of the cycle record
             statement = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ?
-                connection.prepareStatement("CALL IDENTITY();") :
-                connection.prepareStatement("SELECT last_insert_id()");
+                    connection.prepareStatement("CALL IDENTITY();") :
+                    connection.prepareStatement("SELECT last_insert_id()");
             resultSet = statement.executeQuery();
             resultSet.next();
             int cycleId = resultSet.getInt(1);
             statement.close();
 
-            for(Thermocycle.State state : cycle.getStates()) {
+            for (Thermocycle.State state : cycle.getStates()) {
                 //create the state record
                 PreparedStatement statement3 = connection.prepareStatement("INSERT INTO state (cycleid, temp, length) VALUES (" + cycleId + ", " + state.getTemp() + ", " + state.getTime() + ");\n");
                 statement3.execute();
@@ -3284,13 +3277,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         String sql = "DELETE  FROM state WHERE state.id=?";
         String sql2 = "DELETE  FROM cycle WHERE cycle.id=?";
         String sql3 = "DELETE  FROM thermocycle WHERE thermocycle.id=?";
-        String sql4 = "DELETE FROM "+type.databaseTable+" WHERE cycle =?";
+        String sql4 = "DELETE FROM " + type.databaseTable + " WHERE cycle =?";
         ConnectionWrapper connection = null;
         try {
-            if(!BiocodeService.getInstance().deleteAllowed("state") ||
-                !BiocodeService.getInstance().deleteAllowed("cycle") ||
-                !BiocodeService.getInstance().deleteAllowed("thermocycle") ||
-                !BiocodeService.getInstance().deleteAllowed(type.databaseTable)) {
+            if (!BiocodeService.getInstance().deleteAllowed("state") ||
+                    !BiocodeService.getInstance().deleteAllowed("cycle") ||
+                    !BiocodeService.getInstance().deleteAllowed("thermocycle") ||
+                    !BiocodeService.getInstance().deleteAllowed(type.databaseTable)) {
                 throw new DatabaseServiceException("It appears that you do not have permission to delete thermocycles.  Please contact your System Administrator for assistance", false);
             }
 
@@ -3300,13 +3293,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             final PreparedStatement statement2 = connection.prepareStatement(sql2);
             final PreparedStatement statement3 = connection.prepareStatement(sql3);
             final PreparedStatement statement4 = connection.prepareStatement(sql4);
-            for(Thermocycle thermocycle : cycles) {
-                if(thermocycle.getId() >= 0) {
-                    if(getPlatesUsingThermocycle(thermocycle.getId()).size() > 0) {
-                        throw new DatabaseServiceException("The thermocycle "+thermocycle.getName()+" is being used by plates in your database.  Only unused thermocycles can be removed", false);
+            for (Thermocycle thermocycle : cycles) {
+                if (thermocycle.getId() >= 0) {
+                    if (getPlatesUsingThermocycle(thermocycle.getId()).size() > 0) {
+                        throw new DatabaseServiceException("The thermocycle " + thermocycle.getName() + " is being used by plates in your database.  Only unused thermocycles can be removed", false);
                     }
-                    for(Thermocycle.Cycle cycle : thermocycle.getCycles()) {
-                        for(Thermocycle.State state : cycle.getStates()) {
+                    for (Thermocycle.Cycle cycle : thermocycle.getCycles()) {
+                        for (Thermocycle.State state : cycle.getStates()) {
                             statement.setInt(1, state.getId());
                             statement.executeUpdate();
                         }
@@ -3321,7 +3314,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            throw new DatabaseServiceException(e, "Could not delete thermocycles: "+e.getMessage(), false);
+            throw new DatabaseServiceException(e, "Could not delete thermocycles: " + e.getMessage(), false);
         } finally {
             returnConnection(connection);
         }
@@ -3377,7 +3370,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
 
         private static void closeConnection(ConnectionWrapper connection) {
-            if(connection != null) {
+            if (connection != null) {
                 try {
                     connection.close();
                 } catch (SQLException e) {
@@ -3420,7 +3413,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             StringBuilder sql = new StringBuilder("DELETE FROM assembly WHERE (");
             for (int i1 = 0; i1 < sequencesToDelete.size(); i1++) {
                 sql.append("id=?");
-                if(i1 < sequencesToDelete.size()-1) {
+                if (i1 < sequencesToDelete.size() - 1) {
                     sql.append(" OR ");
                 }
             }
@@ -3432,15 +3425,15 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
                 for (int i1 = 0; i1 < sequencesToDelete.size(); i1++) {
                     Integer i = sequencesToDelete.get(i1);
-                    statement.setInt(i1+1, i);
+                    statement.setInt(i1 + 1, i);
                 }
 
                 int notDeletedCount = sequencesToDelete.size() - statement.executeUpdate();
-                if(notDeletedCount > 0) {
+                if (notDeletedCount > 0) {
                     throw new DatabaseServiceException(notDeletedCount + " sequences were not deleted.", false);
                 }
-            } catch(SQLException e) {
-                throw new DatabaseServiceException(e, "Could not delete sequences: "+e.getMessage(), true);
+            } catch (SQLException e) {
+                throw new DatabaseServiceException(e, "Could not delete sequences: " + e.getMessage(), true);
             } finally {
                 returnConnection(connection);
             }
@@ -3457,7 +3450,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             statement.setInt(1, workflowId);
             statement.setString(2, extractionId);
             statement.executeUpdate();
-        } catch(SQLException e) {
+        } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             returnConnection(connection);
@@ -3473,14 +3466,14 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             SqlUtilities.appendSetOfQuestionMarks(query, ids.size());
             PreparedStatement statement1 = connection.prepareStatement(query.toString());
             statement1.setString(1, "passed");
-            for(int i=0; i < ids.size(); i++) {
-                statement1.setInt(i+2, ids.get(i));
+            for (int i = 0; i < ids.size(); i++) {
+                statement1.setInt(i + 2, ids.get(i));
             }
             ResultSet set = statement1.executeQuery();
             set.next();
             int count = set.getInt(1);
 
-            if(count < ids.size()) {
+            if (count < ids.size()) {
                 throw new DatabaseServiceException("Some of the sequences you are marking are either not present in the database, or are marked as failed.  Please make sure that the sequences are present, and are passed before marking as submitted.", false);
             }
 
@@ -3489,13 +3482,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
             PreparedStatement statement2 = connection.prepareStatement(updateString.toString());
             statement2.setInt(1, submitted ? 1 : 0);
-            for(int i=0; i < ids.size(); i++) {
-                statement2.setInt(i+2, ids.get(i));
+            for (int i = 0; i < ids.size(); i++) {
+                statement2.setInt(i + 2, ids.get(i));
             }
             statement2.executeUpdate();
 
         } catch (SQLException e) {
-            throw new DatabaseServiceException(e, "There was a problem marking as submitted in LIMS: "+e.getMessage(), false);
+            throw new DatabaseServiceException(e, "There was a problem marking as submitted in LIMS: " + e.getMessage(), false);
         } finally {
             returnConnection(connection);
         }
@@ -3503,7 +3496,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     @Override
     public Map<String, String> getTissueIdsForExtractionIds_(String tableName, List<String> extractionIds) throws DatabaseServiceException {
-        String tableDefinition = tableName.equals("extraction") ? tableName : tableName+", extraction, workflow";
+        String tableDefinition = tableName.equals("extraction") ? tableName : tableName + ", extraction, workflow";
         String notExtractionBit = tableName.equals("extraction") ? "" : " workflow.extractionId = extraction.id AND " + tableName + ".workflow = workflow.id AND";
         StringBuilder sql = new StringBuilder("SELECT extraction.extractionId AS extractionId, extraction.sampleId AS tissue FROM " + tableDefinition + " WHERE" + notExtractionBit + " (");
 
@@ -3516,7 +3509,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             count++;
         }
         sql.append(")");
-        if(count == 0) {
+        if (count == 0) {
             return Collections.emptyMap();
         }
 
@@ -3533,7 +3526,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             ResultSet resultSet = statement.executeQuery();
 
             Map<String, String> results = new HashMap<String, String>();
-            while(resultSet.next()) {
+            while (resultSet.next()) {
                 results.put(resultSet.getString("extractionId"), resultSet.getString("tissue"));
             }
 
@@ -3635,7 +3628,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     @Override
     public List<ExtractionReaction> getExtractionsForIds_(List<String> extractionIds) throws DatabaseServiceException {
         List<ExtractionReaction> extractionsThatExist = new ArrayList<ExtractionReaction>();
-        if(extractionIds.isEmpty()) {
+        if (extractionIds.isEmpty()) {
             return extractionsThatExist;
         }
 
@@ -3647,12 +3640,12 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         try {
             connection = getConnection();
             PreparedStatement statement = connection.prepareStatement(sql.toString());
-            int count=1;
-            for(String extractionId : extractionIds) {
+            int count = 1;
+            for (String extractionId : extractionIds) {
                 statement.setString(count++, extractionId);
             }
             ResultSet results = statement.executeQuery();
-            while(results.next()) {
+            while (results.next()) {
                 extractionsThatExist.add(new ExtractionReaction(results));
             }
             statement.close();
@@ -3670,6 +3663,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     static boolean isGrantStringForMySQLDatabase(String grantString, String databaseName, String tableName) {
-        return grantString.matches("GRANT.*ON\\s+(`?(("+ databaseName + ")|%|\\*)`?\\.)?`?(\\*|"+ tableName + ")`?\\s+TO.*");
+        return grantString.matches("GRANT.*ON\\s+(`?((" + databaseName + ")|%|\\*)`?\\.)?`?(\\*|" + tableName + ")`?\\s+TO.*");
     }
 }

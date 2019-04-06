@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims.geome;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.fims.biocode.*;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -34,6 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import com.biomatters.plugins.biocode.BiocodePlugin;
+
 /**
  * @author Matthew Cheung
  * Created on 7/02/14 5:51 AM
@@ -53,7 +54,9 @@ public class geomeFIMSClient {
                 .property(ClientProperties.CONNECT_TIMEOUT, timeout * 1000)
                 .property(ClientProperties.READ_TIMEOUT, timeout * 1000);
 
-        target = ClientBuilder.newBuilder().withConfig(config).build().target(hostname)
+        ClientBuilder builder = ClientBuilder.newBuilder();
+        ClientBuilder builderConfig  = builder.withConfig(config);
+        target =  builderConfig.build().target(hostname)
                 .register(GZipEncoder.class)
                 .register(JacksonFeature.class)
                 .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), true));
