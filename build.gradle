@@ -11,24 +11,20 @@ plugins {
     id 'net.saliman.properties' version '1.4.5'
 }
 
-println "Gradle " + GradleVersion.current().getVersion() + ' - ' + GradleVersion.current().getBuildTime() + ' - ' + GradleVersion.current().getRevision() + (GradleVersion.current().isSnapshot() ? " SNAPSHOT" : "")
+//println "Gradle " + GradleVersion.current().getVersion() + ' - ' + GradleVersion.current().getBuildTime() + ' - ' + GradleVersion.current().getRevision() + (GradleVersion.current().isSnapshot() ? " SNAPSHOT" : "")
 
 
 apply plugin: "java"
 apply plugin: "idea"
 
-version = '3.0.10'
+version = '5.3'
 
 defaultTasks 'createPlugin';
-
-task wrapper(type: Wrapper) {
-    gradleVersion = "3.5"
-}
 
 ext {
     shortName = "BiocodePlugin"
     pluginName = "com.biomatters.plugins.biocode." + shortName
-    geneiousPublicAPIVersion = "10.0.5"
+    geneiousPublicAPIVersion = "11.1.5"
     pluginDistFilename = "${shortName}_" + version.replaceAll("\\.", "_") + ".gplugin"
     geneiousFilesName = "GeneiousFiles"
     geneiousFilesPath = "$buildDir/$geneiousFilesName"
@@ -46,9 +42,11 @@ repositories {
 }
 
 dependencies {
+
     compile group: "com.biomatters", name: "geneious.publicapi", version: "$geneiousPublicAPIVersion", configuration: "api", changing: true
     compile group: "com.google.guava", name: "guava", version:"15.0"
 
+    compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.3.1'
     compile group: "org.hsqldb", name:"hsqldb", version:"2.3.0"
     compile group: "org.jcommon", name:"jcommon", version:"1.0"
     compile group: "org.jfree", name:"jfreechart", version:"1.0.15"
