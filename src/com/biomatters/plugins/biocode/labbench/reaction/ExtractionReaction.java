@@ -416,7 +416,18 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         for (Map.Entry<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsAndNewExtractionReactions : existingExtractionReactionsToNewExtractionReactions.entrySet()) {
             List<ExtractionReaction> newExtractionReactions = existingExtractionReactionsAndNewExtractionReactions.getValue();
 
-            if (newExtractionReactions.size() > 1) {
+            if(copyInsteadOfMove) {
+                for(ExtractionReaction destinationReaction : newExtractionReactions) {
+                    ExtractionReaction.copyExtractionReaction(getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey()), destinationReaction);
+
+                    destinationReaction.setExtractionId(ReactionUtilities.getNewExtractionId(existingExtractionIds, destinationReaction.getTissueId()));
+
+                    existingExtractionIds.add(destinationReaction.getExtractionId());
+
+                    destinationReaction.setJustMoved(true);
+                }
+            }
+            else if (newExtractionReactions.size() > 1) {
                 ReactionUtilities.setReactionErrorStates(newExtractionReactions, true);
 
                 extractionReactionsThatCouldNotBeOverridden.add(reactionAttributeGetter.getAttributeName() + ": " + reactionAttributeGetter.get(newExtractionReactions.get(0)) + ".\n" + "Well Numbers: " + StringUtilities.join(", ", ReactionUtilities.getWellNumbers(newExtractionReactions)) + ".");
@@ -425,13 +436,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
                 ExtractionReaction.copyExtractionReaction(getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey()), destinationReaction);
 
-                if(copyInsteadOfMove) {
-                    destinationReaction.setExtractionId(ReactionUtilities.getNewExtractionId(existingExtractionIds, destinationReaction.getTissueId()));
-                    existingExtractionIds.add(destinationReaction.getExtractionId());
-                }
-                else {
-                    destinationReaction.getOptions().setValue("parentExtraction", "");
-                }
+                destinationReaction.getOptions().setValue("parentExtraction", "");
 
                 destinationReaction.setJustMoved(true);
             }
