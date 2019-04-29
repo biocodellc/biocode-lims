@@ -331,14 +331,14 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             if (checkingFromPlate) {
 
                 String move_extractions = "Move extractions";
-                String create_alliquots = "Create alliquots";
+                String create_alliquots = "Create aliquots";
 
                 String firstPartOfMessage = attributeToExistingExtractionReactions.keySet().size() < 4 ? "Extraction reactions that are associated with the following " + attributeName.toLowerCase() + "(s) already exist: " + StringUtilities.join(", ", attributeToExistingExtractionReactions.keySet()) + ".<br><br>"
                         : "Extraction reactions that are associated with "+attributeToExistingExtractionReactions.keySet().size()+" " + attributeName.toLowerCase() + "(s) you entered already exist.  ";
 
                 boolean b = Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {move_extractions, create_alliquots}, "Extractions already exist", dialogParent, Dialogs.DialogIcon.QUESTION), firstPartOfMessage + "Are you trying to:<br><br><b>Move these extractions to this plate?</b> The existing extraction reactions will be removed from their original plate and placed on this one.  " +
                         "Their original locations will be tracked in the <i>previous plate</i> and <i>previous well</i> fields." +
-                        "<br><br><b>Create alliquots?</b> The existing extraction reactions will be left untouched, and these ones will be given new extraction id's.  The location and id's of each alliquot's parent extractions will be tracked in the <i>parent extraction id</i>, " +
+                        "<br><br><b>Create aliquots?</b> The existing extraction reactions will be left untouched, and these ones will be given new extraction id's.  The location and id's of each alliquot's parent extractions will be tracked in the <i>parent extraction id</i>, " +
                         "<i>previous plate</i>, and <i>previous well</i> fields.") == move_extractions;
                 if (b) {
                     return overrideExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(existingExtractionReactionsToNewExtractionReactions, reactionAttributeGetter, false);
