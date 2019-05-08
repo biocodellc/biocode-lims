@@ -1,17 +1,6 @@
 # Biocode LIMS
-The Biocode LIMS is a Geneious plugin that was developed as part of the [Moorea Biocode Project](http://mooreabiocode.org).
-It comprises everything you need to manage your lab and sequence analysis workflows.
-
-### Biocode LIMS Server 
-The Biocode LIMS server is an extension to the original LIMS that adds security, user management, access control and 
-the ability to offload tasks from the Geneious client.  
- 
-The server needs to be deployed in a compatible Java Web Application server and acts as a middle man between the 
-client and the LIMS database.  The client communicates with the server using a REST interface.  By providing this
-interface rather than a proprietary one, there is the possibility of other future clients outside of the Geneious 
-software package.
- 
-It is currently in active development and has not been released yet.
+  
+The Biocode LIMS is a Geneious plugin that comprises everything you need to manage your lab and sequence analysis workflows. For information on how to use the Biocode LIMS and to download the plugin visit our [Wiki Page](https://github.com/biocodellc/biocode-lims/).
 
 ## Useful Information
 * Official releases are available from the [official website](https://github.com/biocodellc/biocode-lims/releases)
@@ -74,3 +63,15 @@ In the gradle build, the complete Geneious runtime is downloaded and the require
 
 ## Contributing
 Please contact support@mooreabiocode.org
+
+## Biocode LIMS Server 
+The Biocode LIMS server is an extension to the original LIMS that adds security, user management, access control and 
+the ability to offload tasks from the Geneious client.  
+ 
+The server needs to be deployed in a compatible Java Web Application server and acts as a middle man between the 
+client and the LIMS database.  The client communicates with the server using a REST interface.  By providing this
+interface rather than a proprietary one, there is the possibility of other future clients outside of the Geneious 
+software package.
+ 
+It is currently in active development and has not been released yet.
+
