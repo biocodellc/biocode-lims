@@ -17,7 +17,7 @@ plugins {
 apply plugin: "java"
 apply plugin: "idea"
 
-version = '5.3'
+version = '3.0.11'
 
 defaultTasks 'createPlugin';
 
@@ -25,6 +25,8 @@ ext {
     shortName = "BiocodePlugin"
     pluginName = "com.biomatters.plugins.biocode." + shortName
     geneiousPublicAPIVersion = "11.1.5"
+    //geneiousPublicAPIVersion = "2019.1.1"
+    //geneiousPublicAPIVersion = "9.0.5"
     pluginDistFilename = "${shortName}_" + version.replaceAll("\\.", "_") + ".gplugin"
     geneiousFilesName = "GeneiousFiles"
     geneiousFilesPath = "$buildDir/$geneiousFilesName"
@@ -179,6 +181,8 @@ task createPlugin(dependsOn: build, type: Zip) {
 }
 
 task runGeneious(dependsOn: [extractGeneiousRuntimeFiles, assemble], type: JavaExec) {
+    // NOTE, the expectation is that we java java 11 linked here
+    //executable '/usr/bin/java'
     main 'com.biomatters.iseek.application.ISeekMain'
     classpath sourceSets.main.runtimeClasspath
     args 'extraPlugins=' + pluginName
