@@ -329,21 +329,21 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         if (!existingExtractionReactionsToNewExtractionReactions.isEmpty()) {
             String attributeName = reactionAttributeGetter.getAttributeName();
             if (checkingFromPlate) {
-                if (Dialogs.showYesNoDialog(
-                        "Extraction reactions that are associated with the following " + attributeName.toLowerCase() + "(s) already exist: " + StringUtilities.join(", ", attributeToExistingExtractionReactions.keySet()) + "."
-                                + "<br><br>Move data to new/edited extraction reactions from corresponding existing ones?",
-                        "Move Extraction Reactions?",
-                        dialogParent,
-                        Dialogs.DialogIcon.QUESTION)) {
-                    return overrideExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(existingExtractionReactionsToNewExtractionReactions, reactionAttributeGetter);
+
+                String move_extractions = "Move extractions";
+                String create_alliquots = "Create aliquots";
+
+                String firstPartOfMessage = attributeToExistingExtractionReactions.keySet().size() < 4 ? "Extraction reactions that are associated with the following " + attributeName.toLowerCase() + "(s) already exist: " + StringUtilities.join(", ", attributeToExistingExtractionReactions.keySet()) + ".<br><br>"
+                        : "Extraction reactions that are associated with "+attributeToExistingExtractionReactions.keySet().size()+" " + attributeName.toLowerCase() + "(s) you entered already exist.  ";
+
+                boolean b = Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {move_extractions, create_alliquots}, "Extractions already exist", dialogParent, Dialogs.DialogIcon.QUESTION), firstPartOfMessage + "Are you trying to:<br><br><b>Move these extractions to this plate?</b> The existing extraction reactions will be removed from their original plate and placed on this one.  " +
+                        "Their original locations will be tracked in the <i>previous plate</i> and <i>previous well</i> fields." +
+                        "<br><br><b>Create aliquots?</b> The existing extraction reactions will be left untouched, and these ones will be given new extraction id's.  The location and id's of each alliquot's parent extractions will be tracked in the <i>parent extraction id</i>, " +
+                        "<i>previous plate</i>, and <i>previous well</i> fields.") == move_extractions;
+                if (b) {
+                    return overrideExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(existingExtractionReactionsToNewExtractionReactions, reactionAttributeGetter, false);
                 } else {
-                    List<ExtractionReaction> newExtractionReactionsAssociatedWithExistingAttributeValue = new ArrayList<ExtractionReaction>();
-
-                    for (List<ExtractionReaction> groupOfNewExtractionReactionsAssociatedWithSameExistingBarcode : existingExtractionReactionsToNewExtractionReactions.values()) {
-                        newExtractionReactionsAssociatedWithExistingAttributeValue.addAll(groupOfNewExtractionReactionsAssociatedWithSameExistingBarcode);
-                    }
-
-                    ReactionUtilities.setReactionErrorStates(newExtractionReactionsAssociatedWithExistingAttributeValue, true);
+                    overrideExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(existingExtractionReactionsToNewExtractionReactions, reactionAttributeGetter, true);
                 }
             } else {
                 Dialogs.showMessageDialog(
@@ -396,13 +396,38 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     }
 
     private static String overrideExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsToNewExtractionReactions,
-                                                                                                      ReactionAttributeGetter<String> reactionAttributeGetter) {
+                                                                                                      ReactionAttributeGetter<String> reactionAttributeGetter, boolean copyInsteadOfMove) throws DatabaseServiceException {
         List<String> extractionReactionsThatCouldNotBeOverridden = new ArrayList<String>();
+
+        Set<String> existingExtractionIds = new LinkedHashSet<>();
+
+        if(copyInsteadOfMove) {
+            LIMSConnection activeLIMSConnection = BiocodeService.getInstance().getActiveLIMSConnection();
+            Set<String> tissueIds = new LinkedHashSet<>();
+            for (List<ExtractionReaction> existingExtractionReactions : existingExtractionReactionsToNewExtractionReactions.keySet()) {
+                for(ExtractionReaction reaction : existingExtractionReactions) {
+                    tissueIds.add(reaction.getTissueId());
+                }
+            }
+
+            existingExtractionIds.addAll(activeLIMSConnection.getAllExtractionIdsForTissueIds(new ArrayList<>(tissueIds)));
+        }
 
         for (Map.Entry<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsAndNewExtractionReactions : existingExtractionReactionsToNewExtractionReactions.entrySet()) {
             List<ExtractionReaction> newExtractionReactions = existingExtractionReactionsAndNewExtractionReactions.getValue();
 
-            if (newExtractionReactions.size() > 1) {
+            if(copyInsteadOfMove) {
+                for(ExtractionReaction destinationReaction : newExtractionReactions) {
+                    ExtractionReaction.copyExtractionReaction(getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey()), destinationReaction);
+
+                    destinationReaction.setExtractionId(ReactionUtilities.getNewExtractionId(existingExtractionIds, destinationReaction.getTissueId()));
+
+                    existingExtractionIds.add(destinationReaction.getExtractionId());
+
+                    destinationReaction.setJustMoved(true);
+                }
+            }
+            else if (newExtractionReactions.size() > 1) {
                 ReactionUtilities.setReactionErrorStates(newExtractionReactions, true);
 
                 extractionReactionsThatCouldNotBeOverridden.add(reactionAttributeGetter.getAttributeName() + ": " + reactionAttributeGetter.get(newExtractionReactions.get(0)) + ".\n" + "Well Numbers: " + StringUtilities.join(", ", ReactionUtilities.getWellNumbers(newExtractionReactions)) + ".");
@@ -410,6 +435,8 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                 ExtractionReaction destinationReaction = newExtractionReactions.get(0);
 
                 ExtractionReaction.copyExtractionReaction(getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey()), destinationReaction);
+
+                destinationReaction.getOptions().setValue("parentExtraction", "");
 
                 destinationReaction.setJustMoved(true);
             }
