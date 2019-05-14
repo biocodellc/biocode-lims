@@ -302,10 +302,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public static FIMSConnection[] getFimsConnections() {
         return new FIMSConnection[] {
                 new ExcelFimsConnection(),
-                new FusionTablesFimsConnection(),
+                //new FusionTablesFimsConnection(),
                 new MySQLFimsConnection(),
                 new MooreaFimsConnection(),
-                new TAPIRFimsConnection(),
+                //new TAPIRFimsConnection(),
                 new BiocodeFIMSConnection(),
                 new geomeFIMSConnection()
         };

@@ -42,7 +42,7 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     public String getDescription() {
-        return "Connection to GeOMe (https://geome-db.org/)";
+        return "Connection to GeOMe (FIMS3) at https://geome-db.org/";
     }
 
     @Override
