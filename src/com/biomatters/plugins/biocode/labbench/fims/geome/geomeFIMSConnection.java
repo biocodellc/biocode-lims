@@ -93,9 +93,6 @@ public class geomeFIMSConnection extends FIMSConnection {
             }
 
         } catch (Exception e) {
-
-            e.printStackTrace();
-            //throw new ConnectionException("Unable to connect to GeOMe: " + e.getMessage());
             throw new ConnectionException("Unable to connect to GeOMe: " + e.getStackTrace());
         }
     }
