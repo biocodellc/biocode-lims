@@ -181,7 +181,7 @@ public class geomeFIMSClient {
         return target.path("");
     }
 
-    List<Project> getProjects(boolean includePublic) throws DatabaseServiceException {=
+    List<Project> getProjects(boolean includePublic) throws DatabaseServiceException {
         Invocation.Builder request = target.path("projects")
                 .queryParam("includePublic", includePublic)
                 .request(MediaType.APPLICATION_JSON_TYPE);
