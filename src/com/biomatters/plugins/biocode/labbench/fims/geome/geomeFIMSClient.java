@@ -2,6 +2,8 @@ package com.biomatters.plugins.biocode.labbench.fims.geome;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.labbench.fims.biocode.*;
+import org.apache.http.conn.ssl.TrustStrategy;
+import org.apache.http.ssl.SSLContexts;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.glassfish.jersey.client.ClientConfig;
@@ -11,13 +13,11 @@ import org.glassfish.jersey.filter.LoggingFilter;
 import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.message.GZipEncoder;
 
+import javax.net.ssl.SSLContext;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.client.*;
 import javax.ws.rs.core.Form;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
@@ -28,6 +28,9 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -53,10 +56,26 @@ public class geomeFIMSClient {
         ClientConfig config = new ClientConfig()
                 .property(ClientProperties.CONNECT_TIMEOUT, timeout * 1000)
                 .property(ClientProperties.READ_TIMEOUT, timeout * 1000);
-
+        
         ClientBuilder builder = ClientBuilder.newBuilder();
-        ClientBuilder builderConfig  = builder.withConfig(config);
-        target =  builderConfig.build().target(hostname)
+
+        // Create SSL Socket Factory Explicitly for older versions of geneious
+        // This is a work-around where we accept the certificate for all geome connections
+        TrustStrategy acceptingTrustStrategy = (cert, authType) -> true;
+        SSLContext sslContext = null;
+        try {
+            sslContext = SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy).build();
+        } catch (NoSuchAlgorithmException e) {
+            throw new ProcessingException(e.getMessage());
+        } catch (KeyManagementException e) {
+            throw new ProcessingException(e.getMessage());
+        } catch (KeyStoreException e) {
+            throw new ProcessingException(e.getMessage());
+        }
+        builder.sslContext(sslContext);
+
+        ClientBuilder builderConfig = builder.withConfig(config);
+        target = builderConfig.build().target(hostname)
                 .register(GZipEncoder.class)
                 .register(JacksonFeature.class)
                 .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), true));
@@ -77,7 +96,9 @@ public class geomeFIMSClient {
         String clientSecret = secrets.get("client_secret").asText();
 
         WebTarget path = target.path("/v1/oauth/accessToken");
-        Invocation.Builder request = path.request();
+
+        Invocation.Builder request = path.request().accept(MediaType.APPLICATION_JSON);
+
         Form formToPost = new Form()
                 .param("username", username)
                 .param("password", password)
@@ -160,11 +181,11 @@ public class geomeFIMSClient {
         return target.path("");
     }
 
-    List<Project> getProjects(boolean includePublic) throws DatabaseServiceException {
+    List<Project> getProjects(boolean includePublic) throws DatabaseServiceException {=
         Invocation.Builder request = target.path("projects")
                 .queryParam("includePublic", includePublic)
                 .request(MediaType.APPLICATION_JSON_TYPE);
-
+        
         try {
             Response response = request.get();
             List<Project> fromService = getRestServiceResult(new GenericType<List<Project>>() {
