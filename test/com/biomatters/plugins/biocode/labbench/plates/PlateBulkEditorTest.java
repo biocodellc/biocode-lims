@@ -15,7 +15,7 @@ import java.util.List;
  */
 public class PlateBulkEditorTest extends LimsTestCase {
     // TODO: figure out Unable to XML deserialize multiple options. This is most likely because the child multiple options do not fulfil the XMLSerializable contract.
-    /*
+
     @Test
     public void testDocumentFieldEditorGetChanges() {
         PlateBulkEditor.DocumentFieldEditor documentFieldEditor = new PlateBulkEditor.DocumentFieldEditor(PlateBulkEditor.WORKFLOW_ID_FIELD, new Plate(Plate.Size.w16, Reaction.Type.PCR), PlateBulkEditor.Direction.ACROSS_AND_DOWN, null);
@@ -71,18 +71,18 @@ public class PlateBulkEditorTest extends LimsTestCase {
         assertEquals("H1 : 14 => 15", changes.get(14));
         assertEquals("H2 : 15 => 16", changes.get(15));
     }
-    */
+
 
     // TODO: figure out Unable to XML deserialize multiple options. This is most likely because the child multiple options do not fulfil the XMLSerializable contract.
-    //@Test
-    //public void testBuldEdit_AddBarcodesFromFile_splitByDelimiters() {
-    //    PlateBulkEditor.DocumentFieldEditor barcodeEditor = new PlateBulkEditor.DocumentFieldEditor(PlateBulkEditor.EXTRACTION_BARCODE_FIELD, new Plate(Plate.Size.w1, Reaction.Type.PCR), PlateBulkEditor.Direction.ACROSS_AND_DOWN, null);
-    //    BiocodeUtilities.Well well = new BiocodeUtilities.Well("A1");
-    //
-    //    List<String> delimiters = Arrays.asList("\t", ";", ",", " ", "-", "_", /*Try some combinations:*/ ";\t", ",\t", "-;");
-     //   for (int i = 0; i < delimiters.size(); i++) {
-     //       PlateBulkEditor.setWellAndBarcode(String.format("A1%s%d", delimiters.get(i), i+2), barcodeEditor);
-     /*       Object value = barcodeEditor.getValue(well.row(), well.col());
+    @Test
+    public void testBuldEdit_AddBarcodesFromFile_splitByDelimiters() {
+        PlateBulkEditor.DocumentFieldEditor barcodeEditor = new PlateBulkEditor.DocumentFieldEditor(PlateBulkEditor.EXTRACTION_BARCODE_FIELD, new Plate(Plate.Size.w1, Reaction.Type.PCR), PlateBulkEditor.Direction.ACROSS_AND_DOWN, null);
+        BiocodeUtilities.Well well = new BiocodeUtilities.Well("A1");
+
+        List<String> delimiters = Arrays.asList("\t", ";", ",", " ", "-", "_", /*Try some combinations:*/ ";\t", ",\t", "-;");
+        for (int i = 0; i < delimiters.size(); i++) {
+            PlateBulkEditor.setWellAndBarcode(String.format("A1%s%d", delimiters.get(i), i+2), barcodeEditor);
+            Object value = barcodeEditor.getValue(well.row(), well.col());
             assertEquals(""+(i+2), value);
         }
         barcodeEditor.setValue(well.row(), well.col(), "0");
@@ -94,7 +94,7 @@ public class PlateBulkEditorTest extends LimsTestCase {
             assertEquals("0", value);
         }
     }
-    */
+
 
     private static String getNewLineSeparatedSequenceOfNumbers(int start, int end) {
         if (start >= end) {

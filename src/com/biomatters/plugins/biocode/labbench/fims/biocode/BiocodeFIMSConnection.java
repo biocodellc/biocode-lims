@@ -52,7 +52,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public String getLabel() {
-        return "Biocode FIMS";
+        return "BiSciCol FIMS";
     }
 
     @Override
@@ -62,7 +62,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public String getDescription() {
-        return "Connection to the new Biocode FIMS (https://github.com/biocodellc/biocode-fims)";
+        return "Connection to BiSciCol (FIMS2) at https://www.biscicol.org/";
     }
 
     private Map<String, SoftReference<FimsSample>> cachedSamples = new HashMap<String, SoftReference<FimsSample>>();

@@ -18,9 +18,8 @@ import com.google.api.client.repackaged.org.apache.commons.codec.binary.StringUt
 
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
-import javax.ws.rs.core.Form;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.*;
 import java.lang.ref.SoftReference;
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -43,7 +42,7 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     public String getDescription() {
-        return "Connection to GeOMe (https://geome-db.org/)";
+        return "Connection to GeOMe (FIMS3) at https://geome-db.org/";
     }
 
     @Override
@@ -94,9 +93,7 @@ public class geomeFIMSConnection extends FIMSConnection {
             }
 
         } catch (Exception e) {
-
-            e.printStackTrace();
-            throw new ConnectionException("Unable to connect to GeOMe: " + e.getMessage());
+            throw new ConnectionException("Unable to connect to GeOMe: " + e.getStackTrace());
         }
     }
 
@@ -242,9 +239,11 @@ public class geomeFIMSConnection extends FIMSConnection {
 
 
         if (query instanceof CompoundSearchQuery) {
-            if (((CompoundSearchQuery) query).getOperator() != CompoundSearchQuery.Operator.AND) {
-                throw new ConnectionException("OR queries with Project unsupported");
-            }
+            // JBD: removing the restriction on OR queries from Geome... these DO work.
+            // However, i'm not certain why this restriction was placed here in the first place
+            //if (((CompoundSearchQuery) query).getOperator() != CompoundSearchQuery.Operator.AND) {
+            //    throw new ConnectionException("OR queries with Project unsupported");
+            //}
             for (Query childQuery : ((CompoundSearchQuery) query).getChildren()) {
                 if (childQuery instanceof AdvancedSearchQueryTerm) {
                     Project project = getProjectFromSearchTerm((AdvancedSearchQueryTerm) childQuery);
@@ -392,68 +391,44 @@ public class geomeFIMSConnection extends FIMSConnection {
     @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
         try {
-            /*
-            return tissueIds.stream()
-                .map(id -> sampleCache.get(id))
-                .filter(s -> s != null)
-                .map(s -> {
-                    if (callback != null) {
-                        callback.add((PluginDocument) s, Collections.emptyMap());
-                    }
-                    return s.get();
-                })
-                .collect(Collectors.toList());
-                */
-            List<Integer> projectIds = new ArrayList<>();
-            // collect project ids
-            for (Project currentProject : projects) {
-                projectIds.add(currentProject.id);
-            }
 
-            for (Project currentProject : projects) {
-
-                Query[] tissueQueries = new Query[tissueIds.size()];
-                for (int i = 0; i < tissueIds.size(); i++) {
-                    tissueQueries[i] = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, tissueIds.get(i));
+            // Strip out empty tissue IDs -- they will make queries to Geome fail parser check
+            ArrayList tissueIdsArrayList = new ArrayList();
+            for (int i = 0; i < tissueIds.size(); i++) {
+                if (!tissueIds.get(i).trim().equals("") && !(tissueIds.get(i) == null)) {
+                    tissueIdsArrayList.add(tissueIds.get(i));
                 }
-                Query tissueQuery = Query.Factory.createOrQuery(tissueQueries, Collections.emptyMap());
-
-                String queryString = buildQuery(tissueQuery);
-
-
-                // POST Connection method... should work for large requests
-                Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
-                        .queryParam("_projects_:", projectIds)
-                        .queryParam("entity", "Tissue")
-                        .queryParam("limit", 100000)
-                        .request();
-
-                Form formToPost = new Form()
-                        .param("query", queryString + "_select_:[Tissue,Sample,Event]");
-
-                Response response = searchRequest.post(
-                        Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
-                 /*
-                // GET Connection method... fails on large requests
-                Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
-                        .queryParam("_projects_:", projectIds)
-                        .queryParam("entity", "Tissue")
-                        .queryParam("limit", 100000)
-                        .queryParam("q", queryString + "_select_:[Tissue,Sample,Event]")
-                        .request();
-
-                Response response = searchRequest.get();
-                */
-                SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
-
-                List<FimsSample> samples = transformQueryResults(tissueIds, result);
-                return samples;
             }
+            Object[] trimmedTissueIds = tissueIdsArrayList.toArray();
+
+            // Build Tissue query
+            Query[] tissueQueries = new Query[trimmedTissueIds.length];
+            for (int i = 0; i < trimmedTissueIds.length; i++) {
+                    tissueQueries[i] = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, trimmedTissueIds[i].toString());
+            }
+            Query tissueQuery = Query.Factory.createOrQuery(tissueQueries, Collections.emptyMap());
+            String tissueIDsToQuery = buildQuery(tissueQuery);
+            String queryString =  tissueIDsToQuery + " _select_:[Tissue,Sample,Event]";
+
+            Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
+                    .queryParam("limit", 100000)
+                    .request();
+
+            Form formToPost = new Form()
+                    .param("query", queryString)
+                    .param("entity", "Tissue");
+
+            Response response = searchRequest.post(
+                    Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
+
+            SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
+
+            List<FimsSample> samples = transformQueryResults(tissueIds, result);
+            return samples;
 
         } catch (DatabaseServiceException e) {
             throw new ConnectionException(e);
         }
-        return null;
     }
 
     private List<FimsSample> transformQueryResults(List<String> tissueIds, SearchResult result) throws ConnectionException {
@@ -663,7 +638,7 @@ public class geomeFIMSConnection extends FIMSConnection {
                 // remove the country name
                 String tempLocalityField = locality.trim().replaceFirst(country.trim(), "");
                 // remove colons since they will be confusing in this context
-                tempLocalityField = tempLocalityField.replace(":","");
+                tempLocalityField = tempLocalityField.replace(":", "");
                 genbankCountryValue += ":" + tempLocalityField;
             } else {
                 genbankCountryValue += ":" + locality.trim();

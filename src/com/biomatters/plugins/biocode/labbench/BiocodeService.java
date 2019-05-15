@@ -302,10 +302,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public static FIMSConnection[] getFimsConnections() {
         return new FIMSConnection[] {
                 new ExcelFimsConnection(),
-                new FusionTablesFimsConnection(),
+                //new FusionTablesFimsConnection(),
                 new MySQLFimsConnection(),
                 new MooreaFimsConnection(),
-                new TAPIRFimsConnection(),
+                //new TAPIRFimsConnection(),
                 new BiocodeFIMSConnection(),
                 new geomeFIMSConnection()
         };
@@ -720,6 +720,18 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public void addDatabaseServiceListener(DatabaseServiceListener listener) {
         super.addDatabaseServiceListener(listener);
         listener.searchableStatusChanged(isLoggedIn, loggedOutMessage);
+    }
+    
+    /**
+     *
+     * @param urns
+     * @param callback
+     * 11 geneious reports this error having to do with urns: contained
+     *      in XML responses and requiring this method.  However, JBD is fairly certain nothing
+     *      needs to be done with this information.
+     */
+    public void retrieve(URN[] urns, RetrieveCallback callback) {
+        //do nothing
     }
 
     public void retrieve(Query query, RetrieveCallback callback, URN[] urnsToNotRetrieve) throws DatabaseServiceException {

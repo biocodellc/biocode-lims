@@ -4,3 +4,6 @@ resources/geome_secrets.json
 .idea/
 build/
 out/
+*.iml
+*.ipr
+*.iws

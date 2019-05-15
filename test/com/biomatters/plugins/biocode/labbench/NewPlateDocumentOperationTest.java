@@ -36,9 +36,6 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     private static final String THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE = "384Plate";
 
     //TODO: Fix these tests which are failing due to Caused by: java.lang.IllegalArgumentException: Key too long: buttonVisibleView/Add Thermocycles:Create new Thermocycles, or view existing ones
-
-    /*
-
     @Test
     public void testCreateStripExtractionPlateFromStripExtractionPlate() throws DocumentOperationException, DatabaseServiceException, BadDataException {
         for (int numberOfStrips = 1; numberOfStrips <= 6; numberOfStrips++) {
@@ -189,19 +186,19 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
         assertEquals(4, gelPlates.size());  // There should be 4x 30-well gel quantification plates from a single 96-well plate.
     }
 
-    @Test
-    public void testCustomCopyWhenSourceHasMoreWellsThanDestination() throws DocumentOperationException, DatabaseServiceException, BadDataException {
-        Plate extractionPlate = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
-        AnnotatedPluginDocument annotatedPlate = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(extractionPlate));
-        NewPlateOptions options = createNewPlateOptions(Reaction.Type.GelQuantification.name, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, 20, annotatedPlate);
-        options.setValue(NewPlateOptions.USE_CUSTOM_COPY, true);
+    //@Test
+    //public void testCustomCopyWhenSourceHasMoreWellsThanDestination() throws DocumentOperationException, DatabaseServiceException, BadDataException {
+    //    Plate extractionPlate = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
+    //    AnnotatedPluginDocument annotatedPlate = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(extractionPlate));
+    //    NewPlateOptions options = createNewPlateOptions(Reaction.Type.GelQuantification.name, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, 20, annotatedPlate);
+    //    options.setValue(NewPlateOptions.USE_CUSTOM_COPY, true);
 
-        for (int start : Arrays.asList(19, 20, 21)) {
-            for (Options.OptionValue insertMethod : Arrays.asList(NewPlateOptions.ALTERNATING, NewPlateOptions.SEQUENTIALLY)) {
-                testCustomCopy(extractionPlate, Arrays.asList(Reaction.Type.values()), insertMethod, start, Arrays.asList(1,2,3), null);
-            }
-        }
-    }
+    //    for (int start : Arrays.asList(19, 20, 21)) {
+    //        for (Options.OptionValue insertMethod : Arrays.asList(NewPlateOptions.ALTERNATING, NewPlateOptions.SEQUENTIALLY)) {
+    //            testCustomCopy(extractionPlate, Arrays.asList(Reaction.Type.values()), insertMethod, start, Arrays.asList(1,2,3), null);
+    //        }
+    //    }
+    //}
 
     private static int extractionPlateCount = 1;
     private static Plate createExtractionNonEmptyExtractionPlate(String plateType, int plateValue) throws DocumentOperationException, DatabaseServiceException, BadDataException {
@@ -277,5 +274,5 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
 
         return newPlateOptions;
     }
-    */
+
 }

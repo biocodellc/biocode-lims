@@ -1,3 +1,14 @@
+==Biocode Plugin 3.0.11 - 14 May 2019==
+* Fixes bug in fetching tissues for plates
+* Fixes "Already connected" exception occuring in Geneious v9
+* Changed behaviour when creating new extractions that use existing extractions ID's
+
+==Biocode Plugin 3.0.11 - 5 April 2019==
+* Fixes error in fetching REF assemblies
+
+==Biocode Plugin 3.0.10 - 26 March 2019==
+* Enabled OR queries for Geome
+
 ==Biocode Plugin 3.0.9 - 6 March 2019==
 * Fixed bug where queries on Geome Project were crashing application
 * Added genbankCountry, genbankDate, and genbankLatLng to output data properties

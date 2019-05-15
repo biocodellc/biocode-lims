@@ -11,24 +11,22 @@ plugins {
     id 'net.saliman.properties' version '1.4.5'
 }
 
-println "Gradle " + GradleVersion.current().getVersion() + ' - ' + GradleVersion.current().getBuildTime() + ' - ' + GradleVersion.current().getRevision() + (GradleVersion.current().isSnapshot() ? " SNAPSHOT" : "")
+//println "Gradle " + GradleVersion.current().getVersion() + ' - ' + GradleVersion.current().getBuildTime() + ' - ' + GradleVersion.current().getRevision() + (GradleVersion.current().isSnapshot() ? " SNAPSHOT" : "")
 
 
 apply plugin: "java"
 apply plugin: "idea"
 
-version = '3.0.9'
+version = '3.0.12'
 
 defaultTasks 'createPlugin';
-
-task wrapper(type: Wrapper) {
-    gradleVersion = "3.5"
-}
 
 ext {
     shortName = "BiocodePlugin"
     pluginName = "com.biomatters.plugins.biocode." + shortName
-    geneiousPublicAPIVersion = "10.0.5"
+    geneiousPublicAPIVersion = "11.1.5"
+    //geneiousPublicAPIVersion = "2019.1.1"
+    //geneiousPublicAPIVersion = "9.0.5"
     pluginDistFilename = "${shortName}_" + version.replaceAll("\\.", "_") + ".gplugin"
     geneiousFilesName = "GeneiousFiles"
     geneiousFilesPath = "$buildDir/$geneiousFilesName"
@@ -46,9 +44,11 @@ repositories {
 }
 
 dependencies {
+
     compile group: "com.biomatters", name: "geneious.publicapi", version: "$geneiousPublicAPIVersion", configuration: "api", changing: true
     compile group: "com.google.guava", name: "guava", version:"15.0"
 
+    compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.3.1'
     compile group: "org.hsqldb", name:"hsqldb", version:"2.3.0"
     compile group: "org.jcommon", name:"jcommon", version:"1.0"
     compile group: "org.jfree", name:"jfreechart", version:"1.0.15"
@@ -71,7 +71,10 @@ dependencies {
     compile group: "commons-beanutils", name:"commons-beanutils", version:"1.9.2"
     compile group: "mysql", name:"mysql-connector-java", version:"5.1.6"
 
-
+    compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.8'
+    compile group: 'commons-httpclient', name: 'commons-httpclient', version: '3.1'
+    compile group: 'org.jsslutils', name: 'jsslutils', version: '1.0.8'
+ 
     testCompile "junit:junit:4.+"
     testRuntime group: "com.biomatters", name: "geneious.publicapi", version: "$geneiousPublicAPIVersion", configuration: "runtime"
 
@@ -165,6 +168,21 @@ sourceSets {
         runtimeClasspath += fileTree("$geneiousFiles/lib")
     }
 }
+task quickCreatePlugin ( dependsOn: assemble, type: Zip) {
+    description "Creates the gplugin to install into Geneious"
+
+    from {
+        configurations.compile.filter {
+            !it.getName().startsWith("GeneiousPublicAPI-") && !it.getName().startsWith("jdom-") && !it.getName().startsWith("jebl-")
+        }
+    }
+    from(libsDir)
+    from(sourceSets.main.resources)
+    into "$pluginName"
+
+    archiveName pluginDistFilename
+}
+
 task createPlugin(dependsOn: build, type: Zip) {
     description "Creates the gplugin to install into Geneious"
 
@@ -181,6 +199,8 @@ task createPlugin(dependsOn: build, type: Zip) {
 }
 
 task runGeneious(dependsOn: [extractGeneiousRuntimeFiles, assemble], type: JavaExec) {
+    // NOTE, the expectation is that we java java 11 linked here
+    //executable '/usr/bin/java'
     main 'com.biomatters.iseek.application.ISeekMain'
     classpath sourceSets.main.runtimeClasspath
     args 'extraPlugins=' + pluginName

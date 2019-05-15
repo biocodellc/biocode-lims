@@ -136,7 +136,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
     public DocumentField getTableCol(String colName) {
         if(fields != null) {
             for(DocumentField field : fields) {
-                if(field.getCode().equals(colName)) {
+                if(field.getCode().equalsIgnoreCase(colName)) {
                     return field;
                 }
             }

@@ -132,7 +132,7 @@ public abstract class LIMSConnection {
     public enum AvailableLimsTypes {
         local(LocalLIMSConnection.class, "Built-in MySQL Database", "Create and connect to LIMS databases on your local computer (stored with your Geneious data)"),
         remote(MysqlLIMSConnection.class, "Remote MySQL Database", "Connect to a LIMS database on a remote MySQL server"),
-        server(ServerLimsConnection.class, "Biocode Server", "Connect to an instance of the Biocode Server.");
+        server(ServerLimsConnection.class, "Biocode Server", "Connect to an instance of the Biocode Server (Beta)");
         private final Class limsClass;
         private final String label;
         private final String description;
