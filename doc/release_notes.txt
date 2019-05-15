@@ -1,4 +1,9 @@
-==Biocode Plugin 3.0.11 - 5 Aprils 2019==
+==Biocode Plugin 3.0.11 - 14 May 2019==
+* Fixes bug in fetching tissues for plates
+* Fixes "Already connected" exception occuring in Geneious v9
+* Changed behaviour when creating new extractions that use existing extractions ID's
+
+==Biocode Plugin 3.0.11 - 5 April 2019==
 * Fixes error in fetching REF assemblies
 
 ==Biocode Plugin 3.0.10 - 26 March 2019==
