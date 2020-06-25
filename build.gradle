@@ -9,6 +9,8 @@ buildscript {
 
 plugins {
     id 'net.saliman.properties' version '1.4.5'
+    //id 'org.openjfx.javafxplugin' version '0.0.8'
+
 }
 
 //println "Gradle " + GradleVersion.current().getVersion() + ' - ' + GradleVersion.current().getBuildTime() + ' - ' + GradleVersion.current().getRevision() + (GradleVersion.current().isSnapshot() ? " SNAPSHOT" : "")
@@ -17,13 +19,14 @@ plugins {
 apply plugin: "java"
 apply plugin: "idea"
 
-version = '3.0.12'
+version = '3.0.13'
 
 defaultTasks 'createPlugin';
 
 ext {
     shortName = "BiocodePlugin"
     pluginName = "com.biomatters.plugins.biocode." + shortName
+    //pluginName = shortName + version
     geneiousPublicAPIVersion = "11.1.5"
     //geneiousPublicAPIVersion = "2019.1.1"
     //geneiousPublicAPIVersion = "9.0.5"
@@ -74,7 +77,12 @@ dependencies {
     compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.8'
     compile group: 'commons-httpclient', name: 'commons-httpclient', version: '3.1'
     compile group: 'org.jsslutils', name: 'jsslutils', version: '1.0.8'
- 
+    //compile group: 'org.openjfx', name: 'javafx-swing', version: '11.0.2'
+    // this one results in Could not get resource 'http://assets.geneious.com/developer/geneious/ivy/javafx/javafx.controls/ivys/ivy-11.0.0.xml'.
+    //compile 'javafx:javafx.controls:11.0.0'
+
+
+
     testCompile "junit:junit:4.+"
     testRuntime group: "com.biomatters", name: "geneious.publicapi", version: "$geneiousPublicAPIVersion", configuration: "runtime"
 
@@ -86,6 +94,11 @@ dependencies {
         testRuntime files(file("$geneiousFiles/lib").listFiles())
     }
 }
+
+//javafx {
+//    version = "11.0.2"
+//    modules = [ 'javafx.controls', 'javafx.fxml' ]
+//}
 
 configurations.all {
     resolutionStrategy {

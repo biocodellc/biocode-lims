@@ -2,7 +2,7 @@
 This section is intended for developers interested in contributing to the Biocode LIMS development.
 
 ## Requirements
-* Java Development Kit 1.6+
+* Java Development Kit 1.8+
 * Gradle
 
 ### Geneious Plugin
