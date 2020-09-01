@@ -307,24 +307,31 @@ public class FimsToLims {
             statement.executeUpdate(dropDefinitionTable);
 
             statement = lims.createStatement();
-            String dropFimsTable = "DROP TABLE IF EXISTS "+FIMS_VALUES_TABLE;
-            statement.executeUpdate(dropFimsTable);
+            //String dropFimsTable = "DROP TABLE IF EXISTS "+FIMS_VALUES_TABLE;
+            //statement.executeUpdate(dropFimsTable);
 
             final List<String> fieldsAndTypes = new ArrayList<String>();
             final List<String> fields = new ArrayList<String>();
             for(DocumentField f : fims.getSearchAttributes()) {
                 String colName = getSqlColName(f.getCode(), getLimsConnection().isLocal());
-                fieldsAndTypes.add(colName +" "+getColumnDefinition(f.getName().toLowerCase().contains("notes") ? null : f.getValueType()));
                 fields.add(colName);
+
+                // TODO: catch all mysql reserved words
+                if (colName.equalsIgnoreCase("order")) {
+                    colName = "ordr";
+                }
+                fieldsAndTypes.add(colName +" "+getColumnDefinition(f.getName().toLowerCase().contains("notes") ? null : f.getValueType()));
             }
             fieldsAndTypes.add("PRIMARY KEY ("+getSqlColName(fims.getTissueSampleDocumentField().getCode(), getLimsConnection().isLocal())+")");
 
-            String createValuesTable = "CREATE TABLE "+FIMS_VALUES_TABLE+"("+ StringUtilities.join(", ", fieldsAndTypes)+")";
-            System.out.println(createValuesTable);
-            statement.executeUpdate(createValuesTable);
+            // NOT dropping or creating table here... now setting to static.
+            //String createValuesTable = "CREATE TABLE "+FIMS_VALUES_TABLE+"("+ StringUtilities.join(", ", fieldsAndTypes)+")";
+            //System.out.println(createValuesTable);
+            //statement.executeUpdate(createValuesTable);
+
             final List<FimsSample> fimsSamples = new ArrayList<FimsSample>();
 
-            RetrieveCallback callback = new RetrieveCallback(listener){
+           /* RetrieveCallback callback = new RetrieveCallback(listener){
                 protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
                     handle((FimsSample)document);
                 }
@@ -382,7 +389,7 @@ public class FimsToLims {
             if(listener.isCanceled()) {
                 return;
             }
-
+              */
             String createDefinitionTable;
             if(lims.isLocal()) {
                 createDefinitionTable = "CREATE TABLE " + FIMS_DEFINITION_TABLE + "(field VARCHAR(255) PRIMARY KEY,\n" +
@@ -391,12 +398,14 @@ public class FimsToLims {
             else {
                 createDefinitionTable = "CREATE TABLE " + FIMS_DEFINITION_TABLE + " (`field` varchar(255), `name` longtext, PRIMARY KEY  (`field`))";
             }
+
             statement.executeUpdate(createDefinitionTable);
             String fillDefinitionTable = "INSERT INTO " + FIMS_DEFINITION_TABLE + " (field, name) VALUES (?, ?)";
             PreparedStatement fillStatement = lims.createStatement(fillDefinitionTable);
             for(DocumentField f : fims.getSearchAttributes()) {
                 fillStatement.setString(1, getSqlColName(f.getCode(), getLimsConnection().isLocal()));
                 fillStatement.setString(2, f.getName());
+                 
                 fillStatement.executeUpdate();
             }
 
@@ -423,9 +432,9 @@ public class FimsToLims {
             ex.printStackTrace();
             Dialogs.showMessageDialog("There was an error copying your FIMS data into the LIMS: "+ex.getMessage());
 
-        } catch (DatabaseServiceException e) {
-            e.printStackTrace();
-            Dialogs.showMessageDialog("There was an error copying your FIMS data into the LIMS: "+e.getMessage());
+        //} catch (DatabaseServiceException e) {
+        //    e.printStackTrace();
+        //    Dialogs.showMessageDialog("There was an error copying your FIMS data into the LIMS: "+e.getMessage());
         } finally {
             listener.setProgress(1.0);
             BiocodeService.getInstance().unregisterCallback(listener);
