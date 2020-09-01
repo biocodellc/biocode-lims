@@ -128,6 +128,7 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
 
     private static FimsSample getFimsSample(List<FimsSample> fimsSamples, DocumentField searchField, AnnotatedPluginDocument document, AnnotateFimsDataOptions options) {
         String searchValue = getFieldValue(document, options);
+        System.out.println("searching for " + searchValue);
         if(searchValue == null) {
             return null;
         }
@@ -207,7 +208,10 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
 
     private static String getFieldValue(AnnotatedPluginDocument document, AnnotateFimsDataOptions options) {
         if(options.matchField()) {
-            return BiocodeUtilities.getStringFromFileName(document.getName(), options.getNameSeaparator(), options.getNamePart());
+            String docName = document.getName();
+            String nameSeparator = options.getNameSeaparator();
+            int namePart = options.getNamePart();
+            return BiocodeUtilities.getStringFromFileName(docName, nameSeparator, namePart);
         }
         return null;
     }
@@ -252,10 +256,13 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         for(AnnotatedPluginDocument document : documents) {
             Object value = document.getFieldValue(field);
             if(value != null) {
+                // i'm not sure why getFieldValues needs to parse separator and part for cases
+                // we're looking up annotated plate/well combinations
                 String finalValue = BiocodeUtilities.getStringFromFileName(value.toString(), separator, part);
                 if(finalValue != null) {
                     fieldValues.add(finalValue);
                 }
+
             }
         }
         return fieldValues;
