@@ -100,7 +100,9 @@ public class AnnotateUtilities {
 
         for (AnnotatedPluginDocument annotatedDocument : docsAnnotated) {
             for (DocumentField field : annotatedDocument.getDisplayableFields()) {
-                if(field.getCode().startsWith(MySQLFimsConnection.FIELD_PREFIX) || Pattern.matches("\\d+", field.getCode())) {
+                //if(field.getCode().startsWith(MySQLFimsConnection.FIELD_PREFIX) || Pattern.matches("\\d+", field.getCode())) {
+                // Only search for old fields containing urn:
+                if(field.getCode().contains("urn:"))  {
                     if(annotatedDocument.getFieldValue(field) != null) {
                         oldFields.add(field);
                     }
