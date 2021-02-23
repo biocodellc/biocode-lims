@@ -19,7 +19,7 @@ plugins {
 apply plugin: "java"
 apply plugin: "idea"
 
-version = '3.0.13'
+version = '3.0.14'
 
 defaultTasks 'createPlugin';
 
