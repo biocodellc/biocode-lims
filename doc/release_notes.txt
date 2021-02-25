@@ -1,3 +1,6 @@
+==Biocode Plugin 3.0.15 - 24 February 2021 ==
+* Fixes issues with large tissue queries against GEOME failing
+
 ==Biocode Plugin 3.0.14 - 01 October 2020 ==
 * Fixes issue with detecting duplicate column names when annotating with FIMS data
 
