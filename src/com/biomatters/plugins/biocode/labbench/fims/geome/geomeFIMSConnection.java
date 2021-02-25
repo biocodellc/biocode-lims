@@ -6,10 +6,8 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
-import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.PasswordOptions;
-import com.biomatters.plugins.biocode.labbench.TissueDocument;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
@@ -389,7 +387,8 @@ public class geomeFIMSConnection extends FIMSConnection {
     }
 
     @Override
-    protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
+    protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback rc) throws ConnectionException {
+  
         try {
 
             // Strip out empty tissue IDs -- they will make queries to Geome fail parser check
@@ -402,29 +401,42 @@ public class geomeFIMSConnection extends FIMSConnection {
             Object[] trimmedTissueIds = tissueIdsArrayList.toArray();
 
             // Build Tissue query
-            Query[] tissueQueries = new Query[trimmedTissueIds.length];
-            for (int i = 0; i < trimmedTissueIds.length; i++) {
-                    tissueQueries[i] = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, trimmedTissueIds[i].toString());
+            List<FimsSample> allSamples = new ArrayList<FimsSample>();
+
+            // Here we loop queries to GEOME in chunks of 1000 records each 
+            int chunk = 1000; // chunk size to divide
+            for(int cnt=0;cnt<trimmedTissueIds.length;cnt+=chunk) {
+                Object[] trimmedTissueIdsChunk = Arrays.copyOfRange(trimmedTissueIds, cnt, Math.min(trimmedTissueIds.length, cnt + chunk));
+
+                //System.out.println("Downloading " + cnt + " of " + trimmedTissueIds.length);
+
+                Query[] tissueQueries = new Query[trimmedTissueIdsChunk.length];
+                for (int i = 0; i < trimmedTissueIdsChunk.length; i++) {
+                    tissueQueries[i] = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, trimmedTissueIdsChunk[i].toString());
+                }
+                Query tissueQuery = Query.Factory.createOrQuery(tissueQueries, Collections.emptyMap());
+                String tissueIDsToQuery = buildQuery(tissueQuery);
+                String queryString = tissueIDsToQuery + " _select_:[Tissue,Sample,Event]";
+
+                Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
+                        .queryParam("limit", chunk)
+                        .request();
+
+                Form formToPost = new Form()
+                        .param("query", queryString)
+                        .param("entity", "Tissue");
+
+                Response response = searchRequest.post(
+                        Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
+
+                SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
+
+                List<FimsSample> samples = transformQueryResults(tissueIds, result);
+
+                allSamples.addAll(samples);
             }
-            Query tissueQuery = Query.Factory.createOrQuery(tissueQueries, Collections.emptyMap());
-            String tissueIDsToQuery = buildQuery(tissueQuery);
-            String queryString =  tissueIDsToQuery + " _select_:[Tissue,Sample,Event]";
 
-            Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
-                    .queryParam("limit", 100000)
-                    .request();
-
-            Form formToPost = new Form()
-                    .param("query", queryString)
-                    .param("entity", "Tissue");
-
-            Response response = searchRequest.post(
-                    Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
-
-            SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
-
-            List<FimsSample> samples = transformQueryResults(tissueIds, result);
-            return samples;
+            return allSamples;
 
         } catch (DatabaseServiceException e) {
             throw new ConnectionException(e);
