@@ -1067,7 +1067,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if (consensus == null || seq.date == null) {
                 consensus = "";
             } else if (seq.progress == null || seq.progress.toLowerCase().contains("failed")) {
-                consensus = "";
+                //consensus = "";
                 description = "Sequencing failed for this well";
             }
             consensus = consensus.replace("-", "");

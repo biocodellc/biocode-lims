@@ -1,10 +1,7 @@
 <PluginVersions>
-    <LatestVersion>3.0.13</LatestVersion>
-    <LatestVersionURL>https://github.com/biocodellc/biocode-lims/releases/download/3.0.13/BiocodePlugin_3_0_12.gplugin</LatestVersionURL>
-    <ReleaseNotes>==Biocode Plugin 3.0.12 - 14 May 2019==
-       * Fixes bug in fetching tissues for plates
-       * Fixes "Already connected" exception occuring in Geneious v9
-       * Changed behaviour when creating new extractions that use existing extractions ID's
-    </ReleaseNotes>
+    <LatestVersion>3.0.15</LatestVersion>
+    <LatestVersionURL>https://github.com/biocodellc/biocode-lims/releases/download/3.0.15/BiocodePlugin_3_0_15.gplugin</LatestVersionURL>
+    <ReleaseNotes>==Biocode Plugin 3.0.15 - -24 Feb 2021==
+        </ReleaseNotes>
     <ExtraInformation/>
 </PluginVersions>
