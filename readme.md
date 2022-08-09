@@ -6,7 +6,7 @@ The Biocode LIMS is a Geneious plugin that comprises everything you need to mana
 * Official releases are available from our [releases page](https://github.com/biocodellc/biocode-lims/releases)
 * Official [Wiki Page](https://github.com/biocodellc/biocode-lims/wiki) for more information
 including the user guide.
-* Support email support@mooreabiocode.org
+* Support email geome.help@gmail.com
 * Information for developers on contributing to the Biocode LIMS plugin is on our [development page](https://github.com/biocodellc/biocode-lims/blob/develop/development.md)
  
 

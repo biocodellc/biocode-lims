@@ -48,7 +48,7 @@ public class BiocodePlugin extends GeneiousPlugin {
 
     private static GeneiousActionOptions superBiocodeAction;
     public static final String PLUGIN_VERSION = "3.0.15";
-    public static final String SUPPORT_EMAIL = "support@mooreabiocode.org";
+    public static final String SUPPORT_EMAIL = "geome.help@gmail.com";
 
     public static GeneiousActionOptions getSuperBiocodeAction() {
         if (superBiocodeAction == null) {

@@ -279,7 +279,7 @@ public class ReportGenerator {
                                 BiocodeUtilities.displayExceptionDialog("Error creating Chart", "<html>There has been an " +
                                         "error creating your report:<br><br>"+e1.getMessage()+"<br><br><b>If you believe " +
                                         "that this is a bug, please click <i>Show Details</i> below, and send the text along " +
-                                        "with a screenshot of your report options to support@mooreabiocode.org.</b></html>", e1, reportCombo);
+                                        "with a screenshot of your report options to geome.help@gmail.com.</b></html>", e1, reportCombo);
                                 setReportPanel(null);
                                 progress.setComplete();
                             } catch(Throwable e1) {
