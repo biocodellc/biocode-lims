@@ -23,11 +23,9 @@ import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import javax.sql.DataSource;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.*;
@@ -2899,7 +2897,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    public int addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason,
+    public int addAssembly(String passedString, String notes, String technician, FailureReason failureReason,
                            String failureNotes, boolean addChromatograms, AssembledSequence seq,
                            List<Integer> reactionIds, Cancelable cancelable) throws DatabaseServiceException {
         PreparedStatement statement = null;
@@ -2920,7 +2918,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
             statement.setString(1, seq.extractionId);
             statement.setInt(2, seq.workflowId);
-            statement.setString(3, isPass ? "passed" : "failed");
+            statement.setString(3, passedString);
             if (seq.consensus == null) {
                 statement.setNull(4, Types.LONGVARCHAR);
             } else {

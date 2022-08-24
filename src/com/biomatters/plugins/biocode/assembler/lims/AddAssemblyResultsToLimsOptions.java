@@ -24,7 +24,7 @@ public class AddAssemblyResultsToLimsOptions extends Options {
 
     private InputType inputType;
 
-    public AddAssemblyResultsToLimsOptions(AnnotatedPluginDocument[] documents, boolean passed) throws DocumentOperationException, DatabaseServiceException {
+    public AddAssemblyResultsToLimsOptions(AnnotatedPluginDocument[] documents, String passedString) throws DocumentOperationException, DatabaseServiceException {
         inputType = InputType.determineInputType(documents);
         if(inputType == InputType.MIXED) {
             throw new DocumentOperationException("This operation only works on documents of the same type.  " +
@@ -40,7 +40,7 @@ public class AddAssemblyResultsToLimsOptions extends Options {
             }
         }
 
-        if(passed) {
+        if(passedString == "passed") {
             String sequenceOrSequences = documents.length > 1 ||
                     inputType == InputType.ALIGNMENT_OF_CONSENSUS ? "sequences" : "sequence";
             StringBuilder message = new StringBuilder("The ");
@@ -63,7 +63,7 @@ public class AddAssemblyResultsToLimsOptions extends Options {
 
         Options details = new Options(AddAssemblyResultsToLimsOptions.class);
         details.addStringOption("technician", "Your name", "");
-        if(!passed) {
+        if(passedString == "failed") {
             reasonOption = FailureReason.addToOptions(details);
             details.addMultipleLineStringOption("reasonDetails", "Reason Details", "", 4, true);
         }

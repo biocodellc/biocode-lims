@@ -36,7 +36,7 @@ public class ReverseAssemblySequencesOperationTest extends LimsTestCase {
         LIMSConnection activeLIMSConnection = BiocodeService.getInstance().getActiveLIMSConnection();
 
         saveExtractionPCRAndForwardCycleSequencingPlatesToDatabase(BiocodeService.getInstance(), extractionID, locus);
-        activeLIMSConnection.addAssembly(true, "", "", null, "", false, createAssembledSequenceWithSuppliedFieldValuesAndZeroOrEmptyValuesForRestOfFields(assemblyID, workflowID, locus, sequence), Arrays.asList(assemblyID), ProgressListener.EMPTY);
+        activeLIMSConnection.addAssembly("passed", "", "", null, "", false, createAssembledSequenceWithSuppliedFieldValuesAndZeroOrEmptyValuesForRestOfFields(assemblyID, workflowID, locus, sequence), Arrays.asList(assemblyID), ProgressListener.EMPTY);
 
         AnnotatedPluginDocument annotatedSequenceDocument = DocumentUtilities.createAnnotatedPluginDocument(new DefaultNucleotideSequence("", "", sequence, new Date()));
         annotatedSequenceDocument.setFieldValue(LIMSConnection.SEQUENCE_ID, 1);

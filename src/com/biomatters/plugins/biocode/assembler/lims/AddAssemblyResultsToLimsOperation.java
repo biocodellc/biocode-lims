@@ -32,28 +32,45 @@ import java.util.*;
  */
 public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
-    private final boolean isPass;
+    private final String passedString;
     private final boolean isAutomated;
 
-    public AddAssemblyResultsToLimsOperation(boolean isPass, boolean isAutomated) {
-        this.isPass = isPass;
+    public AddAssemblyResultsToLimsOperation(String passedString, boolean isAutomated) {
+        this.passedString = passedString;
         this.isAutomated = isAutomated;
     }
 
     public GeneiousActionOptions getActionOptions() {
-        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions(isPass ? "Mark as Pass in LIMS..." : "Mark as Fail in LIMS...")
-                .setInPopupMenu(true, isPass ? 0.65 : 0.66).setProOnly(true);
+        double thisPassDouble = 0.65;
+        String thisPassDescription = "" +
+                "Mark as Pass in LIMS....";
+        if (passedString == "tentative")   {
+             thisPassDescription = "Mark as Tentative in LIMS....";
+             thisPassDouble = 0.66;
+        } else if (passedString == "failed") {
+            thisPassDescription = "Mark as Fail in LIMS....";
+            thisPassDouble = 0.67;
+        }
+
+        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions(thisPassDescription)
+                .setInPopupMenu(true, thisPassDouble).setProOnly(true);
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 
     public String getHelp() {
-        return "Select one or more sequences, contigs or alignments of contigs to mark them as " + (isPass ? "passed" : "failed") + " on the relevant workflows in " +
+        return "Select one or more sequences, contigs or alignments of contigs to mark them as " + passedString + " on the relevant workflows in " +
                 "the LIMS (labratory information management system).";
     }
 
     @Override
     public String getUniqueId() {
-        return isPass ? "MarkAssemblyAsPassInLims" : "MarkAssemblyAsFailInLims";
+        if (passedString == "passed") {
+            return "MarkAssemblyAsPassInLims";
+        } else if (passedString == "failed") {
+            return "MarkAssemblyAsFailInLims";
+        } else {
+            return "MarkAssemblyAsTentativeInLims";
+        }
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
@@ -79,7 +96,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
         try {
-            return new AddAssemblyResultsToLimsOptions(documents, isPass);
+            return new AddAssemblyResultsToLimsOptions(documents, passedString);
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException(e.getMessage(), e);
         }
@@ -102,7 +119,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 break;
             }
 
-            markDocumentPassedOrFailed(isPass, annotatedDocument);
+            markDocumentPassedOrFailed(passedString, annotatedDocument);
 
             AssemblyResult assemblyResult = new AssemblyResult();
 
@@ -131,7 +148,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             if (consensus == null && SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
                 consensus = (SequenceDocument) BiocodeUtilities.getConsensusSequence(annotatedDocument, options.getConsensusOptions()).getDocument();
             }
-            if (isPass && consensus == null) {
+            if (passedString == "passed" && consensus == null) {
                 assert false: "there should be a consensus here!";
             }
             int[] qualities = null;
@@ -164,11 +181,11 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
      * Saves the reaction status to a field on the document. This should handle consensus alignments, contigs, and
      * individual sequences (marking only the traces)
      *
-     * @param isPass pass or fail
+     * @param passedString pass or fail
      * @param document the document to mark
      * @throws DocumentOperationException
      */
-    private void markDocumentPassedOrFailed(boolean isPass, AnnotatedPluginDocument document) throws DocumentOperationException{
+    private void markDocumentPassedOrFailed(String passedString, AnnotatedPluginDocument document) throws DocumentOperationException{
         if(SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass())) {
             SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
             for(int i=0; i < alignment.getNumberOfSequences(); i++) {
@@ -177,20 +194,20 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 }
                 AnnotatedPluginDocument reference = alignment.getReferencedDocument(i);
                 if(reference != null) {
-                    markDocumentPassedOrFailed(isPass, reference);
+                    markDocumentPassedOrFailed(passedString, reference);
                 }
             }
             if (alignment.isContig()) {
-                updateReactionStatusField(isPass, document);
+                updateReactionStatusField(passedString, document);
             }
         }
         else {
-            updateReactionStatusField(isPass, document);
+            updateReactionStatusField(passedString, document);
         }
     }
 
-    private void updateReactionStatusField(boolean isPass, AnnotatedPluginDocument document) {
-        document.setFieldValue(BiocodeUtilities.REACTION_STATUS_FIELD, isPass ? "passed" : "failed");
+    private void updateReactionStatusField(String passField, AnnotatedPluginDocument document) {
+        document.setFieldValue(BiocodeUtilities.REACTION_STATUS_FIELD, passField);
         document.save();
     }
 
@@ -537,7 +554,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 seq.numberOfAmbiguities = assemblyResult.ambiguities;
                 seq.editRecord = assemblyResult.editRecord;
 
-                int seqId = limsConnection.addAssembly(isPass, options.getNotes(), options.getTechnician(),
+                int seqId = limsConnection.addAssembly(passedString, options.getNotes(), options.getTechnician(),
                         options.getFailureReason(), options.getFailureNotes(), options.isAddChromatograms(), seq, reactionIds, progress);
                 if(progress.isCanceled()) {
                     return null;
@@ -551,7 +568,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     }
                 }
 
-                attachChromats(limsConnection, isPass, options.isAddChromatograms(), assemblyResult, chromatogramExportOperation);
+                attachChromats(limsConnection, passedString, options.isAddChromatograms(), assemblyResult, chromatogramExportOperation);
             }
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("Failed to mark as pass/fail in LIMS: " + e.getMessage(), e);
@@ -574,7 +591,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
     }
 
     private static void attachChromats(LIMSConnection limsConnection,
-                                       boolean isPass,
+                                       String passedString,
                                        boolean addChromatograms,
                                        AddAssemblyResultsToLimsOperation.AssemblyResult result,
                                        BatchChromatogramExportOperation chromatogramExportOperation)
@@ -605,7 +622,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     }
                     entry.getKey().addSequences(traces);
                 }
-                entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
+                entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, passedString);
             }
         } catch (IOException e) {
             throw new DatabaseServiceException(e, "Failed to create temporary files and directories to export traces: " + e.getMessage(), false);

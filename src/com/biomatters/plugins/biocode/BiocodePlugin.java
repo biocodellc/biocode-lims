@@ -375,8 +375,9 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new VerifyTaxonomyOperation(),
                 new AnnotateLimsDataOperation(),
                 new AnnotateFimsDataOperation(),
-                new AddAssemblyResultsToLimsOperation(true, false),
-                new AddAssemblyResultsToLimsOperation(false, false),
+                new AddAssemblyResultsToLimsOperation("passed", false),
+                new AddAssemblyResultsToLimsOperation("failed", false),
+                new AddAssemblyResultsToLimsOperation("tentative", false),
                 new MarkSequencesAsSubmittedInLimsOperation(),
                 new GenerateBOLDTraceSubmissionOperation(),
                 new ReverseAssemblySequencesOperation()

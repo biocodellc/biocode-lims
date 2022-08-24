@@ -274,7 +274,7 @@ public class ServerLimsConnection extends LIMSConnection {
     }
 
     @Override
-    public int addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, AssembledSequence seq, List<Integer> reactionIds, Cancelable cancelable) throws DatabaseServiceException {
+    public int addAssembly(String isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, AssembledSequence seq, List<Integer> reactionIds, Cancelable cancelable) throws DatabaseServiceException {
         //not sure if this need batch
         try {
             WebTarget resource = target.path("sequences").
