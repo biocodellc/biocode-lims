@@ -3472,7 +3472,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             int count = set.getInt(1);
 
             if (count < ids.size()) {
-                throw new DatabaseServiceException("Some of the sequences you are marking are either not present in the database, or are marked as failed.  Please make sure that the sequences are present, and are passed before marking as submitted.", false);
+                throw new DatabaseServiceException("Some of the sequences you are marking are either not present in the database, or are marked as failed or tentative.  Please make sure that the sequences are present, and are passed before marking as submitted.", false);
             }
 
             StringBuilder updateString = new StringBuilder("UPDATE assembly SET submitted = ? WHERE id IN ");
