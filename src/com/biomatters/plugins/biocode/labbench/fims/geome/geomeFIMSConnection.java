@@ -91,7 +91,9 @@ public class geomeFIMSConnection extends FIMSConnection {
             }
 
         } catch (Exception e) {
-            throw new ConnectionException("Unable to connect to GeOMe: " + e.getStackTrace());
+            throw new ConnectionException("Unable to retrieve projects from GEOME.  This may be due either to " +
+                    "an invalid username/password combination or the user has not opted to retrieve public projects " +
+                    "and does not have access to any private projects  " + e.getStackTrace());
         }
     }
 
