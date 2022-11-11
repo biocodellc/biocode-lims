@@ -114,6 +114,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
                 throw new DocumentOperationException("Could not find any primer information for your traces.  " +
                         "This could be because they are not annotated with LIMS information or that matching reactions could not be found in the current LIMS.");
             }
+
             Set<String> docsMissingPrimers = new HashSet<String>();
             for (AnnotatedPluginDocument document : annotatedDocuments) {
                 if(traceEntries.get(document) == null) {
@@ -183,6 +184,14 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         Set<String> primers = new HashSet<String>();
         Set<String> loci = new HashSet<String>();
         for (TraceInfo value : values) {
+            // Set forward and reverse primer names to temporary names if they are null
+            if (value.forwardPcrPrimer == null) {
+                value.forwardPcrPrimer= "ENTER FORWARD PRIMER";
+            }
+            if (value.reversePcrPrimer == null) {
+                value.reversePcrPrimer = "ENTER REVERSE PRIMER";
+            }
+
             primers.add(value.forwardPcrPrimer);
             primers.add(value.reversePcrPrimer);
             if(!value.sequencingPrimer.isEmpty()) {  // Might be empty since it's a non required field
