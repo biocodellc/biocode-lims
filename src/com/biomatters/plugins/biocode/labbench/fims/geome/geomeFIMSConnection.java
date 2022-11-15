@@ -30,17 +30,17 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     public String getLabel() {
-        return "GeOMe FIMS";
+        return "GEOME FIMS";
     }
 
     @Override
     public String getName() {
-        return "GeOMe FIMS";
+        return "GEOME FIMS";
     }
 
     @Override
     public String getDescription() {
-        return "Connection to GeOMe (FIMS3) at https://geome-db.org/";
+        return "Connection to GEOME at https://api.geome-db.org/";
     }
 
     @Override

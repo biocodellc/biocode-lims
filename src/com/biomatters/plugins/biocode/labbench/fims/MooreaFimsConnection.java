@@ -68,7 +68,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     }
 
     public String getDescription() {
-        return "Connection to Moorea Biocode (FIMS1) at http://biocode.berkeley.edu/";
+        return "Connection to Moorea Biocode (legacy) http://biocode.berkeley.edu/";
     }
 
     public PasswordOptions getConnectionOptions() {
