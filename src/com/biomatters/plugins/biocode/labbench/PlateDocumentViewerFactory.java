@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 
 /**
@@ -26,6 +27,10 @@ public class PlateDocumentViewerFactory extends MultiPartDocumentViewerFactory{
         return new PlateDocumentViewer(pdoc, annotatedDocuments[0], annotatedDocuments[0].isInLocalRepository());
     }
 
+    @Override
+         public DocumentViewerFactory.ViewPrecedence getPrecedence() {
+             return  DocumentViewerFactory.ViewPrecedence.HIGHEST;
+         }
     @Override
     public String getHelp() {
         return "<p>The plate viewer shows a representation of your plate (or set of reactions).  The main view contains the plate itself, " +
