@@ -27,7 +27,8 @@ ext {
     shortName = "BiocodePlugin"
     pluginName = "com.biomatters.plugins.biocode." + shortName
     //pluginName = shortName + version
-    geneiousPublicAPIVersion = "11.1.5"
+    geneiousPublicAPIVersion = "2022.2.2"
+    //geneiousPublicAPIVersion = "11.1.5"
     //geneiousPublicAPIVersion = "2019.1.1"
     //geneiousPublicAPIVersion = "9.0.5"
     pluginDistFilename = "${shortName}_" + version.replaceAll("\\.", "_") + ".gplugin"
@@ -150,8 +151,8 @@ jar {
 }
 
 compileJava {
-    sourceCompatibility "1.8"
-    targetCompatibility "1.8"
+    sourceCompatibility "11"
+    targetCompatibility "11"
 }
 
 sourceSets {
