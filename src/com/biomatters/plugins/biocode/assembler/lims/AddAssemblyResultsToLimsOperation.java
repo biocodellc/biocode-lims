@@ -42,17 +42,20 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
     public GeneiousActionOptions getActionOptions() {
         double thisPassDouble = 0.65;
-        String thisPassDescription = "" +
+        String thisPassDescription = "Sequence has been checked for both quality and taxonomic accuracy and is ready for submission to public databases such as GenBank";
+        String thisPassHeading = "" +
                 "Mark as Pass in LIMS....";
         if (passedString == "tentative")   {
-             thisPassDescription = "Mark as Tentative in LIMS....";
+             thisPassHeading = "Mark as Tentative in LIMS....";
+             thisPassDescription = "Sequence has been checked only for quality - taxonomy is still under scrutiny.";
              thisPassDouble = 0.66;
         } else if (passedString == "failed") {
-            thisPassDescription = "Mark as Fail in LIMS....";
+            thisPassHeading = "Mark as Fail in LIMS....";
+            thisPassDescription = "Sequence has been checked for either quality and failed to meet barcode data standards, or for taxonomic accuracy and is a contaminent. It will not be pushed to public databases.";
             thisPassDouble = 0.67;
         }
 
-        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions(thisPassDescription)
+        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions(thisPassHeading,thisPassDescription)
                 .setInPopupMenu(true, thisPassDouble).setProOnly(true);
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
