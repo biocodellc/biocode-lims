@@ -258,14 +258,14 @@ public abstract class LIMSConnection {
             };
         } else if (String.class.equals(fieldClass)) {
             return new Condition[]{
-                    Condition.CONTAINS,
                     Condition.EQUAL,
+                    Condition.BEGINS_WITH,
+                    Condition.ENDS_WITH,
                     Condition.NOT_EQUAL,
+                    Condition.CONTAINS,
                     Condition.NOT_CONTAINS,
                     Condition.STRING_LENGTH_LESS_THAN,
-                    Condition.STRING_LENGTH_GREATER_THAN,
-                    Condition.BEGINS_WITH,
-                    Condition.ENDS_WITH
+                    Condition.STRING_LENGTH_GREATER_THAN
             };
         } else if (Date.class.equals(fieldClass)) {
             return new Condition[]{
