@@ -1,3 +1,16 @@
+==Biocode Plugin 3.0.17 - 21 November 2022 ==
+* updated ordering of search options to put search options that are faster at the top of the list. Helps user select options for faster searches
+* adding descriptive text to plugin dropdown menu 
+* implemented well sorting for sorting A01, B01, C01, etc...
+* updated list of working FIMS connections
+* upgraded development environnment to synchronize with geneious prime and java 11
+* fixed issue where BOLD export crashed when forward/reverse primer names were null. New behaviour asks user to name them prior to submission. 
+* fixed error messaging to be more descriptive if FIMS or LIMS connections do not work
+
+==Biocode Plugin 3.0.16 - 24 August 2022 ==
+* Update contact email for asking for help
+* Adding "tentative", in addition to "passed" or "failed". Tentative to be used in cases where we may still need to check taxonomy but sequence is OK. Note that you should not be able to submit as "passed" while in "tentative".
+
 ==Biocode Plugin 3.0.15 - 24 February 2021 ==
 * Fixes issues with large tissue queries against GEOME failing
 

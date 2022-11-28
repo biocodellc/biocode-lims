@@ -1,7 +1,7 @@
 <PluginVersions>
-    <LatestVersion>3.0.16</LatestVersion>
-    <LatestVersionURL>https://github.com/biocodellc/biocode-lims/releases/download/3.0.16/BiocodePlugin_3_0_16.gplugin</LatestVersionURL>
-    <ReleaseNotes>==Biocode Plugin 3.0.16 - -24 Aug 2022==
+    <LatestVersion>3.0.17</LatestVersion>
+    <LatestVersionURL>https://github.com/biocodellc/biocode-lims/releases/download/3.0.17/BiocodePlugin_3_0_17.gplugin</LatestVersionURL>
+    <ReleaseNotes>==Biocode Plugin 3.0.17 - -21 Nov 2022==
         </ReleaseNotes>
     <ExtraInformation/>
 </PluginVersions>

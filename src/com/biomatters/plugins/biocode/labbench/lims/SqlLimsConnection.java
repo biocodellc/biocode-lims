@@ -428,6 +428,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             dataSource.setUrl(connectionUrl);
             dataSource.setUsername(username);
             dataSource.setPassword(password);
+            dataSource.setDriverClassName("com.mysql.jdbc.Driver");
             return dataSource;
         }catch (Exception e) {
             throw new ConnectionException("problems connecting with LIMS database");
