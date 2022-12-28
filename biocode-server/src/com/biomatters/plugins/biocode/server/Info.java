@@ -77,7 +77,7 @@ public class Info {
         if(errors != null) {
             return "<p>The server configuration file is located at: " +
                     LIMSInitializationListener.getPropertiesFile().getAbsolutePath() + "</p>" +
-                    "<p>Please report any errors to support@mooreabiocode.org</p>" +
+                    "<p>Please report any errors to geome.help@gmail.com</p>" +
                     "<p>" + errors + "</p>";
         }
         return "";

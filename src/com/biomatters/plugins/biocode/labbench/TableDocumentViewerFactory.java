@@ -12,6 +12,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.SplitPaneListSelector;
 import com.biomatters.plugins.biocode.utilities.ObjectAndColor;
 import com.biomatters.plugins.biocode.utilities.TableExporter;
+import com.biomatters.plugins.biocode.wellUtilities;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -51,7 +52,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
     protected void messWithTheTable(JTable table, TableModel model) {
 
     }
-
+    
     protected int getColumnWidth(TableModel model, int column) {
         return -1;
     }
@@ -415,6 +416,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
     private static class ColumnHidingTableModel implements TableModel{
         private TableModel internalModel;
         private int[] visibleColumns;
+        private Integer wellColumnPosition = null;
         private java.util.List<TableModelListener> tableModelListeners;
 
         public ColumnHidingTableModel(TableModel internalModel, int[] visibleColumns) {
@@ -432,6 +434,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                             column = e.getColumn();
                         }
                         listener.tableChanged(new TableModelEvent(ColumnHidingTableModel.this, e.getFirstRow(), e.getLastRow(), column));
+                        assignWellColumnPosition();
                     }
                 }
             });
@@ -449,11 +452,25 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
             return visibleColumns;
         }
 
+        /**
+         * Assign the position of the well column based on column name
+         */
+        public void assignWellColumnPosition() {
+            wellColumnPosition = null;
+            for (int i = 0; i < getColumnCount(); i++) {
+                if (getColumnName(i).toString().equals("Well")) {
+                    wellColumnPosition = i;
+                }
+            }
+        }
+
         public void setVisibleColumns(int[] visibleColumns) {
             this.visibleColumns = visibleColumns;
             for(TableModelListener listener : tableModelListeners) {
+                assignWellColumnPosition();
                 listener.tableChanged(new TableModelEvent(this, TableModelEvent.HEADER_ROW));
             }
+
         }
 
         public int getRowCount() {
@@ -476,7 +493,22 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
             return internalModel.isCellEditable(rowIndex, visibleColumns[columnIndex]);
         }
 
+        /**
+         * before getting value of a cell, reformat the well value
+         * @param rowIndex
+         * @param columnIndex
+         * @return
+         */
         public Object getValueAt(int rowIndex, int columnIndex) {
+            if (wellColumnPosition == null) {
+                assignWellColumnPosition();
+            }
+            if (wellColumnPosition != null) {
+                if (columnIndex == wellColumnPosition) {
+                    String well = internalModel.getValueAt(rowIndex, visibleColumns[wellColumnPosition]).toString();
+                    return new wellUtilities(well).toPaddedString();
+                }
+            }
             return internalModel.getValueAt(rowIndex, visibleColumns[columnIndex]);
         }
 
@@ -515,6 +547,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                 Arrays.sort(newVisibleColumns);
             }
             setVisibleColumns(newVisibleColumns);
+            assignWellColumnPosition();
         }
 
         public boolean isColumnVisible(int col) {

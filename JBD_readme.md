@@ -15,4 +15,12 @@ there is probably a more elegant way to proceed here but this is what i've found
 # only run from the command line
 ```
 ./gradlew quickCreatePlugin
+ ```
+
+There may be errors related to running gradle from the command-line, in which case we want to invoke sdk-specific versions of gradle and/or java:
+
 ```
+sdk use java  11.0.17-amzn
+sdk use gradle 5.6.4
+```
+ 

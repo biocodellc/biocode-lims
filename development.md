@@ -53,7 +53,7 @@ depends on some Geneious core classes and this is not reflected in the Ivy confi
 In the gradle build, the complete Geneious runtime is downloaded and the required libraries are extracted from it.
 
 ## Contributing
-Please contact support@mooreabiocode.org
+Please contact geome.help@gmail.com
 
 ## Biocode LIMS Server 
 The Biocode LIMS server is an extension to the original LIMS that adds security, user management, access control and 

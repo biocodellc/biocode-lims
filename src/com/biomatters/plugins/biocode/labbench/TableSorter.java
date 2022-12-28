@@ -1,5 +1,7 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.plugins.biocode.wellUtilities;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
@@ -216,6 +218,10 @@ public class TableSorter extends AbstractTableModel {
         if (Comparable.class.isAssignableFrom(columnType)) {
             return COMPARABLE_COMAPRATOR;
         }
+        // The well column is stored as string but we want to sort it numerically
+        if(getColumnName(column).equals("Well"))  {
+            return COMPARABLE_COMAPRATOR;
+        }
         return LEXICAL_COMPARATOR;
     }
 
@@ -307,11 +313,28 @@ public class TableSorter extends AbstractTableModel {
                 } else if (o2 == null) {
                     comparison = 1;
                 } else {
-                    comparison = getComparator(column).compare(o1, o2);
+                    // well comparison
+                    if (getColumnName(column).equals("Well")) {
+                        Integer x1 = (Integer) ((new wellUtilities(o1.toString()))).number;
+                        Integer x2 = (Integer) ((new wellUtilities(o2.toString()))).number;
+
+                        int sComp = getComparator(column).compare((Integer)x1, (Integer)x2);
+
+                            if (sComp != 0) {
+                            return sComp;
+                        }
+                        String y1 = Character.toString(((new wellUtilities(o1.toString()))).letter);
+                        String y2 = Character.toString(((new wellUtilities(o2.toString()))).letter);
+                        return getComparator(column).compare(y1, y2);
+                    } else {
+                        comparison = getComparator(column).compare(o1, o2);
+                    }
                 }
                 if (comparison != 0) {
                     return directive.direction == DESCENDING ? -comparison : comparison;
                 }
+
+
             }
             return 0;
         }
@@ -360,7 +383,7 @@ public class TableSorter extends AbstractTableModel {
                     && modelToView != null) {
                 int viewIndex = getModelToView()[e.getFirstRow()];
                 fireTableChanged(new TableModelEvent(TableSorter.this, 
-                                                     viewIndex, viewIndex, 
+                                                     viewIndex, viewIndex,
                                                      column, e.getType()));
                 return;
             }

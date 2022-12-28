@@ -21,13 +21,12 @@ import com.google.common.collect.Multimap;
 import jebl.util.Cancelable;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
+import org.apache.commons.dbcp.BasicDataSource;
 
 import javax.sql.DataSource;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.*;
@@ -36,6 +35,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static java.util.stream.Collectors.joining;
 
 /**
  * An SQL based {@link LIMSConnection}
@@ -412,17 +413,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     /**
-     * Creates a {@link org.apache.commons.dbcp.BasicDataSource} using a custom ClassLoader.
-     * <p/>
-     * <b>Note</b>:This method is required because there is an older version of commons-dbcp in Geneious core class
-     * loader.  This
-     * means the class uses that class loader when looking for the JDBC driver class and cannot access the MySQL driver
-     * bundled in the Biocode plugin.
-     * <p/>
-     * We are unable to make use of {@link org.apache.commons.dbcp.BasicDataSource#setDriverClassLoader(ClassLoader)}
-     * because the version that is part of Geneious core is version 1.1 and does not have that method.
-     * </p>
-     * So we are forced to create a custom class loader that only has access to the plugin classes and libraries.
+     * Connect to LIMS database
      *
      * @param connectionUrl The URL to connect to
      * @param username
@@ -430,70 +421,20 @@ public abstract class SqlLimsConnection extends LIMSConnection {
      *
      * @throws com.biomatters.plugins.biocode.labbench.ConnectionException
      */
-    public static DataSource createBasicDataSource(String connectionUrl, Driver driver, String username, String password) throws ConnectionException {
+    public static DataSource createBasicDataSource(String connectionUrl, String username, String password) throws ConnectionException {
 
-        ClassLoader pluginClassLoader = SqlLimsConnection.class.getClassLoader();
-        if (pluginClassLoader instanceof URLClassLoader) {
-            URLClassLoader urlClassLoader = (URLClassLoader) pluginClassLoader;
-            URL rootResource = urlClassLoader.getResource(".");
-            System.out.println(rootResource);
-            // We need DBCP including dependencies as well as the two JDBC drivers.
-            // See http://commons.apache.org/proper/commons-dbcp/dependencies.html for dependencies.
-            List<Dependency> required = Arrays.asList(
-                    new Dependency("commons-dbcp", "1.4"),
-                    new Dependency("commons-logging", "1.1.1"),
-                    new Dependency("commons-pool", "1.6"),
-                    new Dependency("mysql-connector-java", "5.1.6"),
-                    new Dependency("hsqldb", "2.3.0")
-            );
-            List<URL> urlsOfJar = new ArrayList<URL>();
-            for (URL url : (urlClassLoader).getURLs()) {
-                for (Dependency toCheckAgainst : required) {
-                    if (url.toString().contains(toCheckAgainst.name) && url.toString().contains(toCheckAgainst.version)) {
-                        urlsOfJar.add(url);
-                    }
-                }
-            }
-            ClassLoader bootstrapClassLoader = ClassLoader.getSystemClassLoader().getParent();
-            if (bootstrapClassLoader == null) {
-                throw new IllegalStateException("Expected system class loader to have a parent");
-            }
-            // We specify the parent class loader of our new one as the bootstrap classloader so it wont' be able to load
-            // Geneious core classes.
-            URLClassLoader classLoaderForPluginLibsOnly = new URLClassLoader(urlsOfJar.toArray(new URL[1]), bootstrapClassLoader);
-
-            try {
-                Class<?> dataSourceClass = classLoaderForPluginLibsOnly.loadClass("org.apache.commons.dbcp.BasicDataSource");
-                DataSource dataSource = (DataSource) dataSourceClass.newInstance();
-                // We have to use reflection here because we can't cast the class we created to the one loaded by Geneious core
-                dataSourceClass.getDeclaredMethod("setDriverClassName", String.class).invoke(dataSource, driver.getClass().getName());
-                dataSourceClass.getDeclaredMethod("setUrl", String.class).invoke(dataSource, connectionUrl);
-                if (username != null) {
-                    dataSourceClass.getDeclaredMethod("setUsername", String.class).invoke(dataSource, username);
-                }
-                if (password != null) {
-                    dataSourceClass.getDeclaredMethod("setPassword", String.class).invoke(dataSource, password);
-                }
-
-                if (Geneious.isHeadless()) {
-                    dataSourceClass.getDeclaredMethod("setMaxActive", int.class).invoke(dataSource, 25);
-                }
-                return dataSource;
-            } catch (ClassNotFoundException e) {
-                throw new ConnectionException("Failed to load data source. Missing library.", e);
-            } catch (InstantiationException e) {
-                throw new ConnectionException("Cannot construct BasicDataSource", e);
-            } catch (IllegalAccessException e) {
-                throw new ConnectionException("Failed to load data source.", e);
-            } catch (NoSuchMethodException e) {
-                throw new ConnectionException("Failed to load data source.", e);
-            } catch (InvocationTargetException e) {
-                throw new ConnectionException("Failed to load data source.", e);
-            }
-        } else {
-            throw new IllegalStateException("Expected plugin class loader to be a URLClassLoader, was " + pluginClassLoader.getClass().getSimpleName());
+        try {
+            BasicDataSource dataSource = new BasicDataSource();
+            dataSource.setUrl(connectionUrl);
+            dataSource.setUsername(username);
+            dataSource.setPassword(password);
+            dataSource.setDriverClassName("com.mysql.jdbc.Driver");
+            return dataSource;
+        }catch (Exception e) {
+            throw new ConnectionException("problems connecting with LIMS database");
         }
     }
+
 
     /**
      * @return true if this implementation supports automatically upgrading the database
@@ -2899,7 +2840,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    public int addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason,
+    public int addAssembly(String passedString, String notes, String technician, FailureReason failureReason,
                            String failureNotes, boolean addChromatograms, AssembledSequence seq,
                            List<Integer> reactionIds, Cancelable cancelable) throws DatabaseServiceException {
         PreparedStatement statement = null;
@@ -2920,7 +2861,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
             statement.setString(1, seq.extractionId);
             statement.setInt(2, seq.workflowId);
-            statement.setString(3, isPass ? "passed" : "failed");
+            statement.setString(3, passedString);
             if (seq.consensus == null) {
                 statement.setNull(4, Types.LONGVARCHAR);
             } else {
@@ -3474,7 +3415,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             int count = set.getInt(1);
 
             if (count < ids.size()) {
-                throw new DatabaseServiceException("Some of the sequences you are marking are either not present in the database, or are marked as failed.  Please make sure that the sequences are present, and are passed before marking as submitted.", false);
+                throw new DatabaseServiceException("Some of the sequences you are marking are either not present in the database, or are marked as failed or tentative.  Please make sure that the sequences are present, and are passed before marking as submitted.", false);
             }
 
             StringBuilder updateString = new StringBuilder("UPDATE assembly SET submitted = ? WHERE id IN ");
@@ -3665,4 +3606,5 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     static boolean isGrantStringForMySQLDatabase(String grantString, String databaseName, String tableName) {
         return grantString.matches("GRANT.*ON\\s+(`?((" + databaseName + ")|%|\\*)`?\\.)?`?(\\*|" + tableName + ")`?\\s+TO.*");
     }
+    
 }

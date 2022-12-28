@@ -6,6 +6,7 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
+import org.apache.commons.dbcp.BasicDataSource;
 
 import javax.naming.NamingException;
 import javax.sql.DataSource;
@@ -45,7 +46,8 @@ public class MysqlLIMSConnection extends SqlLimsConnection {
             String connectionString = "jdbc:mysql://" + serverUrn + "/" + schema;
             serverUrn += "/" + schema;
             String password = ((PasswordOption) LIMSOptions.getOption("password")).getPassword();
-            return createBasicDataSource(connectionString, BiocodeService.getInstance().getDriver(), username, password);
+
+            return createBasicDataSource(connectionString, username, password);
         }
     }
 

@@ -19,7 +19,7 @@ plugins {
 apply plugin: "java"
 apply plugin: "idea"
 
-version = '3.0.15'
+version = '3.0.18'
 
 defaultTasks 'createPlugin';
 
@@ -27,7 +27,8 @@ ext {
     shortName = "BiocodePlugin"
     pluginName = "com.biomatters.plugins.biocode." + shortName
     //pluginName = shortName + version
-    geneiousPublicAPIVersion = "11.1.5"
+    geneiousPublicAPIVersion = "2022.2.2"
+    //geneiousPublicAPIVersion = "11.1.5"
     //geneiousPublicAPIVersion = "2019.1.1"
     //geneiousPublicAPIVersion = "9.0.5"
     pluginDistFilename = "${shortName}_" + version.replaceAll("\\.", "_") + ".gplugin"
@@ -40,7 +41,7 @@ repositories {
     ivy {
         url "http://assets.geneious.com/developer/geneious/ivy"
         layout "pattern", {
-            ivy "[organisation]/[module]/ivys/ivy-[revision].xml"
+		    ivy "[organisation]/[module]/ivys/ivy-[revision].xml"
             artifact "[organisation]/[module]/[type]s/[artifact]-[revision].[ext]"
         }
     }
@@ -72,7 +73,7 @@ dependencies {
     compile group: "commons-dbcp", name:"commons-dbcp", version:"1.4"
     compile group: "commons-pool", name:"commons-pool", version:"1.6"
     compile group: "commons-beanutils", name:"commons-beanutils", version:"1.9.2"
-    compile group: "mysql", name:"mysql-connector-java", version:"5.1.6"
+    compile group: "mysql", name:"mysql-connector-java", version:"8.0.22"
 
     compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.8'
     compile group: 'commons-httpclient', name: 'commons-httpclient', version: '3.1'
@@ -150,8 +151,8 @@ jar {
 }
 
 compileJava {
-    sourceCompatibility "1.8"
-    targetCompatibility "1.8"
+    sourceCompatibility "11"
+    targetCompatibility "11"
 }
 
 sourceSets {

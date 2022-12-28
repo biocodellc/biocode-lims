@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
+import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.reaction.Cocktail;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
@@ -59,6 +60,10 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
         };
     }
 
+    @Override
+           public DocumentViewerFactory.ViewPrecedence getPrecedence() {
+               return  ViewPrecedence.LOW;
+           }
     private static class PrimerIdentifier{
         public enum Type {
             forward,

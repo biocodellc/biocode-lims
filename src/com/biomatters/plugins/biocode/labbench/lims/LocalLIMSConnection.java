@@ -58,7 +58,7 @@ public class LocalLIMSConnection extends SqlLimsConnection {
             throw new ConnectionException(e.getMessage(), e);
         }
         String connectionString = "jdbc:hsqldb:file:" + path + ";shutdown=true";
-        return createBasicDataSource(connectionString, BiocodeService.getInstance().getLocalDriver(), null, null);
+        return createBasicDataSource(connectionString, null, null);
     }
 
     static String getDbPath(String newDbName) throws IOException {

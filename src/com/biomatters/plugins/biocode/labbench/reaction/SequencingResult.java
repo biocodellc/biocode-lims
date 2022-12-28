@@ -42,8 +42,9 @@ public class SequencingResult implements XMLSerializable {
 
     enum Status {
         PASS("passed", "<html><font color=\"green\"><strong>PASS</strong></font></html>"),
-        FAIL("failed", "<html><font color=\"red\"><strong>FAIL</strong></font></html>");
-
+        FAIL("failed", "<html><font color=\"red\"><strong>FAIL</strong></font></html>"),
+        TENTATIVE("tentative", "<html><font color=\"orange\"><strong>TENTATIVE</strong></font></html>");
+        
         String databaseString;
         String htmlString;
 

@@ -35,7 +35,7 @@ public class TissueSampleViewerFactory extends DocumentViewerFactory{
 
     @Override
     public ViewPrecedence getPrecedence() {
-        return taxonomy ? ViewPrecedence.HIGH : ViewPrecedence.HIGHEST;
+        return taxonomy ? ViewPrecedence.MEDIUM : ViewPrecedence.MEDIUM_HIGH;
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
