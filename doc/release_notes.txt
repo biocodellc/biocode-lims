@@ -1,3 +1,6 @@
+==Biocode Plugin 3.0.18 - 27 December 2022 ==
+* Improves performance in browsing plates by limiting the set of metadata fields
+
 ==Biocode Plugin 3.0.17 - 21 November 2022 ==
 * updated ordering of search options to put search options that are faster at the top of the list. Helps user select options for faster searches
 * adding descriptive text to plugin dropdown menu 

@@ -19,7 +19,7 @@ plugins {
 apply plugin: "java"
 apply plugin: "idea"
 
-version = '3.0.17'
+version = '3.0.18'
 
 defaultTasks 'createPlugin';
 
@@ -41,7 +41,7 @@ repositories {
     ivy {
         url "http://assets.geneious.com/developer/geneious/ivy"
         layout "pattern", {
-            ivy "[organisation]/[module]/ivys/ivy-[revision].xml"
+		    ivy "[organisation]/[module]/ivys/ivy-[revision].xml"
             artifact "[organisation]/[module]/[type]s/[artifact]-[revision].[ext]"
         }
     }

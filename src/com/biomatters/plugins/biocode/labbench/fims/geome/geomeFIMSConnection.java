@@ -75,21 +75,119 @@ public class geomeFIMSConnection extends FIMSConnection {
 
             List<String> taxonomyFieldNames = Arrays.asList("urn:kingdom", "urn:phylum", "urn:subphylum", "urn:superClass", "urn:class", "urn:infraClass", "urn:subclass", "urn:superOrder", "urn:order", "urn:infraOrder", "urn:suborder", "urn:superFamily", "urn:family", "urn:subfamily", "urn:genus", "urn:subGenus", "urn:tribe", "urn:subTribe", "urn:species", "urn:subSpecies");
 
+            //TODO: come up with a better way to manage constrained fields
+            // Here we just name the most common GEOME Fields that we use in the LIMS 
+            // application.  More ideally is a list of all non-null fields, but those are only returned AFTER
+            // a query.  Another approach is to return just the fields of a project but we can query across
+            // multiple projects and that could be very many fields.
+
+            String[] arrayFields = {"urn:eventID",
+                    "urn:principalInvestigator",
+                    "urn:samplingProtocol",
+                    "urn:sampleCollectionDevicee",
+                    "urn:recordedBy",
+                    "urn:continentOcean",
+                    "urn:country",
+                    "urn:county",
+                    "urn:dayCollected",
+                    "urn:decimalLatitude",
+                    "urn:decimalLongitude",
+                    "urn:enteredBy",
+                    "urn:habitat",
+                    "urn:environmentalMedium",
+                    "urn:island",
+                    "urn:locality",
+                    "urn:maximumDepthInMeters",
+                    "urn:maximumDistanceAboveSurfaceInMeters",
+                    "urn:coordinateUncertaintyInMeters",
+                    "urn:microHabitat",
+                    "urn:minimumDepthInMeters",
+                    "urn:minimumDistanceAboveSurfaceInMeters",
+                    "urn:monthCollected",
+                    "urn:permitInformation",
+                    "urn:eventRemarks",
+                    "urn:stateProvince",
+                    "urn:taxTeam",
+                    "urn:yearCollected",
+                    "urn:fixative",
+                    "urn:sampleOwnerInstitutionCode",
+                    "urn:collectionCode",
+                    "urn:preparations",
+                    "urn:preservative",
+                    "urn:relaxant",
+                    "urn:license",
+                    "urn:EnteredBy",
+                    "urn:catalogNumber",
+                    "urn:boldBIN",
+                    "urn:fieldNumber",
+                    "urn:genbankSpecimenVoucher",
+                    "urn:otherCatalogNumbers",
+                    "urn:materialSampleID",
+                    "urn:occurrenceID",
+                    "urn:subProject",
+                    "urn:subSubProject",
+                    "urn:boldProcessID",
+                    "urn:voucherURI",
+                    "urn:establishmentMeans",
+                    "urn:vernacularName",
+                    "urn:dayIdentified",
+                    "urn:basisOfRecord",
+                    "urn:family",
+                    "urn:genus",
+                    "urn:identifiedBy",
+                    "urn:infraClass",
+                    "urn:infraOrder",
+                    "urn:kingdom",
+                    "urn:lifeStage",
+                    "urn:taxonRank",
+                    "urn:order",
+                    "urn:phylum",
+                    "urn:scientificName",
+                    "urn:sex",
+                    "urn:species",
+                    "urn:subclass",
+                    "urn:subfamily",
+                    "urn:subGenus",
+                    "urn:suborder",
+                    "urn:subphylum",
+                    "urn:subSpecies",
+                    "urn:subTribe",
+                    "urn:superClass",
+                    "urn:superFamily",
+                    "urn:superOrder",
+                    "urn:tribe",
+                    "urn:wormsID",
+                    "urn:yearIdentified",
+                    "urn:tissueID",
+                    "urn:geneticTissueType",
+                    "urn:plateID",
+                    "urn:wellID",
+                    "urn:tissueInstitution",
+                    "urn:tissueOtherCatalogNumbers",
+                    "urn:tissuePreservative",
+                    "urn:associatedSequences",
+                    "urn:biosampleAccession"};
+            List<String> allFieldNames = Arrays.asList(arrayFields);
+
+
             for (ProjectConfig.Entity entity : config.entities) {
                 if (!Arrays.asList("Tissue", "Event", "Sample").contains(entity.conceptAlias)) {
                     continue;
                 }
                 for (Project.Field attribute : entity.attributes) {
-                    allAttributes.put(attribute.uri, attribute.asDocumentField());
-                    if (taxonomyFieldNames.contains(attribute.uri)) {
-                        taxonomyAttributes.put(attribute.uri, attribute.asDocumentField());
-                    } else {
-                        collectionAttributes.put(attribute.uri, attribute.asDocumentField());
+                    if (allFieldNames
+                            .stream()
+                            .filter(x -> x.contains(attribute.uri))
+                            .collect(Collectors.toList()).size() > 0) {
+                        allAttributes.put(attribute.uri, attribute.asDocumentField());
+                        if (taxonomyFieldNames.contains(attribute.uri)) {
+                            taxonomyAttributes.put(attribute.uri, attribute.asDocumentField());
+                        } else {
+                            collectionAttributes.put(attribute.uri, attribute.asDocumentField());
+                        }
                     }
                 }
-
             }
-
         } catch (Exception e) {
             throw new ConnectionException("Unable to retrieve projects from GEOME.  This may be due either to " +
                     "an invalid username/password combination or the user has not opted to retrieve public projects " +
@@ -204,6 +302,7 @@ public class geomeFIMSConnection extends FIMSConnection {
 //                .queryParam("_projects_:", projectIds)
                 .queryParam("entity", "Tissue")
                 .queryParam("limit", 100000)
+                .queryParam("includeEmptyProperties", "false")
                 .queryParam("q", "_select_:[Event,Sample,Tissue] " + queryString)
                 .request();
         Response response = searchRequest.get();
@@ -390,7 +489,7 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback rc) throws ConnectionException {
-  
+
         try {
 
             // Strip out empty tissue IDs -- they will make queries to Geome fail parser check
@@ -407,7 +506,7 @@ public class geomeFIMSConnection extends FIMSConnection {
 
             // Here we loop queries to GEOME in chunks of 1000 records each 
             int chunk = 1000; // chunk size to divide
-            for(int cnt=0;cnt<trimmedTissueIds.length;cnt+=chunk) {
+            for (int cnt = 0; cnt < trimmedTissueIds.length; cnt += chunk) {
                 Object[] trimmedTissueIdsChunk = Arrays.copyOfRange(trimmedTissueIds, cnt, Math.min(trimmedTissueIds.length, cnt + chunk));
 
                 //System.out.println("Downloading " + cnt + " of " + trimmedTissueIds.length);
@@ -421,6 +520,7 @@ public class geomeFIMSConnection extends FIMSConnection {
                 String queryString = tissueIDsToQuery + " _select_:[Tissue,Sample,Event]";
 
                 Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
+                        .queryParam("includeEmptyProperties", "false")
                         .queryParam("limit", chunk)
                         .request();
 
@@ -428,9 +528,15 @@ public class geomeFIMSConnection extends FIMSConnection {
                         .param("query", queryString)
                         .param("entity", "Tissue");
 
-                Response response = searchRequest.post(
-                        Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
+                // was APPLICATION_FORM_URLENCODED_TYPE
+                Entity<Form> formEntity = Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED);
 
+                // this line is REALLY slow and the reason for pauses when downloading data (slower than equivalent curl)
+                // The only difference between this request and curl is content-length of a sample query here is 108
+                // while the same content-length in curl is 3555.  I read a comment in stack-overflow that this
+                // could be the issue with slowness, however, i'm not able to set content-length encoding as a param
+                Response response = searchRequest.post(formEntity);
+                
                 SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
 
                 List<FimsSample> samples = transformQueryResults(tissueIds, result);
@@ -630,7 +736,6 @@ public class geomeFIMSConnection extends FIMSConnection {
      *
      * @param country
      * @param locality
-     *
      * @return
      */
     private String getGenbankCountryValue(String country, String locality) {
@@ -672,7 +777,6 @@ public class geomeFIMSConnection extends FIMSConnection {
      * @param yearCollected
      * @param monthCollected
      * @param dayCollected
-     *
      * @return
      */
     private String getGenbankCollectionDate(String yearCollected, String monthCollected, String dayCollected) {
