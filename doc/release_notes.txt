@@ -1,3 +1,6 @@
+==Biocode Plugin 3.0.19 - 15 July 2023 ==
+* Connects to gall database with work-around setting for providing serverTimezone connection
+
 ==Biocode Plugin 3.0.18 - 27 December 2022 ==
 * Improves performance in browsing plates by limiting the set of metadata fields
 

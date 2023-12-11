@@ -44,6 +44,14 @@ public class MysqlLIMSConnection extends SqlLimsConnection {
             serverUrn = LIMSOptions.getValueAsString("server") + ":" + LIMSOptions.getValueAsString("port");
             schema = LIMSOptions.getValueAsString("database");
             String connectionString = "jdbc:mysql://" + serverUrn + "/" + schema;
+            // gall server has not been updated with regions/timezones
+            // see https://help.geneious.com/hc/en-us/articles/360045884552-MySQL-Shared-Database-error-The-server-timezone-value-is-unrecognized
+            // add servertimezone for gall
+            if (serverUrn.contains("gall")) {
+                connectionString += "?serverTimezone=UTC";
+            }
+
+
             serverUrn += "/" + schema;
             String password = ((PasswordOption) LIMSOptions.getOption("password")).getPassword();
 

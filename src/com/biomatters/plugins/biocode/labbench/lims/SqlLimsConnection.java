@@ -3606,5 +3606,4 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     static boolean isGrantStringForMySQLDatabase(String grantString, String databaseName, String tableName) {
         return grantString.matches("GRANT.*ON\\s+(`?((" + databaseName + ")|%|\\*)`?\\.)?`?(\\*|" + tableName + ")`?\\s+TO.*");
     }
-    
 }
