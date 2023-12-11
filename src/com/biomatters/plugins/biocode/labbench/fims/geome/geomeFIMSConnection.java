@@ -81,92 +81,27 @@ public class geomeFIMSConnection extends FIMSConnection {
             // a query.  Another approach is to return just the fields of a project but we can query across
             // multiple projects and that could be very many fields.
 
-            String[] arrayFields = {"urn:eventID",
-                    "urn:principalInvestigator",
-                    "urn:samplingProtocol",
-                    "urn:sampleCollectionDevicee",
-                    "urn:recordedBy",
-                    "urn:continentOcean",
-                    "urn:country",
-                    "urn:county",
-                    "urn:dayCollected",
-                    "urn:decimalLatitude",
-                    "urn:decimalLongitude",
-                    "urn:enteredBy",
-                    "urn:habitat",
-                    "urn:environmentalMedium",
-                    "urn:island",
-                    "urn:locality",
-                    "urn:maximumDepthInMeters",
-                    "urn:maximumDistanceAboveSurfaceInMeters",
-                    "urn:coordinateUncertaintyInMeters",
-                    "urn:microHabitat",
-                    "urn:minimumDepthInMeters",
-                    "urn:minimumDistanceAboveSurfaceInMeters",
-                    "urn:monthCollected",
-                    "urn:permitInformation",
-                    "urn:eventRemarks",
-                    "urn:stateProvince",
-                    "urn:taxTeam",
-                    "urn:yearCollected",
-                    "urn:fixative",
-                    "urn:sampleOwnerInstitutionCode",
-                    "urn:collectionCode",
-                    "urn:preparations",
-                    "urn:preservative",
-                    "urn:relaxant",
-                    "urn:license",
-                    "urn:EnteredBy",
-                    "urn:catalogNumber",
-                    "urn:boldBIN",
-                    "urn:fieldNumber",
-                    "urn:genbankSpecimenVoucher",
-                    "urn:otherCatalogNumbers",
-                    "urn:materialSampleID",
-                    "urn:occurrenceID",
-                    "urn:subProject",
-                    "urn:subSubProject",
-                    "urn:boldProcessID",
-                    "urn:voucherURI",
-                    "urn:establishmentMeans",
-                    "urn:vernacularName",
-                    "urn:dayIdentified",
-                    "urn:basisOfRecord",
-                    "urn:family",
-                    "urn:genus",
-                    "urn:identifiedBy",
-                    "urn:infraClass",
-                    "urn:infraOrder",
-                    "urn:kingdom",
-                    "urn:lifeStage",
-                    "urn:taxonRank",
-                    "urn:order",
-                    "urn:phylum",
-                    "urn:scientificName",
-                    "urn:sex",
-                    "urn:species",
-                    "urn:subclass",
-                    "urn:subfamily",
-                    "urn:subGenus",
-                    "urn:suborder",
-                    "urn:subphylum",
-                    "urn:subSpecies",
-                    "urn:subTribe",
-                    "urn:superClass",
-                    "urn:superFamily",
-                    "urn:superOrder",
-                    "urn:tribe",
-                    "urn:wormsID",
-                    "urn:yearIdentified",
-                    "urn:tissueID",
-                    "urn:geneticTissueType",
-                    "urn:plateID",
-                    "urn:wellID",
-                    "urn:tissueInstitution",
-                    "urn:tissueOtherCatalogNumbers",
-                    "urn:tissuePreservative",
-                    "urn:associatedSequences",
-                    "urn:biosampleAccession"};
+            String[] arrayFields = {
+                    "urn:eventID", "urn:principalInvestigator", "urn:samplingProtocol", "urn:sampleCollectionDevicee",
+                    "urn:recordedBy", "urn:continentOcean", "urn:country", "urn:county", "urn:dayCollected",
+                    "urn:decimalLatitude", "urn:decimalLongitude", "urn:enteredBy", "urn:habitat", "urn:environmentalMedium",
+                    "urn:island", "urn:locality", "urn:maximumDepthInMeters", "urn:maximumDistanceAboveSurfaceInMeters",
+                    "urn:coordinateUncertaintyInMeters", "urn:microHabitat", "urn:minimumDepthInMeters",
+                    "urn:minimumDistanceAboveSurfaceInMeters", "urn:monthCollected", "urn:permitInformation",
+                    "urn:eventRemarks", "urn:stateProvince", "urn:taxTeam", "urn:yearCollected",
+                    "urn:fixative", "urn:sampleOwnerInstitutionCode", "urn:collectionCode", "urn:preparations",
+                    "urn:preservative", "urn:relaxant", "urn:license", "urn:EnteredBy", "urn:catalogNumber",
+                    "urn:boldBIN", "urn:fieldNumber", "urn:genbankSpecimenVoucher", "urn:otherCatalogNumbers",
+                    "urn:materialSampleID", "urn:occurrenceID", "urn:subProject", "urn:subSubProject",
+                    "urn:boldProcessID", "urn:voucherURI", "urn:establishmentMeans", "urn:vernacularName",
+                    "urn:dayIdentified", "urn:basisOfRecord", "urn:family", "urn:genus", "urn:identifiedBy",
+                    "urn:class", "urn:infraClass", "urn:infraOrder", "urn:kingdom", "urn:lifeStage", "urn:taxonRank",
+                    "urn:order", "urn:phylum", "urn:scientificName", "urn:sex", "urn:species", "urn:subclass",
+                    "urn:subfamily", "urn:subGenus", "urn:suborder", "urn:subphylum", "urn:subSpecies",
+                    "urn:subTribe", "urn:superClass", "urn:superFamily", "urn:superOrder", "urn:tribe",
+                    "urn:wormsID", "urn:yearIdentified", "urn:tissueID", "urn:geneticTissueType",
+                    "urn:plateID", "urn:wellID", "urn:tissueInstitution", "urn:tissueOtherCatalogNumbers",
+                    "urn:tissuePreservative", "urn:associatedSequences", "urn:biosampleAccession", "urn:voucherCatalogNumber", "urn:tissueStorageID"};
             List<String> allFieldNames = Arrays.asList(arrayFields);
 
 
@@ -187,6 +122,7 @@ public class geomeFIMSConnection extends FIMSConnection {
                         }
                     }
                 }
+
             }
         } catch (Exception e) {
             throw new ConnectionException("Unable to retrieve projects from GEOME.  This may be due either to " +
@@ -534,7 +470,7 @@ public class geomeFIMSConnection extends FIMSConnection {
                 // this line is REALLY slow and the reason for pauses when downloading data (slower than equivalent curl)
                 // The only difference between this request and curl is content-length of a sample query here is 108
                 // while the same content-length in curl is 3555.  I read a comment in stack-overflow that this
-                // could be the issue with slowness, however, i'm not able to set content-length encoding as a param
+                // could be the issue slowness, however, i'm not able to set content-length encoding as a param
                 Response response = searchRequest.post(formEntity);
                 
                 SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
@@ -695,7 +631,9 @@ public class geomeFIMSConnection extends FIMSConnection {
     private String getGenbankLatLong(String latText, String lngText) {
         StringBuilder latLongSb = new StringBuilder();
 
-        if (!latText.equals("") &&
+        if (    latText != null &&
+                lngText != null &&
+                !latText.equals("") &&
                 !lngText.equals("")) {
 
             try {
