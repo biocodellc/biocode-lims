@@ -335,7 +335,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     private void populateFailureReasons(ConnectionWrapper connection) throws SQLException {
         PreparedStatement getFailureReasons = null;
         try {
-            getFailureReasons = connection.prepareStatement("SELECT * FROM failure_reason");
+            getFailureReasons = connection.prepareStatement("SELECT * FROM failure_reason ORDER BY CHAR_LENGTH(name)");
             ResultSet resultSet = getFailureReasons.executeQuery();
             failureReasons = new ArrayList<FailureReason>(FailureReason.getPossibleListFromResultSet(resultSet));
         } finally {
