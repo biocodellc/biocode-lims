@@ -11,13 +11,18 @@ import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.StringUtils;
+import okhttp3.*;
 
 
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.*;
+//import javax.ws.rs.client.Entity;
+//import javax.ws.rs.client.Invocation;
+//import javax.ws.rs.client.WebTarget;
+//import javax.ws.rs.core.*;
+
+import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -27,6 +32,7 @@ public class geomeFIMSConnection extends FIMSConnection {
     private static final String HOST = "api.geome-db.org";
     public static final String GEOME_URL = "https://" + HOST;
     private geomeFIMSClient client;
+    private String credentials;
 
     @Override
     public String getLabel() {
@@ -60,6 +66,8 @@ public class geomeFIMSConnection extends FIMSConnection {
         try {
             String username = fimsOptions.getUserName();
             String password = fimsOptions.getPassword();
+             credentials = Credentials.basic(username, password);
+
             client.login(username, password);
             projects = client.getProjects(fimsOptions.includePublicProjects());
             if (projects.isEmpty()) {
@@ -68,9 +76,20 @@ public class geomeFIMSConnection extends FIMSConnection {
 
             // for (Project project : projects) {
             // Invocation.Builder configRequest = client.getQueryTarget().path("projects").path(String.valueOf(project.id)).path("config").request();
-            Invocation.Builder configRequest = client.getQueryTarget().path("network").path("config").request();
+            //Invocation.Builder configRequest = client.getQueryTarget().path("network").path("config").request();
+            HttpUrl url = client.getQueryTarget() // get the base URL
+                .newBuilder()
+                .addPathSegment("network") // append "network" to the URL
+                .addPathSegment("config")  // append "config" to the URL
+                .build();
 
-            Response response = configRequest.get();
+            // Create the request using OkHttp's Request.Builder
+            Request configRequest = new Request.Builder()
+                .url(url) // Set the URL
+                .get()    // Specify the HTTP method (GET in this case)
+                .build();
+
+            Response response = client.client.newCall(configRequest).execute();
             ProjectConfig config = geomeFIMSClient.getRestServiceResult(ProjectConfig.class, response);
 
             List<String> taxonomyFieldNames = Arrays.asList("urn:kingdom", "urn:phylum", "urn:subphylum", "urn:superClass", "urn:class", "urn:infraClass", "urn:subclass", "urn:superOrder", "urn:order", "urn:infraOrder", "urn:suborder", "urn:superFamily", "urn:family", "urn:subfamily", "urn:genus", "urn:subGenus", "urn:tribe", "urn:subTribe", "urn:species", "urn:subSpecies");
@@ -105,6 +124,7 @@ public class geomeFIMSConnection extends FIMSConnection {
             List<String> allFieldNames = Arrays.asList(arrayFields);
 
 
+
             for (ProjectConfig.Entity entity : config.entities) {
                 if (!Arrays.asList("Tissue", "Event", "Sample").contains(entity.conceptAlias)) {
                     continue;
@@ -124,6 +144,7 @@ public class geomeFIMSConnection extends FIMSConnection {
                 }
 
             }
+
         } catch (Exception e) {
             throw new ConnectionException("Unable to retrieve projects from GEOME.  This may be due either to " +
                     "an invalid username/password combination or the user has not opted to retrieve public projects " +
@@ -159,10 +180,15 @@ public class geomeFIMSConnection extends FIMSConnection {
         return null;
     }
 
-    @Override
-    public List<FimsProject> getProjects() throws DatabaseServiceException {
-        return null;
-    }
+
+
+
+ 
+
+     @Override
+     public List<FimsProject> getProjects() throws DatabaseServiceException {
+         return null;
+     }
 
     private static final DocumentField PROJECT_FIELD = new DocumentField("Project", "", "geomeProject", String.class, false, false);
     private static final DocumentField GENBANK_COUNTRY_FIELD = new DocumentField("genbankCountry", "", "urn:genbankCountry", String.class, false, false);
@@ -234,14 +260,29 @@ public class geomeFIMSConnection extends FIMSConnection {
 
         //System.out.println(projectIds);
         // _projects_:[1,2,11]
-        Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
-//                .queryParam("_projects_:", projectIds)
-                .queryParam("entity", "Tissue")
-                .queryParam("limit", 100000)
-                .queryParam("includeEmptyProperties", "false")
-                .queryParam("q", "_select_:[Event,Sample,Tissue] " + queryString)
-                .request();
-        Response response = searchRequest.get();
+        HttpUrl url = client.getQueryTarget()
+            .newBuilder()
+            .addPathSegment("records")
+            .addPathSegment("Tissue")
+            .addPathSegment("json")
+            .addQueryParameter("entity", "Tissue")
+            .addQueryParameter("limit", "100000")
+            .addQueryParameter("includeEmptyProperties", "false")
+            .addQueryParameter("q", "_select_:[Event,Sample,Tissue] " + queryString)
+            .build();
+
+        Request searchRequest = new Request.Builder()
+            .url(url)
+            .get()  // This is a GET request
+            .build();
+
+        // Execute the request
+        Response response;
+        try {
+             response = client.client.newCall(searchRequest).execute();
+        } catch (IOException e) {
+            throw new ConnectionException(e);
+        }
         try {
             SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
 
@@ -455,29 +496,51 @@ public class geomeFIMSConnection extends FIMSConnection {
                 String tissueIDsToQuery = buildQuery(tissueQuery);
                 String queryString = tissueIDsToQuery + " _select_:[Tissue,Sample,Event]";
 
-                Invocation.Builder searchRequest = client.getQueryTarget().path("records/Tissue/json")
-                        .queryParam("includeEmptyProperties", "false")
-                        .queryParam("limit", chunk)
-                        .request();
+                // Build the URL
+                HttpUrl url = client.getQueryTarget()
+                        .newBuilder()
+                        .addPathSegment("records")
+                        .addPathSegment("Tissue")
+                        .addPathSegment("json")
+                        .addQueryParameter("includeEmptyProperties", "false")
+                        .addQueryParameter("limit", String.valueOf(chunk)) // Convert chunk to string
+                        .build();
 
-                Form formToPost = new Form()
-                        .param("query", queryString)
-                        .param("entity", "Tissue");
+                // Create the form body (equivalent to JAX-RS Form and Entity)
+                RequestBody formBody = new FormBody.Builder()
+                        .add("query", queryString)
+                        .add("entity", "Tissue")
+                        .build();
 
-                // was APPLICATION_FORM_URLENCODED_TYPE
-                Entity<Form> formEntity = Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED);
+                // Build the POST request (equivalent to searchRequest.post())
+                Request searchRequest = new Request.Builder()
+                        .url(url)
+                        .post(formBody)  // Specify it is a POST request with form data
+                        .header("Content-Type", "application/x-www-form-urlencoded")  // Set the form URL-encoded type
+                        .build();
 
-                // this line is REALLY slow and the reason for pauses when downloading data (slower than equivalent curl)
-                // The only difference between this request and curl is content-length of a sample query here is 108
-                // while the same content-length in curl is 3555.  I read a comment in stack-overflow that this
-                // could be the issue slowness, however, i'm not able to set content-length encoding as a param
-                Response response = searchRequest.post(formEntity);
-                
+                // Measure the time for the POST request
+                long start = System.currentTimeMillis();
+
+                // Execute the POST request
+                try (Response response = client.client.newCall(searchRequest).execute()) {
+                    // Handle the response
+                    System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to get GEOME searchRequest.post");
+                    if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+
+                    // Read the response body (optional)
+                    //String responseBody = response.body().string();
+                    //System.out.println(responseBody);
+
+                    
                 SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
 
                 List<FimsSample> samples = transformQueryResults(tissueIds, result);
 
                 allSamples.addAll(samples);
+                } catch (IOException e) {
+                                                   e.printStackTrace();
+                                               }
             }
 
             return allSamples;

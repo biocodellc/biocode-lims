@@ -1,3 +1,6 @@
+==Biocode Plugin 3.0.21 - 20 October 2024 ==
+* Updated connection library for GEOME plugin to OK4HTTP from Jersey2.6 to address issue #134
+
 ==Biocode Plugin 3.0.20 - 11 December 2023 ==
 * Updated list of failure reasons in nmnh-lims database to address issue #138
 * Updated missing field names from new GEOME connection to address issue #139

@@ -19,7 +19,7 @@ plugins {
 apply plugin: "java"
 apply plugin: "idea"
 
-version = '3.0.20'
+version = '3.0.22'
 
 defaultTasks 'createPlugin';
 
@@ -64,6 +64,10 @@ dependencies {
     compile group: "com.google.apis", name:"google-api-services-fusiontables", version:"v1-rev33-1.17.0-rc"
     compile group: "com.google.oauth-client", name:"google-oauth-client-jetty", version:"1.17.0-rc"
     compile group: "com.google.oauth-client", name:"google-oauth-client-java6", version:"1.17.0-rc"
+
+    // use okhttp client for geome requests
+    compile 'com.squareup.okhttp3:okhttp:4.10.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
 
 
     //    Must use Jersey version less than 2.6

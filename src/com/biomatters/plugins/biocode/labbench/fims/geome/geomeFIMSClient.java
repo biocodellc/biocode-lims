@@ -1,317 +1,454 @@
 package com.biomatters.plugins.biocode.labbench.fims.geome;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import okhttp3.OkHttpClient;
+
+import javax.net.ssl.*;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.plugins.biocode.labbench.fims.biocode.*;
+import com.biomatters.plugins.biocode.labbench.fims.biocode.ErrorResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFimsData;
+import com.biomatters.plugins.biocode.labbench.fims.biocode.QueryResult;
+import okhttp3.*;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.ssl.SSLContexts;
+//import org.apache.http.conn.ssl.TrustStrategy;
+//import org.apache.http.ssl.SSLContexts;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.client.oauth2.OAuth2ClientSupport;
-import org.glassfish.jersey.filter.LoggingFilter;
-import org.glassfish.jersey.jackson.JacksonFeature;
-import org.glassfish.jersey.message.GZipEncoder;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+//import org.codehaus.jackson.JsonNode;
+//import org.codehaus.jackson.map.ObjectMapper;
 
 import javax.net.ssl.SSLContext;
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.ProcessingException;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.client.*;
-import javax.ws.rs.core.Form;
-import javax.ws.rs.core.GenericType;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
 import java.net.URLEncoder;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
-
-import com.biomatters.plugins.biocode.BiocodePlugin;
 
 /**
- * @author Matthew Cheung
- * Created on 7/02/14 5:51 AM
+ * Refactored geomeFIMSClient using OkHttpClient instead of Jersey.
  */
 public class geomeFIMSClient {
-    private WebTarget target;
+
+    public OkHttpClient client;
     public AccessToken access_token;
-    private String hostname = "";
+    private String hostname;
+    private static final ObjectMapper objectMapper = new ObjectMapper(); // Initialize the ObjectMapper
 
+    static {
+        // Configure the ObjectMapper to ignore unknown properties
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
+
+       /*
     public geomeFIMSClient(String hostname) {
-        this(hostname, 0);
+        this(hostname, 30);
     }
+          */
 
-    public geomeFIMSClient(String hostname, int timeout) {
-        this.hostname = hostname;
-        ClientConfig config = new ClientConfig()
-                .property(ClientProperties.CONNECT_TIMEOUT, timeout * 1000)
-                .property(ClientProperties.READ_TIMEOUT, timeout * 1000);
-        
-        ClientBuilder builder = ClientBuilder.newBuilder();
 
-        // Create SSL Socket Factory Explicitly for older versions of geneious
-        // This is a work-around where we accept the certificate for all geome connections
-        TrustStrategy acceptingTrustStrategy = (cert, authType) -> true;
-        SSLContext sslContext = null;
-        try {
-            sslContext = SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy).build();
-        } catch (NoSuchAlgorithmException e) {
-            throw new ProcessingException(e.getMessage());
-        } catch (KeyManagementException e) {
-            throw new ProcessingException(e.getMessage());
-        } catch (KeyStoreException e) {
-            throw new ProcessingException(e.getMessage());
+        public geomeFIMSClient(String hostname2, int timeout) {
+            this.hostname = hostname2;
+
+            try {
+            // Create a TrustManager that accepts all certificates
+            final TrustManager[] trustAllCerts = new TrustManager[]{
+                new X509TrustManager() {
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] chain, String authType) {
+                        System.out.println("Client trusted: " + authType);
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                        System.out.println("Server trusted: " + authType);
+                    }
+
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() {
+                        System.out.println("Returning non-null accepted issuers.");
+                        return new X509Certificate[0]; // Ensure a non-null array is returned
+                    }
+                }
+            };
+
+            // Set up the SSL context with the above TrustManager
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+
+            // Create the SSLSocketFactory using the TrustManager
+            SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+
+            System.out.println("SSL Socket Factory initialized: " + sslSocketFactory);
+
+            // Build the OkHttpClient with custom SSL configuration and hostname verifier
+            client = new OkHttpClient.Builder()
+                .sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0])
+                .hostnameVerifier((hostname, session) -> {
+                    System.out.println("Hostname verified: " + hostname);
+                    return true;  // Trust all hostnames
+                })
+                .connectTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
+                    .writeTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
+
+                .build();
+
+            System.out.println("OkHttpClient initialized successfully.");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        builder.sslContext(sslContext);
+                }
 
-        ClientBuilder builderConfig = builder.withConfig(config);
-        target = builderConfig.build().target(hostname)
-                .register(GZipEncoder.class)
-                .register(JacksonFeature.class)
-                .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), true));
+        
+
+    HttpUrl getQueryTarget() {
+        // Construct the base URL using the hostname and add paths to it
+        return HttpUrl.parse(hostname) // Assuming hostname is a base URL
+                .newBuilder()
+                .build();
     }
-
 
     /**
-     * @param username The username to use to authenticate
-     * @param password The password to use to authenticate
-     *
-     * @throws MalformedURLException    If the url specified was not a valid URL
-     * @throws ProcessingException      If a problem occurs accessing the webservice to login
-     * @throws DatabaseServiceException If the server returned an error when we tried to authenticate
+         * Retrieves the result of a REST method call and maps it to a specific class.
+         *
+         * @param resultType The class of the entity that should be returned from the method
+         * @param response   The response from the method call
+         * @return The result entity
+         * @throws DatabaseServiceException If the server returned an error or if a processing error occurs
+         */
+        public static <T> T getRestServiceResult(Class<T> resultType, Response response) throws DatabaseServiceException {
+            try {
+                // RESPONSE BODY CAN ONLY BE READ ONCE... DO WE HAVE MULTIPLE CALLS?
+                int statusCode = response.code();
+                if (statusCode != 200) {
+                    // Deserialize the error response and throw a RuntimeException
+                    String responseBody = response.body().string();
+                    ErrorResponse errorResponse = objectMapper.readValue(responseBody, ErrorResponse.class);
+                    throw new IllegalStateException("Server returned an error: " + errorResponse.usrMessage + " (HTTP " + statusCode + ")");
+                } else {
+                    // Deserialize the response body into the expected type
+                    //return response.readEntity(resultType);
+                    String responseBody = response.body().string();
+                           return objectMapper.readValue(responseBody, resultType);
+
+                   // String responseBody = response.body().string();
+                   /* JsonNode rootNode = objectMapper.readTree(responseBody);
+
+                      // Create a new ObjectNode to store only conceptAlias and attributes
+                      ObjectNode filteredNode = objectMapper.createObjectNode();
+
+                      
+                      // Check and retain "conceptAlias"
+                      if (rootNode.has("conceptAlias")) {
+                          filteredNode.set("conceptAlias", rootNode.get("conceptAlias"));
+                      }
+
+                      // Check and retain "attributes"
+                      if (rootNode.has("attributes")) {
+                          filteredNode.set("attributes", rootNode.get("attributes"));
+                      }
+
+                    //return objectMapper.readValue(filteredNode, resultType);
+                    return objectMapper.treeToValue(filteredNode, resultType);
+                   */
+                }
+            } catch (IOException e) {
+                throw new DatabaseServiceException(e, "Failed to process the response", false);
+            } finally {
+                response.close();
+            }
+        }
+
+        /**
+         * Retrieves the result of a REST method call and maps it to a generic type (like a List).
+         *
+         * @param resultType The type reference for the generic type
+         * @param response   The response from the method call
+         * @return The result entity
+         * @throws DatabaseServiceException If the server returned an error or if a processing error occurs
+         */
+        public <T> T getRestServiceResult(TypeReference<T> resultType, Response response) throws DatabaseServiceException {
+            try {
+                int statusCode = response.code();
+                if (statusCode != 200) {
+                    // Deserialize the error response and throw a RuntimeException
+                    String responseBody = response.body().string();
+                    ErrorResponse errorResponse = objectMapper.readValue(responseBody, ErrorResponse.class);
+                    throw new IllegalStateException("Server returned an error: " + errorResponse.usrMessage + " (HTTP " + statusCode + ")");
+                } else {
+                    // Deserialize the response body into the expected generic type
+                    String responseBody = response.body().string();
+                    return objectMapper.readValue(responseBody, resultType);
+                }
+            } catch (IOException e) {
+                throw new DatabaseServiceException(e, "Failed to process the response",  false);
+            } finally {
+                response.close();
+            }
+        }
+
+
+    private SSLContext getSslContext() {
+        try {
+            TrustStrategy acceptingTrustStrategy = (cert, authType) -> true;
+            return SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy).build();
+        } catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException e) {
+            throw new RuntimeException("Failed to create SSL context", e);
+        }
+    }
+
+    /**
+     * Login method using OkHttpClient to authenticate and retrieve access token.
      */
-    void login(String username, String password) throws IOException, ProcessingException, DatabaseServiceException {
+    void login(String username, String password) throws IOException {
         JsonNode secrets = getClientSecrets();
         String clientId = secrets.get("client_id").asText();
         String clientSecret = secrets.get("client_secret").asText();
 
-        WebTarget path = target.path("/v1/oauth/accessToken");
+        // Build the form data for POST request
+        RequestBody formBody = new FormBody.Builder()
+                .add("username", username)
+                .add("password", password)
+                .add("client_id", clientId)
+                .add("client_secret", clientSecret)
+                .add("grant_type", "password")
+                .build();
 
-        Invocation.Builder request = path.request().accept(MediaType.APPLICATION_JSON);
+        // Build the request
+        Request request = new Request.Builder()
+                .url(hostname + "/v1/oauth/accessToken")
+                .post(formBody)
+                .build();
 
-        Form formToPost = new Form()
-                .param("username", username)
-                .param("password", password)
-                .param("client_id", clientId)
-                .param("client_secret", clientSecret)
-                .param("grant_type", "password");
+        // Execute the request
+        try (Response response = client.newCall(request).execute()) {
+            if (response.isSuccessful()) {
+                String responseBody = response.body().string();
+                access_token = new ObjectMapper().readValue(responseBody, AccessToken.class);
 
-        Response response = request.post(
-                Entity.entity(formToPost, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
-
-        access_token = new ObjectMapper().readValue(getRestServiceResult(String.class, response), AccessToken.class);
-
-        target.register(OAuth2ClientSupport.feature(access_token.getAccess_token()));
+                // Log the successful authentication
+                System.out.println("Logged in successfully with token: " + access_token.getAccess_token());
+            } else {
+                throw new IOException("Failed to login: " + response.code());
+            }
+        }
     }
 
-    private JsonNode getClientSecrets() throws DatabaseServiceException {
+    private JsonNode getClientSecrets() throws IOException {
         InputStream secretsStream = geomeFIMSClient.class.getResourceAsStream("/geome_secrets.json");
         if (secretsStream == null) {
             throw new IllegalStateException("Can't find client secrets for connection to geome");
         }
 
+        JsonNode node = new ObjectMapper().readTree(secretsStream);
+        if (hostname.contains("develop"))
+            return node.get("develop");
+        else
+            return node.get("production");
+    }
 
+    /**
+     * Retrieve a list of projects using OkHttpClient.
+     */
+    List<Project> getProjects(boolean includePublic) throws IOException {
+        // Build the request URL
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(hostname + "/projects")
+                .newBuilder()
+                .addQueryParameter("includePublic", String.valueOf(includePublic));
+
+        // Build the request
+        Request request = new Request.Builder()
+                .url(urlBuilder.build())
+                .get()
+                .build();
+
+        // Execute the request
         try {
-            JsonNode node = new ObjectMapper().readTree(secretsStream);
-            if (hostname.contains("develop"))
-                return node.get("develop");
-            else
-                return node.get("production");
+            Response response = client.newCall(request).execute();
+            if (response.isSuccessful()) {
+                // Parse the response body into a list of projects
+                String responseBody = response.body().string();
 
+                // Create an ObjectMapper
+                ObjectMapper objectMapper = new ObjectMapper();
+                List<Project> projects = new ArrayList<>();
 
-        } catch (IOException e) {
-            throw new DatabaseServiceException("File missing stuff", false);
+                // Parse the response body into a JsonNode
+                JsonNode rootNode = objectMapper.readTree(responseBody);
+
+                // Ensure that the root is an array
+                if (rootNode.isArray()) {
+                    // Iterate over each element in the array
+                    for (JsonNode node : rootNode) {
+                            if (node.isObject()) {
+                                // Cast the node to ObjectNode to use remove and set methods
+                                ObjectNode projectNode = (ObjectNode) node;
+
+                                // Rename the fields
+                                if (projectNode.has("projectId")) {
+                                    JsonNode idNode = projectNode.remove("projectId"); // Remove old key
+                                    projectNode.set("id", idNode); // Set new key with the same value
+                                }
+
+                                if (projectNode.has("projectCode")) {
+                                    JsonNode codeNode = projectNode.remove("projectCode");
+                                    projectNode.set("code", codeNode);
+                                }
+
+                                if (projectNode.has("projectTitle")) {
+                                    JsonNode titleNode = projectNode.remove("projectTitle");
+                                    projectNode.set("title", titleNode);
+                                }
+
+                                if (projectNode.has("projectConfiguration")) {
+                                    ObjectNode configNode = (ObjectNode)projectNode.remove("projectConfiguration");
+                                    configNode.retain("id", "description", "name");
+                                    projectNode.set("configuration", configNode);
+                                }
+                                
+                                projectNode.retain("id", "title", "configuration", "code");
+
+                                // Deserialize each project and add it to the list
+                                Project project = objectMapper.treeToValue(projectNode, Project.class);
+                                projects.add(project);
+                            }
+                        }
+                } else {
+                    throw new IOException("Expected an array of projects, but received something else.");
+                }
+
+                return projects; // Return the list of projects
+            } else {
+                throw new IOException("Failed to get projects: " + response.code());
+            }
+        } catch (Exception e) {
+            throw new IOException("Some failure getting projects: " + e);
         }
     }
 
     /**
-     * Retrieves the result of a REST method call to the GeOME server
-     *
-     * @param resultType The class of the entity that should be returned from the method
-     * @param response   The response from the method call
-     *
-     * @return The result entity
-     *
-     * @throws DatabaseServiceException if an error was returned by the server
+     * Retrieve data for a specific project using OkHttpClient.
      */
-    static <T> T getRestServiceResult(Class<T> resultType, Response response) throws DatabaseServiceException {
-        try {
-            int statusCode = response.getStatus();
-            if (statusCode != 200) {
-                ErrorResponse errorResponse = response.readEntity(ErrorResponse.class);
-                throw new DatabaseServiceException(
-                        new WebApplicationException(errorResponse.developerMessage, errorResponse.httpStatusCode),
-                        "Server returned an error: " + errorResponse.usrMessage, false);
-            } else {
-                return response.readEntity(resultType);
-            }
-        } finally {
-            response.close();
-        }
-    }
-
-    static <T> T getRestServiceResult(GenericType<T> resultType, Response response) throws DatabaseServiceException {
-        try {
-            int statusCode = response.getStatus();
-            if (statusCode != 200) {
-                ErrorResponse errorResponse = response.readEntity(ErrorResponse.class);
-                throw new DatabaseServiceException(
-                        new WebApplicationException(errorResponse.developerMessage, errorResponse.httpStatusCode),
-                        "Server returned an error: " + errorResponse.usrMessage, false);
-            } else {
-                return response.readEntity(resultType);
-            }
-        } finally {
-            response.close();
-        }
-    }
-
-    WebTarget getQueryTarget() {
-        //return target.path("v1");
-        return target.path("");
-    }
-
-    List<Project> getProjects(boolean includePublic) throws DatabaseServiceException {
-        Invocation.Builder request = target.path("projects")
-                .queryParam("includePublic", includePublic)
-                .request(MediaType.APPLICATION_JSON_TYPE);
-        
-        try {
-            Response response = request.get();
-            List<Project> fromService = getRestServiceResult(new GenericType<List<Project>>() {
-            }, response);
-            List<Project> returnList = new ArrayList<Project>();
-            for (Project project : fromService) {
-                //Boolean validForLims = project.getValidForLIMS();
-                //if (project.title != null && validForLims) {
-                if (project.title != null) {
-                    returnList.add(project);
-                }
-            }
-            return returnList;
-        } catch (WebApplicationException e) {
-            throw new DatabaseServiceException(e, "Error message from server: " + target.getUri() + ": " + e.getMessage(), true);
-        } catch (ProcessingException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), true);
-
-        }
-    }
-
-    List<Graph> getGraphsForProject(String id) throws DatabaseServiceException {
-        try {
-            Invocation.Builder request = target.path("biocode-fims/rest/v1.1/projects").path(id).path("graphs").request(MediaType.APPLICATION_JSON_TYPE);//.header("Authorization", "Bearer " + access_token);
-            Response response = request.get();
-            return getRestServiceResult(new GenericType<List<Graph>>() {
-            }, response);
-        } catch (WebApplicationException e) {
-            throw new DatabaseServiceException(e, "Error message from server: " + target.getUri().getHost() + ": " + e.getMessage(), true);
-        } catch (ProcessingException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), true);
-        }
-    }
-
-
-    BiocodeFimsData getData(String project, Form searchTerms, String filter) throws DatabaseServiceException {
+    BiocodeFimsData getData(String project, Map<String, String> searchTerms, String filter) throws IOException {
         if (filter != null && filter.contains(",")) {
-            try {
-                filter = URLEncoder.encode(filter, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                // Go with default encoding
-                e.printStackTrace();
-            }
+            filter = URLEncoder.encode(filter, "UTF-8");
         }
 
-        return getBiocodeFimsData(project, searchTerms, filter);
-    }
+        // Build the request URL with query parameters
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(hostname + "/data")
+                .newBuilder()
+                .addQueryParameter("projectId", project);
+        if (filter != null) {
+            urlBuilder.addQueryParameter("filter", filter);
+        }
 
-    private BiocodeFimsData getBiocodeFimsData(String project, Form searchTerms, String filter) throws DatabaseServiceException {
-        try {
-            WebTarget target = getQueryTarget();
+        // Build the request
+        Request request = new Request.Builder()
+                .url(urlBuilder.build())
+                .get()
+                .build();
 
-            Entity<Form> entity = null;
-            if (searchTerms == null || searchTerms.asMap().isEmpty()) {
-                target = target.queryParam("projectId", project);
-                if (filter != null) {
-                    target = target.queryParam("filter", filter);
-                }
+        // Execute the request
+        try (Response response = client.newCall(request).execute()) {
+            if (response.isSuccessful()) {
+                // Parse the response body into BiocodeFimsData
+                String responseBody = response.body().string();
+                return new ObjectMapper().readValue(responseBody, BiocodeFimsData.class);
             } else {
-                Form form = new Form(searchTerms.asMap());
-                form.param("projectId", project);
-                entity = Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE);
+                throw new IOException("Failed to get data: " + response.code());
             }
-
-            return QueryResultToData(retrieveResult(target, entity));
-        } catch (NotFoundException e) {
-            throw new DatabaseServiceException("No data found.", false);
-        } catch (WebApplicationException e) {
-            throw new DatabaseServiceException(e, "Encountered an error communicating with " + geomeFIMSConnection.GEOME_URL, false);
-        } catch (ProcessingException e) {
-            throw new DatabaseServiceException(e, "Encountered an error connecting to server: " + e.getMessage(), true);
-        } catch (NoSuchMethodException e) {
-            throw new DatabaseServiceException(e, "Failed to deserialize response. " + e.getMessage(), true);
-        } catch (InvocationTargetException e) {
-            throw new DatabaseServiceException(e, "Failed to deserialize response. " + e.getMessage(), true);
-        } catch (IllegalAccessException e) {
-            throw new DatabaseServiceException(e, "Failed to deserialize response. " + e.getMessage(), true);
         }
     }
 
-    private List<QueryResult> retrieveResult(WebTarget target, Entity entity) throws DatabaseServiceException {
-        List<QueryResult> res = new ArrayList<QueryResult>();
-        target = target.queryParam("limit", "100");
+    /**
+     * Retrieve a list of graphs for a specific project using OkHttpClient.
+     * @return
+     */
+    List<Project> getGraphsForProject(String projectId) throws IOException {
+        // Build the request URL
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(hostname + "/biocode-fims/rest/v1.1/projects/" + projectId + "/graphs")
+                .newBuilder();
+
+        // Build the request
+        Request request = new Request.Builder()
+                .url(urlBuilder.build())
+                .get()
+                .build();
+
+        // Execute the request
+        try (Response response = client.newCall(request).execute()) {
+            if (response.isSuccessful()) {
+                // Parse the response body into a list of Graph objects
+                String responseBody = response.body().string();
+
+                return new ObjectMapper().readValue(responseBody, new TypeReference<List<Project>>() {});
+            } else {
+                throw new IOException("Failed to get graphs: " + response.code());
+            }
+        }
+    }
+
+    /**
+     * Retrieve a paginated result set from a target URL.
+     */
+    private List<QueryResult> retrieveResult(HttpUrl.Builder urlBuilder) throws IOException {
+        List<QueryResult> results = new ArrayList<>();
         int page = 0;
-        QueryResult result;
+
         while (true) {
-            WebTarget target1 = target.queryParam("page", "" + page++);
-            Invocation.Builder request = target1.request(MediaType.APPLICATION_JSON_TYPE);//.header("Authorization", "Bearer " + access_token);
-            if (entity == null)
-                result = request.get(QueryResult.class);
-            else
-                result = getRestServiceResult(QueryResult.class, request.post(entity));
+            // Add pagination query parameters
+            HttpUrl url = urlBuilder.addQueryParameter("limit", "100")
+                                    .addQueryParameter("page", String.valueOf(page++))
+                                    .build();
 
-            if (result.getContent().size() == 0)
-                break;
-            res.add(result);
-        }
+            // Build the request
+            Request request = new Request.Builder()
+                    .url(url)
+                    .get()
+                    .build();
 
-        return res;
-    }
+            // Execute the request
+            try (Response response = client.newCall(request).execute()) {
+                if (response.isSuccessful()) {
+                    // Parse the response body into a QueryResult object
+                    String responseBody = response.body().string();
+                    QueryResult result = new ObjectMapper().readValue(responseBody, QueryResult.class);
 
-    private BiocodeFimsData QueryResultToData(List<QueryResult> results) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        BiocodeFimsData res = new BiocodeFimsData();
+                    if (result.getContent().isEmpty()) {
+                        break; // Exit if no more content is available
+                    }
 
-        if (results.isEmpty()) {
-            return res;
-        }
-
-        //header
-        List<Map<String, String>> rows = results.get(0).getContent();
-        if (rows.isEmpty() || rows.get(0) == null) {
-            return res;
-        }
-        res.header = new ArrayList<String>(rows.get(0).keySet());
-
-        //data
-        /*
-        for (QueryResult result : results) {
-            for (Map<String, String> rowValues : result.getContent()) {
-                //Row row = new Row();
-                //row.row Items = new ArrayList<String>(rowValues.values());
-                //res.data.add(row);
+                    results.add(result);
+                } else {
+                    throw new IOException("Failed to retrieve results: " + response.code());
+                }
             }
-        }   */
+        }
 
-        return res;
+        return results;
     }
+
+    // Additional methods can be added here using similar patterns.
 }
+
