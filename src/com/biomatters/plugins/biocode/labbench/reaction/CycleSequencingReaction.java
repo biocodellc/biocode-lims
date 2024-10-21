@@ -38,6 +38,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     public static final DocumentField NUM_TRACES_FIELD = DocumentField.createIntegerField("# Traces", "Number of traces attached to reaction", "numTraces");
     public static final DocumentField NUM_PASSED_SEQS_FIELD = DocumentField.createIntegerField("# Passed Sequences", "Number of passed sequences attached to reaction", "numPassedSeqs");
     public static final DocumentField NUM_SEQS_FIELD = DocumentField.createIntegerField("# Sequences", "Total number of sequencing results attached to reaction", "totalNumSeqs");
+    public static final DocumentField SEQ_STATUS_FIELD = DocumentField.createIntegerField("Sequence Status", "Status of Latest Sequence", "sequenceStatus");
 
     private CycleSequencingOptions options;
     private Set<Integer> tracesToRemoveOnSave = new LinkedHashSet<Integer>();
@@ -481,6 +482,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         fields.add(NUM_TRACES_FIELD);
         fields.add(NUM_PASSED_SEQS_FIELD);
         fields.add(NUM_SEQS_FIELD);
+        fields.add(SEQ_STATUS_FIELD);
         return fields;
     }
 
@@ -495,6 +497,8 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             }
         } else if(NUM_PASSED_SEQS_FIELD.getCode().equals(fieldCode)) {
             return countSeqResults(SequencingResult.Status.PASS);
+        } else if(SEQ_STATUS_FIELD.getCode().equals(fieldCode)) {
+            return getSeqResults();
         } else if(NUM_SEQS_FIELD.getCode().equals(fieldCode)) {
             return countSeqResults(null);
         } else {
@@ -510,5 +514,13 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             }
         }
         return count;
+    }
+
+    private String getSeqResults() {
+        for (SequencingResult sequencingResult : sequencingResults) {
+            // TODO: return the LATEST status, right now we just return the first status found
+            return (String) sequencingResult.getStatus().toString();
+        }
+        return null;
     }
 }

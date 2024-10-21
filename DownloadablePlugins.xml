@@ -1,0 +1,39 @@
+<!-- fully qualified class name of the plugin class. For wrapper plugins, this should be equal to the name attribute in the plugin's pluginWrapper.xml's wrapperPlugin element -->
+<!-- should be 200x140 pixels -->
+<!-- Still need to decide what these are, now we have [Assembly, Alignment, Phylogenetics, Protein, Nucleotide, Services and Searching and Misc -->
+<!-- Optional URL of a web page where the plugin can be downloaded. If the plugin is not installed the user will be sent here instead of downloading directly. Updates are always downloaded directly if plugin is already installed. -->
+<!-- Plugins to only upload but not promote & not show in Geneious Downloadable plugins. Mainly for experimental plugins -->
+<!-- list of changes in this version, html tags accepted -->
+<!-- URL of the gplugin file -->
+<!-- add one of these for each platform supported by the gplugin, must be one of: All, Windows, MacOS, Linux -->
+<!-- must be a decimal in the form x.y -->
+<!-- must be an int -->
+<!-- must be in the same form as a Geneious version number eg. x.y(.z) -->
+<!-- yyyy-MM-dd format -->
+<!-- beta version are clearly marked as such in Geneious and users are only informed of their release if they specify they are interested in betas -->
+<!-- must be a decimal in the form x.y -->
+<!-- must be an int -->
+<!-- must be in the same form as a Geneious version number eg. x.y(.z) -->
+<!-- yyyy-MM-dd format -->
+<!-- beta version are clearly marked as such in Geneious and users are only informed of their release if they specify they are interested in betas -->
+<!-- if true, users will be notified of its release and the plugin will be displayed at the top of the list with a star next to it -->
+<!-- yyyy-MM-dd format, if the plugin has a recent release date then it will be marked as NEW in the plugin list -->
+<!-- whether a license/trial is required in the plugin, false if not specified -->
+<plugins>
+<plugin isNoteWorthy="false" isProOnly="false" releaseDate="2015-03-02">
+<name>Biocode Plugin</name>
+<className>com.biomatters.plugins.biocode.BiocodePlugin</className>
+<description>The Biocode LIMS is a Geneious plugin that was developed as part of the Moorea Biocode Project. It comprises everything you need to manage your lab and sequence analysis workflows. </description>
+<authors>Biocode</authors>
+<category>Services and Searching</category>
+<upOnlyVersion minimumApiVersion="4.611" maximumApiVersion="4" pluginVersion="3.0.18" releaseDate="2022-12-27" isBeta="false">
+<changes>
+<![CDATA[ <strong>3.0.18</strong><br> performance improvements ]]>
+</changes>
+<file>
+<platform>All</platform>
+<url>https://github.com/biocodellc/biocode-lims/releases/download/v3.0.18/BiocodePlugin_3_0_18.gplugin </url>
+</file>
+</upOnlyVersion>
+</plugin>
+</plugins>

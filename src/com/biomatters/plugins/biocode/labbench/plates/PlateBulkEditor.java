@@ -14,9 +14,11 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.Workflow;
+//import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -33,6 +35,9 @@ import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.*;
 import java.io.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -41,8 +46,8 @@ import java.util.prefs.Preferences;
 
 /**
  * @author Steven Stones-Havas
- *          <p/>
- *          Created on 17/06/2009 12:39:03 PM
+ * <p/>
+ * Created on 17/06/2009 12:39:03 PM
  */
 @SuppressWarnings({"ConstantConditions", "ConstantConditions"})
 public class PlateBulkEditor {
@@ -50,6 +55,7 @@ public class PlateBulkEditor {
     private SwapAction swapAction;
     private GeneiousAction archivePlateAction;
     private GeneiousAction importBarcodesFromScannerFile;
+    private GeneiousAction importConcentrationsFromFile;
     private GeneiousAction importBarcodesFromFIMS;
     private GeneiousAction getExtractionsFromBarcodes;
     private GeneiousAction specNumCollector;
@@ -59,6 +65,8 @@ public class PlateBulkEditor {
     public static DocumentField TISSUE_SAMPLE_ID_FIELD = new DocumentField("Tissue Sample ID", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
     public static DocumentField EXTRACTION_ID_FIELD = new DocumentField("Extraction ID", "", "extractionId", String.class, false, false);
     public static DocumentField EXTRACTION_BARCODE_FIELD = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
+    public static DocumentField CONCENTRATION_PURITY_FIELD = new DocumentField("Concentration/Purity", "", "concentration", String.class, false, false);
+    //public static DocumentField CONCENTRATION_STORED_FIELD = new DocumentField("Concentration Stored", "", "concentrationStored", String.class, false, false);
     public static DocumentField PARENT_EXTRACTION_ID_FIELD = new DocumentField("Parent Extraction ID", "", "parentExtraction", String.class, true, false);
     public static DocumentField WORKFLOW_ID_FIELD = new DocumentField("Workflow ID", "", "workflowId", String.class, false, false);
 
@@ -77,8 +85,9 @@ public class PlateBulkEditor {
 
     /**
      * displays an editing dialog
+     *
      * @param owner a JComponent for the displayed dialog to be modal over
-     * @return  true if the user clicked ok, false if they clicked cancel
+     * @return true if the user clicked ok, false if they clicked cancel
      */
     public boolean editPlate(JComponent owner) {
         final JPanel platePanel = new JPanel();
@@ -87,27 +96,27 @@ public class PlateBulkEditor {
 
         //link the scrolling of all editors together
         final AtomicBoolean isAdjusting = new AtomicBoolean(false);
-        AdjustmentListener listener = new AdjustmentListener(){
+        AdjustmentListener listener = new AdjustmentListener() {
             public void adjustmentValueChanged(AdjustmentEvent e) {
-                if(isAdjusting.get()) {
+                if (isAdjusting.get()) {
                     return;
                 }
                 isAdjusting.set(true);
-                for(DocumentFieldEditor editor : editors) {
+                for (DocumentFieldEditor editor : editors) {
                     editor.setScrollPosition(e.getValue());
                 }
                 isAdjusting.set(false);
             }
         };
 
-        for(DocumentField field : defaultFields) {
+        for (DocumentField field : defaultFields) {
             final AtomicReference<DocumentFieldEditor> editor = new AtomicReference<DocumentFieldEditor>();
-            if(autoFillFields.contains(field)) {
+            if (autoFillFields.contains(field)) {
                 JButton setAllButton = new JButton("Set All", IconUtilities.getIcons("expanded.png").getIcon16());
                 setAllButton.setHorizontalTextPosition(SwingConstants.LEFT);
                 setAllButton.setBorderPainted(false);
                 setAllButton.setBorder(new EmptyBorder(1, 5, 1, 5));
-                setAllButton.addActionListener(new ActionListener(){
+                setAllButton.addActionListener(new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         OptionsPanel messagePanel = new OptionsPanel();
                         JTextField textField = new JTextField(25);
@@ -116,38 +125,37 @@ public class PlateBulkEditor {
                         JCheckBox doWorkflows = new JCheckBox("Also refresh workflows", true);
                         doWorkflows.setToolTipText("Updates the workflow ids to the correct workflow for the new locus");
                         messagePanel.addComponent(doWorkflows, false);
-                        if(Dialogs.showOkCancelDialog(messagePanel, "Enter Value", editor.get())) {
+                        if (Dialogs.showOkCancelDialog(messagePanel, "Enter Value", editor.get())) {
                             for (DocumentFieldEditor editorToCheck : editors) {
                                 editorToCheck.valuesFromTextView();  // Get values from current text
                             }
 
-                            for(int i=0; i < editor.get().values.length; i++) {
-                                for(int j=0; j < editor.get().values[0].length; j++) {
+                            for (int i = 0; i < editor.get().values.length; i++) {
+                                for (int j = 0; j < editor.get().values[0].length; j++) {
                                     boolean blank = true;
                                     for (DocumentFieldEditor editorToCheck : editors) {
-                                        if(editorToCheck == editor.get()) {
+                                        if (editorToCheck == editor.get()) {
                                             continue;
                                         }
                                         Object value = editorToCheck.getValue(i, j);
-                                        if(value != null && value.toString().trim().length() > 0 && !value.equals("None")) {
+                                        if (value != null && value.toString().trim().length() > 0 && !value.equals("None")) {
                                             blank = false;
                                         }
                                     }
-                                    if(!blank) {
+                                    if (!blank) {
                                         editor.get().values[i][j] = textField.getText();
                                     }
                                 }
                             }
                             editor.get().textViewFromValues();
-                            if(doWorkflows.isSelected() && autodetectAction != null) {
+                            if (doWorkflows.isSelected() && autodetectAction != null) {
                                 autodetectAction.actionPerformed(null);
                             }
                         }
                     }
                 });
                 editor.set(new DocumentFieldEditor(field, plate, Direction.ACROSS_AND_DOWN, setAllButton));
-            }
-            else {
+            } else {
                 editor.set(new DocumentFieldEditor(field, plate, Direction.ACROSS_AND_DOWN, null));
             }
             editor.get().addScrollListener(listener);
@@ -240,28 +248,60 @@ public class PlateBulkEditor {
             };
             toolsActions.add(archivePlateAction);
         }
-        if(plate.getReactionType() == Reaction.Type.Extraction) {
-            importBarcodesFromScannerFile = new GeneiousAction("Import Extraction Barcodes from File", "Import extraction barcodes from a barcode scanner file", BiocodePlugin.getIcons("barcode_16.png")) {
+
+
+        if (plate.getReactionType() == Reaction.Type.Extraction) {
+
+            importConcentrationsFromFile = new GeneiousAction("Import Concentration from File", "Import concentration/purity from a file that looks like the barcode scanner file", BiocodePlugin.getIcons("bulkEdit_16.png")) {
                 public void actionPerformed(ActionEvent e) {
-                    File inputFile = FileUtilities.getUserSelectedFile("Select Barcode File", new FilenameFilter(){
+                    File inputFile = FileUtilities.getUserSelectedFile("Select Concentration File", new FilenameFilter() {
                         public boolean accept(File dir, String name) {
                             return true;
                         }
                     }, JFileChooser.FILES_ONLY);
 
-                    if(inputFile != null) {
-                        final DocumentFieldEditor barcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
+                    if (inputFile != null) {
+                        final DocumentFieldEditor barcodeEditor = getEditorForField(editors, CONCENTRATION_PURITY_FIELD);
+                        //final DocumentFieldEditor concentrationStoredEditor = getEditorForField(editors, CONCENTRATION_STORED_FIELD);
+
                         //barcodeEditor.values = new String[barcodeEditor.values.length][barcodeEditor.values[0].length];//todo: make this tidier
                         try {
                             BufferedReader in = new BufferedReader(new FileReader(inputFile));
                             String s;
-                            while((s = in.readLine()) != null) {
+                            while ((s = in.readLine()) != null) {
                                 setWellAndBarcode(s, barcodeEditor);
                             }
                             in.close();
                             barcodeEditor.textViewFromValues();
+                        } catch (IOException ex) {
+                            Dialogs.showMessageDialog("Could not read the input file! " + ex.getMessage());
+                        } 
+                    }
+                }
+            };
+            toolsActions.add(importConcentrationsFromFile);
+            
+            importBarcodesFromScannerFile = new GeneiousAction("Import Extraction Barcodes from File", "Import extraction barcodes from a barcode scanner file", BiocodePlugin.getIcons("barcode_16.png")) {
+                public void actionPerformed(ActionEvent e) {
+                    File inputFile = FileUtilities.getUserSelectedFile("Select Barcode File", new FilenameFilter() {
+                        public boolean accept(File dir, String name) {
+                            return true;
                         }
-                        catch(IOException ex) {
+                    }, JFileChooser.FILES_ONLY);
+
+                    if (inputFile != null) {
+                        final DocumentFieldEditor barcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
+
+                        //barcodeEditor.values = new String[barcodeEditor.values.length][barcodeEditor.values[0].length];//todo: make this tidier
+                        try {
+                            BufferedReader in = new BufferedReader(new FileReader(inputFile));
+                            String s;
+                            while ((s = in.readLine()) != null) {
+                                setWellAndBarcode(s, barcodeEditor);
+                            }
+                            in.close();
+                            barcodeEditor.textViewFromValues();
+                        } catch (IOException ex) {
                             Dialogs.showMessageDialog("Could not read the input file! " + ex.getMessage());
                         }
                     }
@@ -276,6 +316,9 @@ public class PlateBulkEditor {
                     final DocumentFieldEditor extractionBarcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
                     final DocumentFieldEditor tissueSampleIDEditor = getEditorForField(editors, TISSUE_SAMPLE_ID_FIELD);
                     final ExtractionBarcodeFieldSelection extractionBarcodeFieldSelection = new ExtractionBarcodeFieldSelection(this.getClass(), BiocodeUtilities.getOptionValuesForDocumentFields(activeFIMSConnection.getSearchAttributes()));
+                    final DocumentFieldEditor concentrationEditor = getEditorForField(editors, CONCENTRATION_PURITY_FIELD);
+                    //final DocumentFieldEditor concentrationStoredEditor = getEditorForField(editors, CONCENTRATION_STORED_FIELD);
+
 
                     tissueSampleIDEditor.valuesFromTextView();
 
@@ -287,7 +330,7 @@ public class PlateBulkEditor {
                                 for (int row = 0; row < plate.getRows(); row++) {
                                     for (int col = 0; col < plate.getCols(); col++) {
                                         Object tissueID = tissueSampleIDEditor.getValue(row, col);
-                                        String tissueIDAsString = (String)tissueID;
+                                        String tissueIDAsString = (String) tissueID;
                                         if (tissueID instanceof String && !tissueIDAsString.isEmpty()) {
                                             if (tissueIDToPosition.containsKey(tissueIDAsString)) {
                                                 Dialogs.showMessageDialog("Cannot fetch extraction barcodes because multiple wells have the same tissue ID: " + tissueIDAsString);
@@ -315,7 +358,7 @@ public class PlateBulkEditor {
                                                 Pair<Integer, Integer> position = tissueIDToPosition.get(tissueIDAndFimsSamples.getKey());
                                                 Object extractionBarcode = fimsSamples.iterator().next().getFimsAttributeValue(extractionBarcodeFieldName);
                                                 if (extractionBarcode instanceof String) {
-                                                    extractionBarcodeEditor.setValue(position.getItemA(), position.getItemB(), (String)extractionBarcode);
+                                                    extractionBarcodeEditor.setValue(position.getItemA(), position.getItemB(), (String) extractionBarcode);
                                                 }
                                             }
                                         }
@@ -340,10 +383,10 @@ public class PlateBulkEditor {
                     final DocumentFieldEditor barcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
                     barcodeEditor.valuesFromTextView();
                     final List<String> barcodes = new ArrayList<String>();
-                    for(int i=0; i < plate.getRows(); i++) {
-                        for(int j=0; j < plate.getCols(); j++) {
+                    for (int i = 0; i < plate.getRows(); i++) {
+                        for (int j = 0; j < plate.getCols(); j++) {
                             final Object value = barcodeEditor.getValue(i, j);
-                            if(value != null) {
+                            if (value != null) {
                                 barcodes.add(value.toString());
                             }
                         }
@@ -359,7 +402,7 @@ public class PlateBulkEditor {
             };
             toolsActions.add(getExtractionsFromBarcodes);
 
-            if(BiocodeService.getInstance().getActiveFIMSConnection() instanceof MooreaFimsConnection) {
+            if (BiocodeService.getInstance().getActiveFIMSConnection() instanceof MooreaFimsConnection) {
                 specNumCollector = new GeneiousAction("Map Spec_Num_Collectors", "Convert Spec_Num_Collector values to Mbio numbers") {
                     public void actionPerformed(ActionEvent e) {
                         final DocumentFieldEditor tissueEditor = getEditorForField(editors, TISSUE_SAMPLE_ID_FIELD);
@@ -390,38 +433,50 @@ public class PlateBulkEditor {
                     final DocumentFieldEditor extractionBarcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
                     extractionBarcodeEditor.valuesFromTextView();
 
+                    final DocumentFieldEditor concentrationEditor = getEditorForField(editors, CONCENTRATION_PURITY_FIELD);
+                    concentrationEditor.valuesFromTextView();
+
+                    //final DocumentFieldEditor concentrationStoredEditor = getEditorForField(editors, CONCENTRATION_STORED_FIELD);
+                    //concentrationStoredEditor.valuesFromTextView();
+
                     List<String> tissueIds = getIdsToCheck(tissueEditor, plate);
 
                     List<String> existingExtractionIds = getIdsToCheck(extractionEditor, plate);
 
+                    List<String> concentrationIds = getIdsToCheck(concentrationEditor, plate);
+
+                    boolean fillAllConcentrationWells = false;
+                    if (concentrationIds.size() > 1) {
+                        fillAllConcentrationWells = Dialogs.showYesNoDialog("There are already concentration ID's on this plate. \nDo you want to overwrite these values (choosing no will generate concentration id's for nonempty wells that don't already have one)", "Concentrations already exist", tissueEditor, Dialogs.DialogIcon.QUESTION);
+                    }
+
                     boolean fillAllWells = false;
-                    if(existingExtractionIds.size() > 1) {
+                    if (existingExtractionIds.size() > 1) {
                         fillAllWells = Dialogs.showYesNoDialog("There are already extraction ID's on this plate. \nDo you want to overwrite these values (choosing no will generate extraction id's for nonempty wells that don't already have one)", "Extraction IDs already exist", tissueEditor, Dialogs.DialogIcon.QUESTION);
                     }
 
                     try {
                         Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsForTissueIds(tissueIds);
                         extractionIds.addAll(existingExtractionIds);
-                        for(int row=0; row < plate.getRows(); row++) {
-                            for(int col=0; col < plate.getCols(); col++) {
+                        for (int row = 0; row < plate.getRows(); row++) {
+                            for (int col = 0; col < plate.getCols(); col++) {
                                 Object existingValue = extractionEditor.getValue(row, col);
                                 Object value = tissueEditor.getValue(row, col);
                                 Object barcodeValue = extractionBarcodeEditor.getValue(row, col);
-                                if(existingValue != null && existingValue.toString().length() > 0) {
+                                if (existingValue != null && existingValue.toString().length() > 0) {
                                     extractionIds.add(existingValue.toString());
-                                    if(!fillAllWells) {
+                                    if (!fillAllWells) {
                                         continue;
                                     }
                                 }
-                                if(value != null && value.toString().trim().length() > 0) {
+                                if (value != null && value.toString().trim().length() > 0) {
                                     String valueString = ReactionUtilities.getNewExtractionId(extractionIds, value);
                                     extractionEditor.setValue(row, col, valueString);
                                     extractionIds.add(valueString);
-                                }
-                                else if(barcodeValue != null && barcodeValue.toString().length() > 0) {
+                                } else if (barcodeValue != null && barcodeValue.toString().length() > 0) {
                                     String emptyValue = "noTissue";
                                     int i = 1;
-                                    while(extractionIds.contains(emptyValue+i)) {
+                                    while (extractionIds.contains(emptyValue + i)) {
                                         i++;
                                     }
                                     String valueString = emptyValue + i;
@@ -439,8 +494,7 @@ public class PlateBulkEditor {
                 }
             };
             toolsActions.add(autoGenerateIds);
-        }
-        else {
+        } else {
             getExtractionsFromBarcodes = new GeneiousAction("Fetch Extractions from Barcodes", "Fetch extractions that already exist in your LIMS database, based on the extraction barcodes you have entered in this plate") {
                 public void actionPerformed(ActionEvent e) {
                     final DocumentFieldEditor barcodeEditor = new DocumentFieldEditor(EXTRACTION_BARCODE_FIELD, plate, swapAction.getDirection(), null);
@@ -451,10 +505,10 @@ public class PlateBulkEditor {
                             JToolBar innerToolbar = new JToolBar();
                             innerToolbar.setFloatable(false);
                             innerToolbar.add(new SwapAction(Arrays.asList(barcodeEditor)));
-                            for(Component component : innerToolbar.getComponents()) {
-                                if(component instanceof JButton) {
-                                    ((JButton)component).putClientProperty("hideActionText", Boolean.FALSE);
-                                    ((JButton)component).setHorizontalTextPosition(JButton.RIGHT);
+                            for (Component component : innerToolbar.getComponents()) {
+                                if (component instanceof JButton) {
+                                    ((JButton) component).putClientProperty("hideActionText", Boolean.FALSE);
+                                    ((JButton) component).setHorizontalTextPosition(JButton.RIGHT);
                                 }
                             }
                             panel.add(innerToolbar, BorderLayout.NORTH);
@@ -463,15 +517,15 @@ public class PlateBulkEditor {
                         }
                     };
                     ThreadUtilities.invokeNowOrWait(barcodeEnterRunnable);
-                    if(!response.get()) {
+                    if (!response.get()) {
                         return;
                     }
                     barcodeEditor.valuesFromTextView();
                     final List<String> barcodes = new ArrayList<String>();
-                    for(int i=0; i < plate.getRows(); i++) {
-                        for(int j=0; j < plate.getCols(); j++) {
+                    for (int i = 0; i < plate.getRows(); i++) {
+                        for (int j = 0; j < plate.getCols(); j++) {
                             final Object value = barcodeEditor.getValue(i, j);
-                            if(value != null) {
+                            if (value != null) {
                                 barcodes.add(value.toString());
                             }
                         }
@@ -484,11 +538,11 @@ public class PlateBulkEditor {
             };
             toolsActions.add(getExtractionsFromBarcodes);
         }
-        if(toolsActions.size() > 0) {
+        if (toolsActions.size() > 0) {
             GeneiousAction.SubMenu toolsAction = new GeneiousAction.SubMenu(new GeneiousActionOptions("Tools", "", IconUtilities.getIcons("tools16.png")), toolsActions);
             toolbar.addAction(toolsAction);
         }
-        if(fieldToCheck != null) {
+        if (fieldToCheck != null) {
             autodetectAction = new GeneiousAction("Autodetect workflows", "Autodetect workflows from the extraction id's you have entered", BiocodePlugin.getIcons("workflow_16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     if (fieldToCheck == null) {
@@ -514,10 +568,10 @@ public class PlateBulkEditor {
                     final List<String> idsToCheck = new ArrayList<String>();
                     final List<String> loci = new ArrayList<String>();
                     //todo "noTissue"?
-                    for(int row=0; row < plate.getRows(); row++) {
-                        for(int col=0; col < plate.getCols(); col++) {
+                    for (int row = 0; row < plate.getRows(); row++) {
+                        for (int col = 0; col < plate.getCols(); col++) {
                             Object value = editorToCheck.getValue(row, col);
-                            if(value != null && value.toString().trim().length() > 0) {
+                            if (value != null && value.toString().trim().length() > 0) {
                                 idsToCheck.add(value.toString().trim());
                                 Object lociValue = lociEditor.getValue(row, col);
                                 loci.add(lociValue != null ? lociValue.toString() : null);
@@ -529,12 +583,12 @@ public class PlateBulkEditor {
                             try {
                                 boolean noLociSet = true;
                                 for (String l : loci) {
-                                    if(l != null && !l.equals("None")) {
+                                    if (l != null && !l.equals("None")) {
                                         noLociSet = false;
                                     }
                                 }
                                 Map<String, String> idToWorkflow = BiocodeService.getInstance().getWorkflowIds(idsToCheck, loci, plate.getReactionType());
-                                if(idToWorkflow.isEmpty()) {
+                                if (idToWorkflow.isEmpty()) {
                                     Dialogs.showMessageDialog("<html>Did not find any workflows that match your extraction IDs and locus. " +
                                             (noLociSet ? "Have you set the locus for your plate?" : "") + "<br><br><u><b>Note</b></u>: If you save this plate without any workflows, " +
                                             "Geneious will generate new workflows for your reactions.</html>");
@@ -564,11 +618,11 @@ public class PlateBulkEditor {
                 }
             }
         });
-        if (Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate", owner), holderPanel).equals("Cancel")) {
+        if (Dialogs.showDialog(new Dialogs.DialogOptions(new String[]{"OK", "Cancel"}, "Edit Plate", owner), holderPanel).equals("Cancel")) {
             return false;
         }
 
-        for(DocumentFieldEditor editor : editors) {
+        for (DocumentFieldEditor editor : editors) {
             if (editor.getField().getCode().equals(workflowField.getCode())) {
                 List<String> changes = editor.getChanges();
                 if (changes.size() > 0) {
@@ -585,7 +639,7 @@ public class PlateBulkEditor {
             }
         }
 
-        for(DocumentFieldEditor editor : editors) {
+        for (DocumentFieldEditor editor : editors) {
             editor.valuesFromTextView();
         }
 
@@ -605,16 +659,16 @@ public class PlateBulkEditor {
             }
         }
         if (workflowCount == 0 && fieldToCheck != null && autodetectAction != null) {
-            if (Dialogs.showYesNoDialog("You have not entered any workflows.  You should only enter no workflows if you are intending to start new workflows with these reactions (for example if you are sequencing a new locus).  <br><br>Do you want to autodetect the workflows? (If you have forgotten to click Autodetect Workflows, click yes)", "No workflows", owner, Dialogs.DialogIcon.QUESTION)){
+            if (Dialogs.showYesNoDialog("You have not entered any workflows.  You should only enter no workflows if you are intending to start new workflows with these reactions (for example if you are sequencing a new locus).  <br><br>Do you want to autodetect the workflows? (If you have forgotten to click Autodetect Workflows, click yes)", "No workflows", owner, Dialogs.DialogIcon.QUESTION)) {
                 autodetectAction.actionPerformed(null);
             }
         }
         //get the workflows out of the database (mainly to check for validity in what the user's entered)
-        for(DocumentFieldEditor editor : editors) {
-            if(editor.getField().getCode().equals(workflowField.getCode())) {
-                for(int row = 0; row < plate.getRows(); row++) {
-                    for(int col = 0; col < plate.getCols(); col++) {
-                        if(editor.getValue(row, col) != null && editor.getValue(row, col).toString().trim().length() > 0) {
+        for (DocumentFieldEditor editor : editors) {
+            if (editor.getField().getCode().equals(workflowField.getCode())) {
+                for (int row = 0; row < plate.getRows(); row++) {
+                    for (int col = 0; col < plate.getCols(); col++) {
+                        if (editor.getValue(row, col) != null && editor.getValue(row, col).toString().trim().length() > 0) {
                             workflowIds.add(editor.getValue(row, col).toString());
                         }
                     }
@@ -622,22 +676,22 @@ public class PlateBulkEditor {
             }
         }
         Map<String, Workflow> workflows = null;
-        if(workflowIds.size() > 0) {
+        if (workflowIds.size() > 0) {
             try {
                 workflows = BiocodeService.getInstance().getWorkflows(workflowIds);
             } catch (DatabaseServiceException e) {
-                Dialogs.showMessageDialog("Could not get the workflows from the database: "+e.getMessage());
+                Dialogs.showMessageDialog("Could not get the workflows from the database: " + e.getMessage());
             }
         }
         //put the values back in the reactions
         StringBuilder badWorkflows = new StringBuilder();
-        for(int row=0; row < plate.getRows(); row++) {
-            for(int col=0; col < plate.getCols(); col++) {
+        for (int row = 0; row < plate.getRows(); row++) {
+            for (int col = 0; col < plate.getCols(); col++) {
                 Reaction reaction = plate.getReaction(row, col);
                 Options options = reaction.getOptions();
 
 
-                for (int i = editors.size()-1; i >= 0; i--) {
+                for (int i = editors.size() - 1; i >= 0; i--) {
                     DocumentFieldEditor editor = editors.get(i);
                     Object value = editor.getValue(row, col);
                     options.setValue(editor.getField().getCode(), ""); //erase records if the user has blanked out the line...
@@ -659,8 +713,8 @@ public class PlateBulkEditor {
                 }
             }
         }
-        if(badWorkflows.length() > 0) {
-            Dialogs.showMessageDialog("The following workflow Ids were invalid and were not set:\n"+badWorkflows.toString());
+        if (badWorkflows.length() > 0) {
+            Dialogs.showMessageDialog("The following workflow Ids were invalid and were not set:\n" + badWorkflows.toString());
         }
         return true;
     }
@@ -672,7 +726,7 @@ public class PlateBulkEditor {
         String[] data = new String[2];
         for (String delimiter : delimiters) {
             String[] parts = line.split(delimiter);
-            if(parts.length == 2) {
+            if (parts.length == 2) {
                 data[0] = parts[0];
                 data[1] = parts[1];
                 break;
@@ -683,16 +737,16 @@ public class PlateBulkEditor {
         String wellString = data[0].trim();
         String barcode = data[1].trim();
 
-        if(wellString.length() != 0 && delimiters.contains(wellString.substring(wellString.length()-1))) {
-            wellString = wellString.substring(0, wellString.length()-1);
+        if (wellString.length() != 0 && delimiters.contains(wellString.substring(wellString.length() - 1))) {
+            wellString = wellString.substring(0, wellString.length() - 1);
         }
         BiocodeUtilities.Well well;
         try {
             well = new BiocodeUtilities.Well(wellString);
-        }
-        catch(IllegalArgumentException ex) {
+        } catch (IllegalArgumentException ex) {
             return;
         }
+        
         barcodeEditor.setValue(well.row(), well.col(), barcode);
     }
 
@@ -714,8 +768,8 @@ public class PlateBulkEditor {
         }
     }
 
-    private static void populateWells384(final List<Map<String, String>> ids, final DocumentFieldEditor editorField, Plate p){
-        if(ids.size() != 4) {
+    private static void populateWells384(final List<Map<String, String>> ids, final DocumentFieldEditor editorField, Plate p) {
+        if (ids.size() != 4) {
             throw new IllegalArgumentException("You must have 4 maps!");
         }
 
@@ -724,13 +778,13 @@ public class PlateBulkEditor {
                 editorField.setText("");
                 editorField.valuesFromTextView();
 
-                for(int i=0; i < ids.size(); i++) {
+                for (int i = 0; i < ids.size(); i++) {
                     int xoffset = i % 2 == 0 ? 0 : 1;
                     int yOffset = i > 1 ? 1 : 0;
-                    for(Map.Entry<String, String> entry : ids.get(i).entrySet()) {
+                    for (Map.Entry<String, String> entry : ids.get(i).entrySet()) {
                         BiocodeUtilities.Well well = new BiocodeUtilities.Well(entry.getKey());
                         try {
-                            editorField.setValue(well.row()*2 + yOffset, well.col()*2 + xoffset, entry.getValue());
+                            editorField.setValue(well.row() * 2 + yOffset, well.col() * 2 + xoffset, entry.getValue());
                         } catch (Exception e1) {
                             e1.printStackTrace();
                         }
@@ -747,7 +801,7 @@ public class PlateBulkEditor {
             public void run() {
                 editorField.setText("");
                 editorField.valuesFromTextView();
-                for(Map.Entry<String, String> entry : ids.entrySet()) {
+                for (Map.Entry<String, String> entry : ids.entrySet()) {
                     BiocodeUtilities.Well well;
                     try {
                         well = new BiocodeUtilities.Well(entry.getKey());
@@ -768,15 +822,14 @@ public class PlateBulkEditor {
     }
 
     private static void putMappedValuesIntoEditor(DocumentFieldEditor sourceEditor, DocumentFieldEditor destEditor, Map<String, String> mappedValues, Plate plate, boolean blankUnmappedRows) {
-        for(int row=0; row < plate.getRows(); row++) {
-            for(int col=0; col < plate.getCols(); col++) {
+        for (int row = 0; row < plate.getRows(); row++) {
+            for (int col = 0; col < plate.getCols(); col++) {
                 Object value = sourceEditor.getValue(row, col);
-                if(value != null && value.toString().length() > 0) {
+                if (value != null && value.toString().length() > 0) {
                     String destValue = mappedValues.get(value.toString());
-                    if(destValue != null) {
+                    if (destValue != null) {
                         destEditor.setValue(row, col, destValue);
-                    }
-                    else if(blankUnmappedRows) {
+                    } else if (blankUnmappedRows) {
                         destEditor.setValue(row, col, "");
                     }
                 }
@@ -787,10 +840,10 @@ public class PlateBulkEditor {
 
     private static List<String> getIdsToCheck(DocumentFieldEditor editorToCheck, Plate p) {
         List<String> idsToCheck = new ArrayList<String>();
-        for(int row=0; row < p.getRows(); row++) {
-            for(int col=0; col < p.getCols(); col++) {
+        for (int row = 0; row < p.getRows(); row++) {
+            for (int col = 0; col < p.getCols(); col++) {
                 Object value = editorToCheck.getValue(row, col);
-                if(value != null && value.toString().trim().length() > 0) {
+                if (value != null && value.toString().trim().length() > 0) {
                     idsToCheck.add(value.toString().trim());
                 }
             }
@@ -801,8 +854,8 @@ public class PlateBulkEditor {
 
     private static DocumentFieldEditor getEditorForField(List<DocumentFieldEditor> editors, DocumentField field) {
         DocumentFieldEditor editorToCheck = null;
-        for(DocumentFieldEditor editor : editors) {
-            if(editor.getField().getCode().equals(field.getCode())){
+        for (DocumentFieldEditor editor : editors) {
+            if (editor.getField().getCode().equals(field.getCode())) {
                 editorToCheck = editor;
             }
         }
@@ -816,50 +869,50 @@ public class PlateBulkEditor {
     }
 
     private static List<DocumentField> getDefaultFields(Plate p) {
-        switch(p.getReactionType()) {
+        switch (p.getReactionType()) {
             case Extraction:
-                return Arrays.asList(TISSUE_SAMPLE_ID_FIELD, EXTRACTION_ID_FIELD, EXTRACTION_BARCODE_FIELD, PARENT_EXTRACTION_ID_FIELD);
+                return Arrays.asList(TISSUE_SAMPLE_ID_FIELD, EXTRACTION_ID_FIELD, EXTRACTION_BARCODE_FIELD, PARENT_EXTRACTION_ID_FIELD, CONCENTRATION_PURITY_FIELD);
             case PCR://drop through
             case CycleSequencing:
                 return Arrays.asList(
-                    Reaction.EXTRACTION_FIELD,
-                    LIMSConnection.WORKFLOW_LOCUS_FIELD,
-                    new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
+                        Reaction.EXTRACTION_FIELD,
+                        LIMSConnection.WORKFLOW_LOCUS_FIELD,
+                        new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
                 );
             case GelQuantification:
                 return GelQuantificationReaction.getBulkEditorFields();
-            default :
+            default:
                 return Collections.EMPTY_LIST;
         }
     }
 
     private static DocumentField getFieldToCheck(Plate p) {
-        switch(p.getReactionType()) {
+        switch (p.getReactionType()) {
             case Extraction:
                 return null;
             case PCR:
             case CycleSequencing:
                 return EXTRACTION_ID_FIELD;
-            default :
+            default:
                 return null;
         }
     }
 
     private static DocumentField getLociField(Plate p) {
-        switch(p.getReactionType()) {
+        switch (p.getReactionType()) {
             case Extraction:
                 return null;
             case PCR:
             case CycleSequencing:
                 return LIMSConnection.WORKFLOW_LOCUS_FIELD;
-            default :
+            default:
                 return null;
         }
     }
 
     private static DocumentField getWorkflowField(Plate p) {
-        switch(p.getReactionType()) {
-            default :
+        switch (p.getReactionType()) {
+            default:
                 return WORKFLOW_ID_FIELD;
         }
     }
@@ -880,14 +933,14 @@ public class PlateBulkEditor {
             this.direction = direction;
             this.setAllButton = setAllButton;
             values = new String[plate.getRows()][plate.getCols()];
-            for(int row = 0; row < plate.getRows(); row++) {
-                for(int col = 0; col < plate.getCols(); col++) {
+            for (int row = 0; row < plate.getRows(); row++) {
+                for (int col = 0; col < plate.getCols(); col++) {
                     Object value = plate.getReaction(row, col).getFieldValue(field.getCode());
                     values[row][col] = value != null ? value.toString() : "";
                 }
             }
             valueArea = new JTextArea() {
-                private int minimumRows = DocumentFieldEditor.this.plate.getCols()*DocumentFieldEditor.this.plate.getRows();
+                private int minimumRows = DocumentFieldEditor.this.plate.getCols() * DocumentFieldEditor.this.plate.getRows();
 
                 @Override
                 public Dimension getPreferredSize() {
@@ -916,14 +969,13 @@ public class PlateBulkEditor {
             add(scroller, BorderLayout.CENTER);
 
             JPanel topPanel = new GPanel(new BorderLayout());
-            topPanel.setBorder(new EmptyBorder(0,5,1,10));
+            topPanel.setBorder(new EmptyBorder(0, 5, 1, 10));
             topPanel.add(new JLabel(field.getName()), BorderLayout.CENTER);
-            
+
             add(topPanel, BorderLayout.NORTH);
-            if(setAllButton != null) {
+            if (setAllButton != null) {
                 topPanel.add(setAllButton, BorderLayout.EAST);
-            }
-            else {
+            } else {
                 JPanel spacer = new GPanel();
                 spacer.setPreferredSize(new Dimension(1, 15));
                 topPanel.add(spacer, BorderLayout.EAST);
@@ -964,21 +1016,20 @@ public class PlateBulkEditor {
             final int scrollPosition = scroller.getVerticalScrollBar().getValue();
             final StringBuilder valuesBuilder = new StringBuilder();
             final List<String> lineNumbersBuilder = new ArrayList<String>();
-            if(direction == Direction.DOWN_AND_ACROSS) {
-                for(int row = 0; row < plate.getRows(); row++) {
-                    for(int col = 0; col < plate.getCols(); col++) {
-                        if(col != 0 || row != 0) {
+            if (direction == Direction.DOWN_AND_ACROSS) {
+                for (int row = 0; row < plate.getRows(); row++) {
+                    for (int col = 0; col < plate.getCols(); col++) {
+                        if (col != 0 || row != 0) {
                             valuesBuilder.append("\n");
                         }
                         valuesBuilder.append(values[row][col]);
                         lineNumbersBuilder.add(Plate.getWellName(row, col));
                     }
                 }
-            }
-            else {
-                for(int col = 0; col < plate.getCols(); col++) {
-                    for(int row = 0; row < plate.getRows(); row++) {
-                        if(col != 0 || row != 0) {
+            } else {
+                for (int col = 0; col < plate.getCols(); col++) {
+                    for (int row = 0; row < plate.getRows(); row++) {
+                        if (col != 0 || row != 0) {
                             valuesBuilder.append("\n");
                         }
                         valuesBuilder.append(values[row][col]);
@@ -1006,11 +1057,11 @@ public class PlateBulkEditor {
         public void valuesFromTextView() {
             String[] stringValues = valueArea.getText().split("\n");
             int index = 0;
-            if(direction == Direction.DOWN_AND_ACROSS) {
-                for(int row = 0; row < plate.getRows(); row++) {
-                    for(int col = 0; col < plate.getCols(); col++) {
+            if (direction == Direction.DOWN_AND_ACROSS) {
+                for (int row = 0; row < plate.getRows(); row++) {
+                    for (int col = 0; col < plate.getCols(); col++) {
                         String value;
-                        if(index >= stringValues.length)
+                        if (index >= stringValues.length)
                             value = "";
                         else
                             value = stringValues[index];
@@ -1018,12 +1069,11 @@ public class PlateBulkEditor {
                         index++;
                     }
                 }
-            }
-            else {
-                for(int col = 0; col < plate.getCols(); col++) {
-                    for(int row = 0; row < plate.getRows(); row++) {
+            } else {
+                for (int col = 0; col < plate.getCols(); col++) {
+                    for (int row = 0; row < plate.getRows(); row++) {
                         String value;
-                        if(index >= stringValues.length)
+                        if (index >= stringValues.length)
                             value = "";
                         else
                             value = stringValues[index];
@@ -1055,7 +1105,7 @@ public class PlateBulkEditor {
             int rows = plate.getRows(), columns = plate.getCols();
 
             String[] newValues = valueArea.getText().split("\n", -1);
-            String[] newValuesPaddedOrTruncatedToPlateSize = Arrays.copyOf(newValues, rows*columns);
+            String[] newValuesPaddedOrTruncatedToPlateSize = Arrays.copyOf(newValues, rows * columns);
             return convertToTwoDimensionalArray(newValuesPaddedOrTruncatedToPlateSize, rows, columns, direction);
         }
 
@@ -1064,7 +1114,7 @@ public class PlateBulkEditor {
                 throw new IllegalArgumentException("The supplied String array argument must be non-null.");
             }
 
-            if (array.length != rows*columns) {
+            if (array.length != rows * columns) {
                 throw new IllegalArgumentException(
                         "The length of the supplied String array argument (" + array.length + ") " +
                                 "must be equal to the product of the supplied rows argument (" + rows + ") " +
@@ -1093,7 +1143,7 @@ public class PlateBulkEditor {
         }
 
         public void setDirection(Direction dir) {
-            if(dir != direction) {
+            if (dir != direction) {
                 valuesFromTextView();
                 direction = dir;
                 textViewFromValues();
@@ -1101,34 +1151,30 @@ public class PlateBulkEditor {
             }
         }
 
-        public Object getValue(int row, int col) throws IllegalStateException{
+        public Object getValue(int row, int col) throws IllegalStateException {
             String stringValue = values[row][col];
-            if(stringValue.trim().length() == 0) {
+            if (stringValue.trim().length() == 0) {
                 return null;
             }
-            if(Integer.class.isAssignableFrom(field.getClass())) {
-                try{
+            if (Integer.class.isAssignableFrom(field.getClass())) {
+                try {
                     return Integer.parseInt(stringValue);
+                } catch (NumberFormatException ex) {
+                    throw new IllegalStateException("Invalid value '" + stringValue + "' is invalid.  Expected an integer.");
                 }
-                catch(NumberFormatException ex) {
-                    throw new IllegalStateException("Invalid value '"+stringValue+"' is invalid.  Expected an integer.");
-                }
-            }
-            else if(Double.class.isAssignableFrom(field.getClass())) {
-                try{
+            } else if (Double.class.isAssignableFrom(field.getClass())) {
+                try {
                     return Double.parseDouble(stringValue);
+                } catch (NumberFormatException ex) {
+                    throw new IllegalStateException("Invalid value '" + stringValue + "' is invalid.  Expected a floating point number.");
                 }
-                catch(NumberFormatException ex) {
-                    throw new IllegalStateException("Invalid value '"+stringValue+"' is invalid.  Expected a floating point number.");
-                }
-            }
-            else {
+            } else {
                 return stringValue;
             }
         }
 
         public void setValue(int row, int col, String value) {
-            if(row >= values.length || col >= values[0].length) {
+            if (row >= values.length || col >= values[0].length) {
                 return;
             }
             values[row][col] = value;
@@ -1148,6 +1194,7 @@ public class PlateBulkEditor {
 
         /**
          * newPos must be between 0 and the length of text inclusive.
+         *
          * @param newPos
          */
         public void setCaretPosition(int newPos) {
@@ -1160,6 +1207,7 @@ public class PlateBulkEditor {
 
         private class PasteHandler extends TransferHandler {
             private TransferHandler original;
+
             public PasteHandler(TransferHandler transferHandler) {
                 original = transferHandler;
             }
@@ -1168,11 +1216,11 @@ public class PlateBulkEditor {
             public boolean importData(TransferSupport support) {
                 try {
                     DataFlavor textFlavour = DataFlavor.selectBestTextFlavor(support.getTransferable().getTransferDataFlavors());
-                    if(textFlavour == null) {
+                    if (textFlavour == null) {
                         return original.importData(support);  // Let the original implementation try
                     }
                     Object textData = support.getTransferable().getTransferData(textFlavour);
-                    if(textData == null) {
+                    if (textData == null) {
                         return original.importData(support);  // Let the original implementation try
                     }
 
@@ -1191,15 +1239,15 @@ public class PlateBulkEditor {
                     String selection = valueArea.getSelectedText();
                     int selectedLines = selection == null ? 1 : 1 + CharSequenceUtilities.count('\n', selection);
                     int extraEmptyRowsBeingOverwritten = 0;
-                    if(newLines.length > 1) {
-                        for(int i=selectedLines; i<newLines.length && i<oldLines.length; i++) {
-                            if(oldLines[i].trim().length() > 0) {
+                    if (newLines.length > 1) {
+                        for (int i = selectedLines; i < newLines.length && i < oldLines.length; i++) {
+                            if (oldLines[i].trim().length() > 0) {
                                 extraEmptyRowsBeingOverwritten++;
                             }
                         }
                     }
 
-                    if(extraEmptyRowsBeingOverwritten > 0) {
+                    if (extraEmptyRowsBeingOverwritten > 0) {
                         if (displayOverwritingWarning(newLines, selectedLines, extraEmptyRowsBeingOverwritten))
                             return false;
                     }
@@ -1207,13 +1255,13 @@ public class PlateBulkEditor {
 
                     StringBuilder newText = new StringBuilder();
                     newText.append(originalText.substring(0, pasteStart));
-                    for(int i=0; i<oldLines.length || i<newLines.length; i++) {
-                        if(i>0) {
+                    for (int i = 0; i < oldLines.length || i < newLines.length; i++) {
+                        if (i > 0) {
                             newText.append("\n");
                         }
-                        if(i < newLines.length) {
+                        if (i < newLines.length) {
                             newText.append(newLines[i]);
-                            if(selectedLines == newLines.length && i == newLines.length-1) {
+                            if (selectedLines == newLines.length && i == newLines.length - 1) {
                                 newText.append(trailingLineAfterPaste);
                             }
                         } else {
@@ -1222,7 +1270,7 @@ public class PlateBulkEditor {
                     }
                     valueArea.setText(newText.toString());
                     int position = pasteStart + text.length();
-                    if(position > newText.length()) {
+                    if (position > newText.length()) {
                         position = newText.length();
                     }
                     valueArea.setCaretPosition(position);
@@ -1242,7 +1290,7 @@ public class PlateBulkEditor {
 
                 List<String> lines = new ArrayList<String>();
                 String current;
-                while((current = reader.readLine()) != null) {
+                while ((current = reader.readLine()) != null) {
                     lines.add(current);
                 }
                 reader.close();
@@ -1251,22 +1299,22 @@ public class PlateBulkEditor {
 
             private boolean displayOverwritingWarning(String[] newLines, int selectedLines, int extraNonEmptyRowsBeingOverwritten) {
                 StringBuilder message = new StringBuilder("<html>You are pasting <strong>" + newLines.length + "</strong> lines");
-                if(selectedLines > 1) {
+                if (selectedLines > 1) {
                     message.append(", but have only selected <strong>").append(selectedLines).append("</strong> lines");
                 }
                 message.append(". This will overwrite <font color=\"red\"><strong>").append(extraNonEmptyRowsBeingOverwritten).append(
                         "</strong></font> existing well");
-                if(extraNonEmptyRowsBeingOverwritten > 1) {
+                if (extraNonEmptyRowsBeingOverwritten > 1) {
                     message.append("s");
                 }
-                if(selectedLines > 1) {
+                if (selectedLines > 1) {
                     message.append(" outside of your selection");
                 } else {
                     message.append(" below the current well");
                 }
                 message.append(".");
 
-                if(!Dialogs.showYesNoDialog(message + "\n\nContinue?</html>", "Overwriting Existing Data", null, Dialogs.DialogIcon.WARNING)) {
+                if (!Dialogs.showYesNoDialog(message + "\n\nContinue?</html>", "Overwriting Existing Data", null, Dialogs.DialogIcon.WARNING)) {
                     return true;
                 }
                 return false;
@@ -1315,7 +1363,7 @@ public class PlateBulkEditor {
                 setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
                 setBackground(new Color(225, 225, 225));
                 rowComponents = new JLabel[plate.getRows() * plate.getCols()];
-                for(int i=0; i< rowComponents.length; i++) {
+                for (int i = 0; i < rowComponents.length; i++) {
                     JLabel label = new JLabel();
                     label.setFont(valueArea.getFont().deriveFont(Font.PLAIN));
                     add(label);
@@ -1332,7 +1380,7 @@ public class PlateBulkEditor {
                     String contents = changeEvent.getDocument().getText(0, changeEvent.getDocument().getLength());
                     String[] parts = contents.split("\n");
 
-                    for(int i=0; i<rowComponents.length; i++) {
+                    for (int i = 0; i < rowComponents.length; i++) {
                         String oldValue = getPlateValue(i);
                         String newValue = i < parts.length ? parts[i] : "";
                         boolean changed = !oldValue.equals(newValue);
@@ -1347,14 +1395,13 @@ public class PlateBulkEditor {
             }
 
             /**
-             *
              * @param rowIndex The row index in the line numbers component
              * @return field value or "" if it does not exist.  Never null.
              */
             private String getPlateValue(int rowIndex) {
                 int row;
                 int col;
-                if(direction == Direction.DOWN_AND_ACROSS) {
+                if (direction == Direction.DOWN_AND_ACROSS) {
                     row = rowIndex / plate.getCols();
                     col = rowIndex % plate.getCols();
                 } else {
@@ -1362,7 +1409,7 @@ public class PlateBulkEditor {
                     row = rowIndex % plate.getRows();
                 }
                 Reaction reaction = plate.getReaction(row, col);
-                if(reaction == null) {
+                if (reaction == null) {
                     return "";
                 }
                 Object fieldValue = reaction.getFieldValue(field.getCode());
@@ -1386,7 +1433,7 @@ public class PlateBulkEditor {
         }
     }
 
-    private static class SwapAction extends GeneiousAction{
+    private static class SwapAction extends GeneiousAction {
         private List<DocumentFieldEditor> editors;
         private Direction direction = Direction.ACROSS_AND_DOWN;
 
@@ -1415,7 +1462,7 @@ public class PlateBulkEditor {
         }
     }
 
-    private static class ExtractionFetcherRunnable implements Runnable{
+    private static class ExtractionFetcherRunnable implements Runnable {
         private List<String> barcodes;
         private List<DocumentFieldEditor> editors;
         private Plate plate;
@@ -1432,8 +1479,10 @@ public class PlateBulkEditor {
             DocumentFieldEditor tissueEditor = getEditorForField(editors, TISSUE_SAMPLE_ID_FIELD);
             DocumentFieldEditor extractionIdEditor = getEditorForField(editors, EXTRACTION_ID_FIELD);
             DocumentFieldEditor parentExtractionEditor = getEditorForField(editors, PARENT_EXTRACTION_ID_FIELD);
+            DocumentFieldEditor concentrationsEditor = getEditorForField(editors, CONCENTRATION_PURITY_FIELD);
+            //DocumentFieldEditor concentrationStoredEditor = getEditorForField(editors, CONCENTRATION_STORED_FIELD);
 
-            valuesFromTextView(tissueEditor, extractionIdEditor, parentExtractionEditor);
+            valuesFromTextView(tissueEditor, extractionIdEditor, parentExtractionEditor, concentrationsEditor);
 
             try {
                 List<ExtractionReaction> temp = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(barcodes);
@@ -1441,9 +1490,9 @@ public class PlateBulkEditor {
                 for (ExtractionReaction reaction : temp) {
                     extractions.put(reaction.getExtractionBarcode(), reaction);
                 }
-                for (int i=0; i < plate.getRows(); i++) {
-                    for (int j=0; j < plate.getCols(); j++) {
-                        Object barcode = barcodeEditor.getValue(i,j);
+                for (int i = 0; i < plate.getRows(); i++) {
+                    for (int j = 0; j < plate.getCols(); j++) {
+                        Object barcode = barcodeEditor.getValue(i, j);
 
                         //get the extraction
                         ExtractionReaction reaction = null;
@@ -1453,21 +1502,21 @@ public class PlateBulkEditor {
 
                         //fill in the values
                         if (reaction != null) {
-                            if(extractionIdEditor != null)
+                            if (extractionIdEditor != null)
                                 extractionIdEditor.setValue(i, j, reaction.getExtractionId());
-                            if(parentExtractionEditor != null)
+                            if (parentExtractionEditor != null)
                                 parentExtractionEditor.setValue(i, j, "" + reaction.getFieldValue("parentExtraction"));
-                            if(tissueEditor != null)
+                            if (tissueEditor != null)
                                 tissueEditor.setValue(i, j, reaction.getTissueId());
                             //todo: original plate
                         }
                     }
                 }
-                if(extractionIdEditor != null)
+                if (extractionIdEditor != null)
                     extractionIdEditor.textViewFromValues();
-                if(parentExtractionEditor != null)
+                if (parentExtractionEditor != null)
                     parentExtractionEditor.textViewFromValues();
-                if(tissueEditor != null)
+                if (tissueEditor != null)
                     tissueEditor.textViewFromValues();
             } catch (DatabaseServiceException e1) {
                 Dialogs.showMessageDialog("Could not get Workflow IDs from the database: " + e1.getMessage());
@@ -1477,7 +1526,7 @@ public class PlateBulkEditor {
 
         private void valuesFromTextView(DocumentFieldEditor... editors) {
             for (DocumentFieldEditor editor : editors) {
-                if(editor != null) {
+                if (editor != null) {
                     editor.valuesFromTextView();
                 }
             }

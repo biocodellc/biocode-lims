@@ -38,7 +38,7 @@ public class ExtractionOptions extends ReactionOptions<ExtractionReaction>{
         concOption.setUnits("ng/" + '\u00B5' + "L");
         concOption.setDisabledValue(0.0);
         concOption.setIncrement(0.01);
-        concStoredOption.addDependent(concOption, concStoredValues[0]);
+        //concStoredOption.addDependent(concOption, concStoredValues[0]);
         addStringOption("extractionBarcode", "Extraction Barcode", "", "May be blank");
         addStringOption("extractionMethod", "Extraction Method", "");
         addStringOption("parentExtraction", "Parent Extraction Id", "", "May be blank");

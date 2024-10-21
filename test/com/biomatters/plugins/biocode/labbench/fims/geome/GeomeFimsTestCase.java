@@ -21,7 +21,7 @@ public abstract class GeomeFimsTestCase extends Assert {
 
     @Before
     public void createClient() {
-        client = new geomeFIMSClient(geomeFIMSConnection.GEOME_URL);
+        client = new geomeFIMSClient(geomeFIMSConnection.GEOME_URL,30);
     }
     @After
     public void logoutAfterTestDone() throws MalformedURLException {
