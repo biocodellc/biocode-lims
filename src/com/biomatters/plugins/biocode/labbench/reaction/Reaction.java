@@ -407,6 +407,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 return locationString;
             }
         }
+        if (fieldCode.equals("concentration")) {
+            // If value is 0.0, return an empty string to display nothing
+            if (value == null || (value instanceof Double && (Double) value == 0.0)) {
+                return "";  // UI will show "" (nothing) instead of 0.0
+            }
+        }
         return value == null ? "" : value;
     }
 
@@ -646,6 +652,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
      */
     final String getDisplayableValue(DocumentField field) {
         Object value = getFieldValue(field.getCode());
+        
         if(value == null) {
             value = "";
         }
