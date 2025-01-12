@@ -34,8 +34,7 @@ public class ExtractionOptions extends ReactionOptions<ExtractionReaction>{
         };
         addComboBoxOption("control", "Control", controlValues, controlValues[0]);
         ComboBoxOption concStoredOption = addComboBoxOption("concentrationStored", "Sample Spec'd", concStoredValues, concStoredValues[1]);
-        DoubleOption concOption = addDoubleOption("concentration", "Concentration/Purity", 0.0, 0.0, Double.MAX_VALUE);
-        //StringOption concOption = addStringOption("concentration", "Concentration/Purity", "");
+        DoubleOption concOption = addDoubleOption("concentration", "Concentration", 0.0, 0.0, Double.MAX_VALUE);
         concOption.setUnits("ng/" + '\u00B5' + "L");
         concOption.setDisabledValue(Double.NaN);
         concOption.setIncrement(0.01);

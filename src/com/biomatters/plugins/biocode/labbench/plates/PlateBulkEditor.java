@@ -65,7 +65,7 @@ public class PlateBulkEditor {
     public static DocumentField TISSUE_SAMPLE_ID_FIELD = new DocumentField("Tissue Sample ID", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
     public static DocumentField EXTRACTION_ID_FIELD = new DocumentField("Extraction ID", "", "extractionId", String.class, false, false);
     public static DocumentField EXTRACTION_BARCODE_FIELD = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
-    public static DocumentField CONCENTRATION_PURITY_FIELD = new DocumentField("Concentration/Purity", "", "concentration", String.class, false, false);
+    public static DocumentField CONCENTRATION_PURITY_FIELD = new DocumentField("Concentration", "", "concentration", String.class, false, false);
     //public static DocumentField CONCENTRATION_STORED_FIELD = new DocumentField("Concentration Stored", "", "concentrationStored", String.class, false, false);
     public static DocumentField PARENT_EXTRACTION_ID_FIELD = new DocumentField("Parent Extraction ID", "", "parentExtraction", String.class, true, false);
     public static DocumentField WORKFLOW_ID_FIELD = new DocumentField("Workflow ID", "", "workflowId", String.class, false, false);
