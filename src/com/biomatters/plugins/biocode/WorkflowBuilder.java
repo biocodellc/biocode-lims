@@ -629,7 +629,7 @@ public class WorkflowBuilder extends DocumentOperation {
             boolean copy = ids.contains(String.valueOf(srcReactions[i].getFieldValue("biocode.Specimen_Num_Collector")));
             if(copy) {
                 count++;
-                ReactionUtilities.copyReaction(srcReactions[i], destReactions[i]);
+                ReactionUtilities.copyReaction(srcReactions[i], destReactions[i], false);
             }
             else {
                 System.out.println("didn't copy!");

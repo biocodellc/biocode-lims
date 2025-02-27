@@ -249,7 +249,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         int srcIndex = srcStart;
         int destIndex = destStart;
         for(int i=0; i < max && destIndex < destReactions.length && srcIndex < srcReactions.length; i++) {
-            ReactionUtilities.copyReaction(srcReactions[srcIndex], destReactions[destIndex]);
+            ReactionUtilities.copyReaction(srcReactions[srcIndex], destReactions[destIndex], true);
             srcIndex += srcIncrement;
             destIndex += destIncrement;
         }
@@ -276,7 +276,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                     Reaction destReaction = destPlate.getReaction(row * 2 + yOffset, col * 2 + xoffset);
                     boolean copy = passedOrFailed == null || passedOrFailed == ReactionOptions.PASSED_VALUE.getName().equals(srcReaction.getFieldValue(ReactionOptions.RUN_STATUS));
                     if(copy) {
-                        ReactionUtilities.copyReaction(srcReaction, destReaction);
+                        ReactionUtilities.copyReaction(srcReaction, destReaction, false);
                     }
                 }
             }
@@ -294,7 +294,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 Reaction srcReaction = srcPlate.getReaction(row * 2 + yOffset, col * 2 + xoffset);
                 boolean copy = passedOrFailed == null ? true : passedOrFailed == ReactionOptions.PASSED_VALUE.getName().equals(srcReaction.getFieldValue(ReactionOptions.RUN_STATUS));
                 if (copy) {
-                    ReactionUtilities.copyReaction(srcReaction, destReaction);
+                    ReactionUtilities.copyReaction(srcReaction, destReaction, false);
                 }
             }
         }
@@ -319,7 +319,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             boolean copy = passedOrFailed == null ? true : passedOrFailed == ReactionOptions.PASSED_VALUE.getName().equals(srcReactions[i].getFieldValue(ReactionOptions.RUN_STATUS));
             if(copy) {
                 count++;
-                ReactionUtilities.copyReaction(srcReactions[i], destReactions[i]);
+                ReactionUtilities.copyReaction(srcReactions[i], destReactions[i], false);
             }
             else {
                 System.out.println("didn't copy!");

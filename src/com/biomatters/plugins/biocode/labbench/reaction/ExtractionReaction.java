@@ -91,8 +91,8 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         }
     }
 
-    public static void copyExtractionReaction(ExtractionReaction src, ExtractionReaction dest) {
-        ReactionUtilities.copyReaction(src, dest);
+    public static void copyExtractionReaction(ExtractionReaction src, ExtractionReaction dest, Boolean keepExtractionBarcode) {
+        ReactionUtilities.copyReaction(src, dest, keepExtractionBarcode);
         dest.setId(src.getId());
         dest.setExtractionId(src.getExtractionId());
     }
@@ -419,10 +419,11 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
             if(copyInsteadOfMove) {
                 for(ExtractionReaction destinationReaction : newExtractionReactions) {
-                    ExtractionReaction.copyExtractionReaction(getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey()), destinationReaction);
+                    ExtractionReaction.copyExtractionReaction(getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey()), destinationReaction, false);
 
                     destinationReaction.setExtractionId(ReactionUtilities.getNewExtractionId(existingExtractionIds, destinationReaction.getTissueId()));
-
+                    // in the case of a copy we don't want to preserve the extractionBarcode
+                    destinationReaction.getOptions().setValue("extractionBarcode", "");
                     existingExtractionIds.add(destinationReaction.getExtractionId());
 
                     destinationReaction.setJustMoved(true);
@@ -435,7 +436,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             } else {
                 ExtractionReaction destinationReaction = newExtractionReactions.get(0);
 
-                ExtractionReaction.copyExtractionReaction(getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey()), destinationReaction);
+                ExtractionReaction.copyExtractionReaction(getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey()), destinationReaction, true);
 
                 destinationReaction.getOptions().setValue("parentExtraction", "");
 

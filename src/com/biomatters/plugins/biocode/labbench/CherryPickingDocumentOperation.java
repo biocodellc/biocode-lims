@@ -348,7 +348,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                         Reaction newReaction = newReactions.get(index);
                         Reaction plateReaction = plate.getPlate().getReactions()[plateIndex];
 
-                        ReactionUtilities.copyReaction(newReaction, plateReaction);
+                        ReactionUtilities.copyReaction(newReaction, plateReaction, true);
                         plateReaction.setExtractionId(newReaction.getExtractionId());
                         plateReaction.setId(newReaction.getId());
                     }
@@ -379,7 +379,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
         for (Reaction oldReaction : failedReactions) {
             Reaction newReaction = Reaction.getNewReaction(reactionType);
-            ReactionUtilities.copyReaction(oldReaction, newReaction);
+            ReactionUtilities.copyReaction(oldReaction, newReaction, true);
             newReaction.getOptions().setValue(ReactionOptions.RUN_STATUS, ReactionOptions.NOT_RUN_VALUE);
             newReactions.add(newReaction);
         }
