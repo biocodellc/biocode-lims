@@ -340,6 +340,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                         "Their original locations will be tracked in the <i>previous plate</i> and <i>previous well</i> fields." +
                         "<br><br><b>Create aliquots?</b> The existing extraction reactions will be left untouched, and these ones will be given new extraction id's.  The location and id's of each alliquot's parent extractions will be tracked in the <i>parent extraction id</i>, " +
                         "<i>previous plate</i>, and <i>previous well</i> fields.") == move_extractions;
+                // if b is true then user selected move_extractions
                 if (b) {
                     return overrideExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(existingExtractionReactionsToNewExtractionReactions, reactionAttributeGetter, false);
                 } else {

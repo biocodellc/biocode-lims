@@ -1,4 +1,12 @@
-==Biocode Plugin 3.0.21 - 20 October 2024 ==
+==Biocode Plugin 3.0.24 - 27 February 2025 ==
+* Fixing move extraction issue that leaves extraction barcodes behind
+
+==Biocode Plugin 3.0.23 - 12 January 2025 ==
+* Concentration/Purity renamed to Concentration
+* Concentration does not display 0.0 values and instead shows blank values
+* Verified Save function executes without errors
+
+==Biocode Plugin 3.0.22 - 20 October 2024 ==
 * Updated connection library for GEOME plugin to OK4HTTP from Jersey2.6 to address issue #134
 
 ==Biocode Plugin 3.0.20 - 11 December 2023 ==
