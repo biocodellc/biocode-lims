@@ -122,6 +122,10 @@ public class PlateDocumentViewer extends DocumentViewer{
                                     hasCheckedPlateForErrorsAtLeastOnce = true;
                                 }
 
+                                for (Reaction r : plateView.getPlate().getReactions()) {
+                                    System.out.println("Reaction ID: " + r.getId() + "Extraction ID: " + r.getExtractionId() +  ", Locus: " + r.getLocus());
+                                }
+
                                 if (!errorDetected) {
                                     BiocodeService.getInstance().savePlate(plateView.getPlate(), progressFrame);
                                 }

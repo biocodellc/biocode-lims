@@ -1689,11 +1689,28 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             Object tissueId = reaction.getFieldValue("sampleId");
             String extractionId = reaction.getExtractionId();
 
+            boolean hasValidTissueId = tissueId != null && !tissueId.toString().trim().isEmpty();
+            boolean hasValidExtractionId = extractionId != null && !extractionId.trim().isEmpty() && !extractionId.equalsIgnoreCase("None");
+
             if (!reaction.isEmpty()) {
-                if (reaction.getType().linksToWorkflows() && reaction.getLocus().equals("None")) {
-                    throw new BadDataException("Locus is not specified for reaction with extraction id " + reaction.getExtractionId());
+                //if (reaction.getType().linksToWorkflows() && reaction.getLocus().equals("None")) {
+                //    throw new BadDataException("Locus is not specified for reaction with extraction id " + reaction.getExtractionId());
+                //}
+                if (reaction.getType().linksToWorkflows()) {
+                    String locus = reaction.getLocus();
+
+                    boolean isLocusInvalid = (locus == null || locus.trim().isEmpty() || locus.equalsIgnoreCase("None"));
+                    boolean isExtractionIdValid = (extractionId != null && !extractionId.trim().isEmpty() && !extractionId.equalsIgnoreCase("None"));
+
+                    if (isLocusInvalid && isExtractionIdValid) {
+                        throw new BadDataException("Locus is not specified for reaction with extraction id " + extractionId);
+                    }
                 }
-                reactionsToSave.add(reaction);
+
+                //if (hasValidTissueId || hasValidExtractionId) {
+                    reactionsToSave.add(reaction);
+                //}
+
                 if(extractionId != null && tissueId != null && tissueId.toString().length() > 0) {
                     if(reaction.getWorkflow() != null && workflowId.toString().length() > 0){
                         if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
@@ -1706,6 +1723,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         workflowIdStrings.add(workflowId.toString());
                     }
                 }
+            }    else {
+                System.out.println("reaction is empty.  This may require setting up a delete operation or ignore operation" + reaction.toString());
             }
         }
 

@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -13,6 +14,9 @@ import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 
+import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import javax.swing.*;
 import java.util.*;
 import java.util.List;
@@ -21,16 +25,17 @@ import java.sql.*;
 
 /**
  * @author Steven Stones-Havas
- *          <p/>
- *          Created on 12/06/2009 5:27:29 PM
+ * <p/>
+ * Created on 12/06/2009 5:27:29 PM
  */
 @SuppressWarnings({"ConstantConditions"})
-public class ExtractionReaction extends Reaction<ExtractionReaction>{
+public class ExtractionReaction extends Reaction<ExtractionReaction> {
     private boolean justMoved = false;
 
-    public ExtractionReaction(){}
+    public ExtractionReaction() {
+    }
 
-    public ExtractionReaction(ResultSet r) throws SQLException{
+    public ExtractionReaction(ResultSet r) throws SQLException {
         ReactionOptions options = getOptions();
         init(r, options);
     }
@@ -91,11 +96,14 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         }
     }
 
+    /*
+    // this function is now redundant
     public static void copyExtractionReaction(ExtractionReaction src, ExtractionReaction dest, Boolean keepExtractionBarcode) {
         ReactionUtilities.copyReaction(src, dest, keepExtractionBarcode);
-        dest.setId(src.getId());
-        dest.setExtractionId(src.getExtractionId());
+        //dest.setId(src.getId());
+        //dest.setExtractionId(src.getExtractionId());
     }
+    */
 
     public String getLocus() {
         return null; //extractions don't have a locus
@@ -121,7 +129,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     private ReactionOptions options;
 
     public ReactionOptions _getOptions() {
-        if(options == null) {
+        if (options == null) {
             options = new ExtractionOptions();
         }
         return options;
@@ -131,7 +139,9 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         this.options = op;
     }
 
-    public void setThermocycle(Thermocycle tc){}
+    public void setThermocycle(Thermocycle tc) {
+    }
+
     public Thermocycle getThermocycle() {
         return null;  //Extractions don't have thermocycles
     }
@@ -153,13 +163,12 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     }
 
     public static List<DocumentField> getDefaultDisplayedFields() {
-        if(BiocodeService.getInstance().isLoggedIn()) {
+        if (BiocodeService.getInstance().isLoggedIn()) {
             return Arrays.asList(
                     BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
                     new DocumentField("Extraction Id", "", "extractionId", String.class, false, false)
             );
-        }
-        else {
+        } else {
             return Arrays.asList(
                     new DocumentField("Extraction Id", "", "extractionId", String.class, false, false)
             );
@@ -172,6 +181,8 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     }
 
     public String _areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent, boolean checkingFromPlate) {
+        System.out.println("BEFORE _areReactionsValid - Reactions: " + reactions);
+
         if (!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database.";
         }
@@ -262,11 +273,11 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                 r.setHasError(true);
             }
         }
-        if(!emptyLocations.isEmpty()) {
+        if (!emptyLocations.isEmpty()) {
             errorBuilder.append("Extraction reactions cannot have empty ids");
             errorBuilder.append(checkingFromPlate ? ":" : ".");
 
-            if(checkingFromPlate) {
+            if (checkingFromPlate) {
                 if (emptyLocations.size() < 8) {
                     errorBuilder.append(StringUtilities.humanJoin(emptyLocations)).append(".");
                 } else {
@@ -278,6 +289,8 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         if (errorBuilder.length() > 0) {
             return "<html><b>There were some errors in your data:</b><br>" + errorBuilder.toString() + "</html>";
         }
+
+        System.out.println("AFTER _areReactionsValid - Reactions: " + reactions);
 
         return "";
     }
@@ -308,6 +321,35 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionBarcodeGetter(), new ExtractionReactionRetrieverViaBarcode(), dialogParent, checkingFromPlate);
     }
 
+    @Override
+    public String toString() {
+        Map<String, String> attributes = new LinkedHashMap<>();
+
+        // Collect non-empty attributes
+        if (getTissueId() != null && !getTissueId().isEmpty()) {
+            attributes.put("tissueId", getTissueId());
+        }
+        if (getExtractionId() != null && !getExtractionId().isEmpty()) {
+            attributes.put("extractionId", getExtractionId());
+        }
+        String extractionBarcode = getOptions().getValueAsString("extractionBarcode");
+        if (extractionBarcode != null && !extractionBarcode.isEmpty()) {
+            attributes.put("extractionBarcode", extractionBarcode);
+        }
+
+        // If all attributes are empty, return an empty string
+        if (attributes.isEmpty()) {
+            return ""; // Ensures no empty reactions appear in lists
+        }
+
+        // Format only non-empty attributes dynamically
+        return "ExtractionReaction{" +
+                attributes.entrySet().stream()
+                        .map(entry -> entry.getKey() + "='" + entry.getValue() + "'")
+                        .collect(Collectors.joining(", ")) + // No extra commas
+                "}";
+    }
+
     private static String checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions,
                                                                                                              ReactionAttributeGetter<String> reactionAttributeGetter,
                                                                                                              ReactionRetriever<ExtractionReaction, LIMSConnection, List<String>> reactionRetriever,
@@ -334,9 +376,9 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                 String create_alliquots = "Create aliquots";
 
                 String firstPartOfMessage = attributeToExistingExtractionReactions.keySet().size() < 4 ? "Extraction reactions that are associated with the following " + attributeName.toLowerCase() + "(s) already exist: " + StringUtilities.join(", ", attributeToExistingExtractionReactions.keySet()) + ".<br><br>"
-                        : "Extraction reactions that are associated with "+attributeToExistingExtractionReactions.keySet().size()+" " + attributeName.toLowerCase() + "(s) you entered already exist.  ";
+                        : "Extraction reactions that are associated with " + attributeToExistingExtractionReactions.keySet().size() + " " + attributeName.toLowerCase() + "(s) you entered already exist.  ";
 
-                boolean b = Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {move_extractions, create_alliquots}, "Extractions already exist", dialogParent, Dialogs.DialogIcon.QUESTION), firstPartOfMessage + "Are you trying to:<br><br><b>Move these extractions to this plate?</b> The existing extraction reactions will be removed from their original plate and placed on this one.  " +
+                boolean b = Dialogs.showDialog(new Dialogs.DialogOptions(new String[]{move_extractions, create_alliquots}, "Extractions already exist", dialogParent, Dialogs.DialogIcon.QUESTION), firstPartOfMessage + "Are you trying to:<br><br><b>Move these extractions to this plate?</b> The existing extraction reactions will be removed from their original plate and placed on this one.  " +
                         "Their original locations will be tracked in the <i>previous plate</i> and <i>previous well</i> fields." +
                         "<br><br><b>Create aliquots?</b> The existing extraction reactions will be left untouched, and these ones will be given new extraction id's.  The location and id's of each alliquot's parent extractions will be tracked in the <i>parent extraction id</i>, " +
                         "<i>previous plate</i>, and <i>previous well</i> fields.") == move_extractions;
@@ -402,11 +444,11 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
         Set<String> existingExtractionIds = new LinkedHashSet<>();
 
-        if(copyInsteadOfMove) {
+        if (copyInsteadOfMove) {
             LIMSConnection activeLIMSConnection = BiocodeService.getInstance().getActiveLIMSConnection();
             Set<String> tissueIds = new LinkedHashSet<>();
             for (List<ExtractionReaction> existingExtractionReactions : existingExtractionReactionsToNewExtractionReactions.keySet()) {
-                for(ExtractionReaction reaction : existingExtractionReactions) {
+                for (ExtractionReaction reaction : existingExtractionReactions) {
                     tissueIds.add(reaction.getTissueId());
                 }
             }
@@ -417,26 +459,45 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         for (Map.Entry<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsAndNewExtractionReactions : existingExtractionReactionsToNewExtractionReactions.entrySet()) {
             List<ExtractionReaction> newExtractionReactions = existingExtractionReactionsAndNewExtractionReactions.getValue();
 
-            if(copyInsteadOfMove) {
-                for(ExtractionReaction destinationReaction : newExtractionReactions) {
-                    ExtractionReaction.copyExtractionReaction(getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey()), destinationReaction, false);
+            if (copyInsteadOfMove) {
+                for (ExtractionReaction destinationReaction : newExtractionReactions) {
+                    // Get the source reaction to copy from
+                    ExtractionReaction sourceReaction = getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey());
 
-                    destinationReaction.setExtractionId(ReactionUtilities.getNewExtractionId(existingExtractionIds, destinationReaction.getTissueId()));
-                    // in the case of a copy we don't want to preserve the extractionBarcode
-                    destinationReaction.getOptions().setValue("extractionBarcode", "");
-                    existingExtractionIds.add(destinationReaction.getExtractionId());
+                    // Log the source reaction before copying
+                    //System.out.println("Before copy - Source Reaction: " + sourceReaction);
 
+                    // Copy the source reaction into the destination reaction
+                    ReactionUtilities.copyReaction(sourceReaction, destinationReaction, false);
+
+                    // Generate a new extraction ID for the destination reaction
+                    String newExtractionId = ReactionUtilities.getNewExtractionId(existingExtractionIds, destinationReaction.getTissueId());
+                    destinationReaction.setExtractionId(newExtractionId);
+
+                    // Store the new extraction ID to ensure uniqueness
+                    existingExtractionIds.add(newExtractionId);
+
+                    // Mark the destination reaction as moved
                     destinationReaction.setJustMoved(true);
+
+                    // Log final state of the destination reaction
+                    //System.out.println("Destination Reaction after copy: " + destinationReaction);
+
+                    // Log the source reaction after copying (to check if it's modified)
+                    //System.out.println("Source Reaction after copy: " + sourceReaction);
                 }
-            }
-            else if (newExtractionReactions.size() > 1) {
+            } else if (newExtractionReactions.size() > 1) {
                 ReactionUtilities.setReactionErrorStates(newExtractionReactions, true);
 
                 extractionReactionsThatCouldNotBeOverridden.add(reactionAttributeGetter.getAttributeName() + ": " + reactionAttributeGetter.get(newExtractionReactions.get(0)) + ".\n" + "Well Numbers: " + StringUtilities.join(", ", ReactionUtilities.getWellNumbers(newExtractionReactions)) + ".");
             } else {
                 ExtractionReaction destinationReaction = newExtractionReactions.get(0);
+                ExtractionReaction sourceReaction = getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey());
 
-                ExtractionReaction.copyExtractionReaction(getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey()), destinationReaction, true);
+                ReactionUtilities.copyReaction(sourceReaction, destinationReaction, true);
+
+                destinationReaction.setId(sourceReaction.getId());
+                destinationReaction.setExtractionId(sourceReaction.getExtractionId());
 
                 destinationReaction.getOptions().setValue("parentExtraction", "");
 
@@ -444,7 +505,23 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             }
         }
 
-        return extractionReactionsThatCouldNotBeOverridden.isEmpty() ? "" : "Cannot override multiple new reactions that are associated with the same" + reactionAttributeGetter.getAttributeName() + ":<br><br>" + StringUtilities.join("\n\n", extractionReactionsThatCouldNotBeOverridden);
+        //return extractionReactionsThatCouldNotBeOverridden.isEmpty() ? "" : "Cannot override multiple new reactions that are associated with the same" + reactionAttributeGetter.getAttributeName() + ":<br><br>" + StringUtilities.join("\n\n", extractionReactionsThatCouldNotBeOverridden);
+        if (extractionReactionsThatCouldNotBeOverridden.isEmpty()) {
+            return "";
+        }
+
+        // Get the attribute name for debugging
+        String attributeName = reactionAttributeGetter.getAttributeName();
+
+        // Join the list of reactions into a formatted string
+        String reactionsList = StringUtilities.join("\n\n", extractionReactionsThatCouldNotBeOverridden);
+
+        // Construct the error message
+        String errorMessage = "Cannot override multiple new reactions that are associated with the same "
+                + attributeName + ":<br><br>" + reactionsList;
+
+        return errorMessage;
+
     }
 
     private static ExtractionReaction getExistingExtractionReactionToMove(Collection<ExtractionReaction> existingExtractionReactions) {
@@ -456,4 +533,72 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             extractionReaction.setJustMoved(val);
         }
     }
+
+    /**
+     * Create a main class for direct testing of move and copy reactions
+     *
+     * @param args
+     */
+    public static void main(String[] args) {
+        TestGeneious.initialize();
+
+        // Step 1: Create two ExtractionReaction objects
+        ExtractionReaction reaction1 = new ExtractionReaction();
+        reaction1.setTissueId("t1");
+        reaction1.setExtractionId("ex1");
+        reaction1.getOptions().setValue("extractionBarcode", "eb1");
+
+        ExtractionReaction reaction2 = new ExtractionReaction();
+        reaction2.setTissueId("t2");
+        reaction2.setExtractionId("ex2");
+        reaction2.getOptions().setValue("extractionBarcode", "eb2");
+
+        // Step 2: Create a list to simulate a test plate with these reactions
+        List<ExtractionReaction> testPlate = new ArrayList<>();
+        testPlate.add(reaction1);
+        testPlate.add(reaction2);
+
+        // Step 3: Print initial reactions
+        System.out.println("Before 'Create Aliquot':");
+        testPlate.forEach(System.out::println);
+
+        // Step 4: Simulate "Create Aliquot" option (copy instead of move)
+        List<ExtractionReaction> aliquots = createAliquots(testPlate);
+
+        // Step 5: Print the new aliquot reactions
+        System.out.println("\nAfter 'Create Aliquot... aliquotPlate':");
+        aliquots.forEach(System.out::println);
+
+        System.out.println("\nAfter 'Create Aliquot... testPlate':");
+        testPlate.forEach(System.out::println);
+
+    }
+
+    /**
+     * Simulates creating aliquots from a list of extraction reactions.
+     *
+     * @param originalReactions The original extraction reactions.
+     * @return A new list containing the aliquots.
+     */
+    public static List<ExtractionReaction> createAliquots(List<ExtractionReaction> originalReactions) {
+        List<ExtractionReaction> aliquots = new ArrayList<>();
+
+        for (ExtractionReaction original : originalReactions) {
+            ExtractionReaction aliquot = new ExtractionReaction();
+
+            // Copy original reaction into new aliquot but assign a new extraction ID
+            ReactionUtilities.copyReaction(original, aliquot, true);
+
+            // Assign a new unique extraction ID (simulating an ID generator)
+            aliquot.setExtractionId(original.getExtractionId() + "_aliquot");
+
+            // Set parent extraction ID for tracking
+            aliquot.getOptions().setValue("parentExtraction", original.getExtractionId());
+
+            // Add to the aliquots list
+            aliquots.add(aliquot);
+        }
+        return aliquots;
+    }
+
 }

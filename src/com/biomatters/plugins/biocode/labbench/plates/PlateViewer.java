@@ -391,44 +391,44 @@ public class PlateViewer extends JPanel {
                         progress.setIndeterminateProgress();
 
                         Runnable runnable = new Runnable() {
-                            public void run() {
-                                try {
-                                    if (!hasCheckedPlateForErrorsAtLeastOnce && !plateView.isEditted()) {
-                                        String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView, true);
+                                public void run() {
+                                    try {
+                                        if (!hasCheckedPlateForErrorsAtLeastOnce && !plateView.isEditted()) {
+                                            String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView, true);
 
-                                        if (!reactionValidityCheckResult.isEmpty()) {
-                                            Dialogs.showMessageDialog(reactionValidityCheckResult);
+                                            if (!reactionValidityCheckResult.isEmpty()) {
+                                                Dialogs.showMessageDialog(reactionValidityCheckResult);
 
-                                            errorDetected.set(true);
+                                                errorDetected.set(true);
+                                            }
+
+                                            errorDetected.set(errorDetected.get() || plateView.checkForPlateSpecificErrors());
+
+                                            hasCheckedPlateForErrorsAtLeastOnce = true;
                                         }
 
-                                        errorDetected.set(errorDetected.get() || plateView.checkForPlateSpecificErrors());
-
-                                        hasCheckedPlateForErrorsAtLeastOnce = true;
+                                        if (!errorDetected.get()) {
+                                            BiocodeService.getInstance().savePlate(plate, progress);
+                                        }
+                                    } catch(BadDataException ex) {
+                                        progress.setComplete();
+                                        Dialogs.showMessageDialog("You have some errors in your plate:\n\n" + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);
+                                        errorDetected.set(true);
+                                    } catch(DatabaseServiceException ex){
+                                        ex.printStackTrace();
+                                        progress.setComplete();
+                                        Dialogs.showMessageDialog("There was an error saving your plate: " + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);
+                                        errorDetected.set(true);
+                                    } finally {
+                                        progress.setComplete();
                                     }
+
+                                    nameField.getParentOptions().savePreferences();
 
                                     if (!errorDetected.get()) {
-                                        BiocodeService.getInstance().savePlate(plate, progress);
+                                        frame.dispose();
                                     }
-                                } catch(BadDataException ex) {
-                                    progress.setComplete();
-                                    Dialogs.showMessageDialog("You have some errors in your plate:\n\n" + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);
-                                    errorDetected.set(true);
-                                } catch(DatabaseServiceException ex){
-                                    ex.printStackTrace();
-                                    progress.setComplete();
-                                    Dialogs.showMessageDialog("There was an error saving your plate: " + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);
-                                    errorDetected.set(true);
-                                } finally {
-                                    progress.setComplete();
                                 }
-
-                                nameField.getParentOptions().savePreferences();
-
-                                if (!errorDetected.get()) {
-                                    frame.dispose();
-                                }
-                            }
                         };
 
                         Runnable updatePanelRunnable = new Runnable() {

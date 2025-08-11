@@ -277,6 +277,11 @@ public class geomeFIMSClient {
                 .newBuilder()
                 .addQueryParameter("includePublic", String.valueOf(includePublic));
 
+        // Conditionally add access_token if it's set
+        if (access_token != null && access_token.getAccess_token() != null && !access_token.getAccess_token().isEmpty()) {
+            urlBuilder.addQueryParameter("access_token", access_token.getAccess_token());
+        }
+
         // Build the request
         Request request = new Request.Builder()
                 .url(urlBuilder.build())

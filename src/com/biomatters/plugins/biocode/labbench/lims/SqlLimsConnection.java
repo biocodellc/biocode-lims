@@ -2226,6 +2226,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         Map<String, Set<Integer>> workflowLoci = new HashMap<String, Set<Integer>>();
         for (Reaction reaction : plate.getReactions()) {
             Set<Integer> ids = workflowLoci.get(reaction.getLocus());
+            
             if (ids == null) {
                 ids = new HashSet<Integer>();
                 workflowLoci.put(reaction.getLocus(), ids);
@@ -2237,9 +2238,16 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
 
         for (Map.Entry<String, Set<Integer>> stringSetEntry : workflowLoci.entrySet()) {
-            if (stringSetEntry.getValue().isEmpty()) {
+            String locusValue = stringSetEntry.getKey();
+            Set<Integer> workflowIds = stringSetEntry.getValue();
+
+            if (locusValue == null || workflowIds.isEmpty()) {
+                System.out.println("Skipping entry. Reason: " +
+                    (locusValue == null ? "Locus is NULL" : "No workflow IDs") +
+                    " | IDs: " + workflowIds);
                 continue;
             }
+
             StringBuilder updateLociSql = new StringBuilder();
             updateLociSql.append("UPDATE workflow SET workflow.locus = ? WHERE id IN ");
             SqlUtilities.appendSetOfQuestionMarks(updateLociSql, stringSetEntry.getValue().size());
