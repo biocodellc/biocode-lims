@@ -77,12 +77,23 @@ public class geomeFIMSConnection extends FIMSConnection {
             // for (Project project : projects) {
             // Invocation.Builder configRequest = client.getQueryTarget().path("projects").path(String.valueOf(project.id)).path("config").request();
             //Invocation.Builder configRequest = client.getQueryTarget().path("network").path("config").request();
-            HttpUrl url = client.getQueryTarget() // get the base URL
-                .newBuilder()
-                .addPathSegment("network") // append "network" to the URL
-                .addPathSegment("config")  // append "config" to the URL
-                .build();
+            HttpUrl.Builder urlBuilder = client.getQueryTarget() // get the base URL
+                    .newBuilder()
+                    .addPathSegment("network") // append "network" to the URL
+                    .addPathSegment("config"); // append "config" to the URL
 
+            // Conditionally add the access token
+            if (client.access_token.getAccess_token() != null &&
+                client.access_token.getAccess_token() != null &&
+                !client.access_token.getAccess_token().isEmpty()) {
+
+                urlBuilder.addQueryParameter("access_token", client.access_token.getAccess_token());
+            }
+
+            // Now build the final URL
+            HttpUrl url = urlBuilder.build();
+
+                 
             // Create the request using OkHttp's Request.Builder
             Request configRequest = new Request.Builder()
                 .url(url) // Set the URL
@@ -197,6 +208,13 @@ public class geomeFIMSConnection extends FIMSConnection {
     // NOTE: the Genbank submission docs indicate empty attributes should be titled "misssing", however, geome commonlyl
     // encodes this as "Unknown".  To maintain consistency with Geome, we set the BLANK_ATTRIBUTE to "Unknown"
     private static final String BLANK_ATTRIBUTE = "Unknown";
+    // DocumentFields for Tissue-level metadata
+    private static final DocumentField EXPEDITION_CODE_FIELD =
+        new DocumentField("expeditionCode", "", "urn:expeditionCode", String.class, false, false);
+
+    private static final DocumentField PROJECT_ID_FIELD =
+        new DocumentField("projectId", "", "urn:projectId", String.class, false, false);
+
 
 
     @Override
@@ -207,6 +225,8 @@ public class geomeFIMSConnection extends FIMSConnection {
         result.add(GENBANK_COUNTRY_FIELD);
         result.add(GENBANK_DATE_FIELD);
         result.add(GENBANK_LATLNG_FIELD);
+        result.add(EXPEDITION_CODE_FIELD);
+           result.add(PROJECT_ID_FIELD);
         return result;
     }
 
@@ -260,7 +280,7 @@ public class geomeFIMSConnection extends FIMSConnection {
 
         //System.out.println(projectIds);
         // _projects_:[1,2,11]
-        HttpUrl url = client.getQueryTarget()
+        HttpUrl.Builder urlBuilder = client.getQueryTarget()
             .newBuilder()
             .addPathSegment("records")
             .addPathSegment("Tissue")
@@ -268,13 +288,23 @@ public class geomeFIMSConnection extends FIMSConnection {
             .addQueryParameter("entity", "Tissue")
             .addQueryParameter("limit", "100000")
             .addQueryParameter("includeEmptyProperties", "false")
-            .addQueryParameter("q", "_select_:[Event,Sample,Tissue] " + queryString)
-            .build();
+            .addQueryParameter("q", "_select_:[Event,Sample,Tissue] " + queryString);
+
+        // Conditionally add access_token
+        if (client.access_token.getAccess_token() != null &&
+            client.access_token.getAccess_token() != null &&
+            !client.access_token.getAccess_token().isEmpty()) {
+
+            urlBuilder.addQueryParameter("access_token", client.access_token.getAccess_token());
+        }
+
+        HttpUrl url = urlBuilder.build();
 
         Request searchRequest = new Request.Builder()
             .url(url)
-            .get()  // This is a GET request
+            .get()
             .build();
+
 
         // Execute the request
         Response response;
@@ -497,14 +527,23 @@ public class geomeFIMSConnection extends FIMSConnection {
                 String queryString = tissueIDsToQuery + " _select_:[Tissue,Sample,Event]";
 
                 // Build the URL
-                HttpUrl url = client.getQueryTarget()
+                HttpUrl.Builder urlBuilder = client.getQueryTarget()
                         .newBuilder()
                         .addPathSegment("records")
                         .addPathSegment("Tissue")
                         .addPathSegment("json")
                         .addQueryParameter("includeEmptyProperties", "false")
-                        .addQueryParameter("limit", String.valueOf(chunk)) // Convert chunk to string
-                        .build();
+                        .addQueryParameter("limit", String.valueOf(chunk)); // Convert chunk to string
+
+                // Conditionally add access_token
+                if (client.access_token.getAccess_token() != null &&
+                    client.access_token.getAccess_token() != null &&
+                    !client.access_token.getAccess_token().isEmpty()) {
+
+                    urlBuilder.addQueryParameter("access_token", client.access_token.getAccess_token());
+                }
+
+                HttpUrl url = urlBuilder.build();
 
                 // Create the form body (equivalent to JAX-RS Form and Entity)
                 RequestBody formBody = new FormBody.Builder()
@@ -556,6 +595,8 @@ public class geomeFIMSConnection extends FIMSConnection {
         allAttributes.put("genbankCountry", GENBANK_COUNTRY_FIELD);
         allAttributes.put("genbankDate", GENBANK_DATE_FIELD);
         allAttributes.put("genbankLatLng", GENBANK_LATLNG_FIELD);
+        allAttributes.put("urn:expeditionCode", EXPEDITION_CODE_FIELD);
+        allAttributes.put("urn:projectId",     PROJECT_ID_FIELD);
 
         Map<String, DocumentField> attributesByName = new HashMap<>();
         allAttributes.values().forEach(f -> attributesByName.put(f.getName(), f));
@@ -592,7 +633,13 @@ public class geomeFIMSConnection extends FIMSConnection {
                             } else {
                                 valueToStore = value.toString();
                             }
-
+                            // 🔗 prepend the URL for projectId
+                            if ("urn:projectId".equals(documentField.getCode())) {
+                                String id = valueToStore.toString();
+                                if (!id.startsWith("http")) {
+                                    valueToStore = "https://geome-db.org/workbench/project-overview?projectId=" + id;
+                                }
+                            }
                             valuesByCode.put(documentField.getCode(), valueToStore);
 
                         } catch (NumberFormatException e) {
