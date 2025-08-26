@@ -16,14 +16,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.StringUtils;
 import okhttp3.*;
 
-
-//import javax.ws.rs.client.Entity;
-//import javax.ws.rs.client.Invocation;
-//import javax.ws.rs.client.WebTarget;
-//import javax.ws.rs.core.*;
-
 import java.io.IOException;
 import java.lang.ref.SoftReference;
+import java.text.Normalizer;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
@@ -66,50 +61,36 @@ public class geomeFIMSConnection extends FIMSConnection {
         try {
             String username = fimsOptions.getUserName();
             String password = fimsOptions.getPassword();
-             credentials = Credentials.basic(username, password);
+            credentials = Credentials.basic(username, password);
 
             client.login(username, password);
             projects = client.getProjects(fimsOptions.includePublicProjects());
-            if (projects.isEmpty()) {
+            if (projects == null || projects.isEmpty()) {
                 throw new ConnectionException("You don't have access to any projects");
             }
 
-            // for (Project project : projects) {
-            // Invocation.Builder configRequest = client.getQueryTarget().path("projects").path(String.valueOf(project.id)).path("config").request();
-            //Invocation.Builder configRequest = client.getQueryTarget().path("network").path("config").request();
-            HttpUrl.Builder urlBuilder = client.getQueryTarget() // get the base URL
+            // Defensive sanitize so later logic never sees null entries
+            projects = projects.stream()
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            // Build /network/config request
+            HttpUrl.Builder urlBuilder = client.getQueryTarget()
                     .newBuilder()
-                    .addPathSegment("network") // append "network" to the URL
-                    .addPathSegment("config"); // append "config" to the URL
+                    .addPathSegment("network")
+                    .addPathSegment("config");
 
-            // Conditionally add the access token
             if (client.access_token.getAccess_token() != null &&
-                client.access_token.getAccess_token() != null &&
                 !client.access_token.getAccess_token().isEmpty()) {
-
                 urlBuilder.addQueryParameter("access_token", client.access_token.getAccess_token());
             }
 
-            // Now build the final URL
             HttpUrl url = urlBuilder.build();
-
-                 
-            // Create the request using OkHttp's Request.Builder
-            Request configRequest = new Request.Builder()
-                .url(url) // Set the URL
-                .get()    // Specify the HTTP method (GET in this case)
-                .build();
-
+            Request configRequest = new Request.Builder().url(url).get().build();
             Response response = client.client.newCall(configRequest).execute();
             ProjectConfig config = geomeFIMSClient.getRestServiceResult(ProjectConfig.class, response);
 
             List<String> taxonomyFieldNames = Arrays.asList("urn:kingdom", "urn:phylum", "urn:subphylum", "urn:superClass", "urn:class", "urn:infraClass", "urn:subclass", "urn:superOrder", "urn:order", "urn:infraOrder", "urn:suborder", "urn:superFamily", "urn:family", "urn:subfamily", "urn:genus", "urn:subGenus", "urn:tribe", "urn:subTribe", "urn:species", "urn:subSpecies");
-
-            //TODO: come up with a better way to manage constrained fields
-            // Here we just name the most common GEOME Fields that we use in the LIMS 
-            // application.  More ideally is a list of all non-null fields, but those are only returned AFTER
-            // a query.  Another approach is to return just the fields of a project but we can query across
-            // multiple projects and that could be very many fields.
 
             String[] arrayFields = {
                     "urn:eventID", "urn:principalInvestigator", "urn:samplingProtocol", "urn:sampleCollectionDevicee",
@@ -134,17 +115,13 @@ public class geomeFIMSConnection extends FIMSConnection {
                     "urn:tissuePreservative", "urn:associatedSequences", "urn:biosampleAccession", "urn:voucherCatalogNumber", "urn:tissueStorageID"};
             List<String> allFieldNames = Arrays.asList(arrayFields);
 
-
-
             for (ProjectConfig.Entity entity : config.entities) {
                 if (!Arrays.asList("Tissue", "Event", "Sample").contains(entity.conceptAlias)) {
                     continue;
                 }
                 for (Project.Field attribute : entity.attributes) {
-                    if (allFieldNames
-                            .stream()
-                            .filter(x -> x.contains(attribute.uri))
-                            .collect(Collectors.toList()).size() > 0) {
+                    boolean include = allFieldNames.stream().anyMatch(x -> x.contains(attribute.uri));
+                    if (include) {
                         allAttributes.put(attribute.uri, attribute.asDocumentField());
                         if (taxonomyFieldNames.contains(attribute.uri)) {
                             taxonomyAttributes.put(attribute.uri, attribute.asDocumentField());
@@ -153,13 +130,12 @@ public class geomeFIMSConnection extends FIMSConnection {
                         }
                     }
                 }
-
             }
 
         } catch (Exception e) {
             throw new ConnectionException("Unable to retrieve projects from GEOME.  This may be due either to " +
                     "an invalid username/password combination or the user has not opted to retrieve public projects " +
-                    "and does not have access to any private projects  " + e.getStackTrace());
+                    "and does not have access to any private projects  " + e.getMessage());
         }
     }
 
@@ -169,7 +145,7 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     public void disconnect() {
-
+        // no-op
     }
 
     private static final String TISSUE_URN = "urn:tissueID";
@@ -178,7 +154,6 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     public DocumentField getTissueSampleDocumentField() {
-
         return allAttributes.get(TISSUE_URN);
     }
 
@@ -191,31 +166,21 @@ public class geomeFIMSConnection extends FIMSConnection {
         return null;
     }
 
-
-
-
- 
-
-     @Override
-     public List<FimsProject> getProjects() throws DatabaseServiceException {
-         return null;
-     }
+    @Override
+    public List<FimsProject> getProjects() throws DatabaseServiceException {
+        return null;
+    }
 
     private static final DocumentField PROJECT_FIELD = new DocumentField("Project", "", "geomeProject", String.class, false, false);
     private static final DocumentField GENBANK_COUNTRY_FIELD = new DocumentField("genbankCountry", "", "urn:genbankCountry", String.class, false, false);
     private static final DocumentField GENBANK_DATE_FIELD = new DocumentField("genbankDate", "", "urn:genbankDate", String.class, false, false);
     private static final DocumentField GENBANK_LATLNG_FIELD = new DocumentField("genbankLatLng", "", "urn:genbankLatLng", String.class, false, false);
-    // NOTE: the Genbank submission docs indicate empty attributes should be titled "misssing", however, geome commonlyl
-    // encodes this as "Unknown".  To maintain consistency with Geome, we set the BLANK_ATTRIBUTE to "Unknown"
     private static final String BLANK_ATTRIBUTE = "Unknown";
-    // DocumentFields for Tissue-level metadata
     private static final DocumentField EXPEDITION_CODE_FIELD =
-        new DocumentField("expeditionCode", "", "urn:expeditionCode", String.class, false, false);
+            new DocumentField("expeditionCode", "", "urn:expeditionCode", String.class, false, false);
 
     private static final DocumentField PROJECT_ID_FIELD =
-        new DocumentField("projectId", "", "urn:projectId", String.class, false, false);
-
-
+            new DocumentField("projectId", "", "urn:projectId", String.class, false, false);
 
     @Override
     protected List<DocumentField> _getCollectionAttributes() {
@@ -226,7 +191,7 @@ public class geomeFIMSConnection extends FIMSConnection {
         result.add(GENBANK_DATE_FIELD);
         result.add(GENBANK_LATLNG_FIELD);
         result.add(EXPEDITION_CODE_FIELD);
-           result.add(PROJECT_ID_FIELD);
+        result.add(PROJECT_ID_FIELD);
         return result;
     }
 
@@ -250,6 +215,81 @@ public class geomeFIMSConnection extends FIMSConnection {
         return result;
     }
 
+    // ===== NEW: robust normalizer (fold diacritics, keep alnum only) =====
+    private static String normalize(String s) {
+        if (s == null) return "";
+        String folded = Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
+        return folded.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+    }
+
+    // ===== NEW: safe view of projects list (filters nulls only) =====
+    private List<Project> projectsSafe() {
+        if (projects == null) return Collections.emptyList();
+        List<Project> safe = new ArrayList<>(projects.size());
+        for (Project p : projects) {
+            if (p != null) safe.add(p);
+        }
+        return safe;
+    }
+
+    // ===== NEW: collect ALL matching projects for EQUAL/CONTAINS =====
+    private List<Project> getProjectsFromQuery(Query query) throws ConnectionException {
+        LinkedHashSet<Integer> equalIds = new LinkedHashSet<>();
+        LinkedHashSet<Integer> containsIds = new LinkedHashSet<>();
+        collectProjectTerms(query, equalIds, containsIds);
+
+        if (!equalIds.isEmpty()) {
+            List<Project> out = new ArrayList<>();
+            for (Project p : projectsSafe()) if (equalIds.contains(p.id)) out.add(p);
+            return out;
+        }
+        if (!containsIds.isEmpty()) {
+            List<Project> out = new ArrayList<>();
+            for (Project p : projectsSafe()) if (containsIds.contains(p.id)) out.add(p);
+            return out;
+        }
+        return null; // no Project term → search all
+    }
+
+    private void collectProjectTerms(Query q,
+                                     Set<Integer> equalIds,
+                                     Set<Integer> containsIds) throws ConnectionException {
+        if (q instanceof AdvancedSearchQueryTerm) {
+            AdvancedSearchQueryTerm t = (AdvancedSearchQueryTerm) q;
+            if (!PROJECT_FIELD.getCode().equals(t.getField().getCode())) return;
+
+            String raw = (String) t.getValues()[0];
+            String needle = normalize(raw);
+
+            if (t.getCondition() == Condition.EQUAL) {
+                boolean any = false;
+                for (Project p : projectsSafe()) {
+                    if (normalize(p.title).equals(needle)) {
+                        equalIds.add(p.id);
+                        any = true;
+                    }
+                }
+                if (!any) throw new ConnectionException("Project '" + raw + "' not found.");
+            } else if (t.getCondition() == Condition.CONTAINS) {
+                boolean any = false;
+                for (Project p : projectsSafe()) {
+                    if (normalize(p.title).contains(needle)) {
+                        containsIds.add(p.id);
+                        any = true;
+                    }
+                }
+                if (!any) throw new ConnectionException("No projects containing '" + raw + "'.");
+            } else {
+                throw new ConnectionException("Only Project queries with Contains or Equal are supported");
+            }
+
+        } else if (q instanceof CompoundSearchQuery) {
+            for (Query child : ((CompoundSearchQuery) q).getChildren()) {
+                collectProjectTerms(child, equalIds, containsIds);
+            }
+        }
+    }
+
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         return getTissueIdsMatchingQuery(query, projectsToMatch, true);
@@ -259,71 +299,57 @@ public class geomeFIMSConnection extends FIMSConnection {
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmptyQuery) throws ConnectionException {
         String queryString = buildQuery(query);
 
-        Project project = getProjectFromQuery(query);
-        List<Project> projectsToSearch = new ArrayList<>();
-        if (project == null) {
-            projectsToSearch.addAll(projects);
-        } else {
-            projectsToSearch.add(project);
+        // Use ALL matching projects for Project terms (EQUAL/CONTAINS)
+        List<Project> projectsToSearch = getProjectsFromQuery(query);
+        if (projectsToSearch == null || projectsToSearch.isEmpty()) {
+            projectsToSearch = projectsSafe();
         }
 
         List<String> tissueIds = new ArrayList<>();
         List<Integer> projectIds = new ArrayList<>();
-        // collect project ids
         for (Project currentProject : projectsToSearch) {
             projectIds.add(currentProject.id);
         }
+
         if (!queryString.trim().equals("")) {
             queryString += " and";
         }
         queryString += " _projects_:" + projectIds;
 
-        //System.out.println(projectIds);
-        // _projects_:[1,2,11]
         HttpUrl.Builder urlBuilder = client.getQueryTarget()
-            .newBuilder()
-            .addPathSegment("records")
-            .addPathSegment("Tissue")
-            .addPathSegment("json")
-            .addQueryParameter("entity", "Tissue")
-            .addQueryParameter("limit", "100000")
-            .addQueryParameter("includeEmptyProperties", "false")
-            .addQueryParameter("q", "_select_:[Event,Sample,Tissue] " + queryString);
+                .newBuilder()
+                .addPathSegment("records")
+                .addPathSegment("Tissue")
+                .addPathSegment("json")
+                .addQueryParameter("entity", "Tissue")
+                .addQueryParameter("limit", "100000")
+                .addQueryParameter("includeEmptyProperties", "false")
+                .addQueryParameter("q", "_select_:[Event,Sample,Tissue] " + queryString);
 
-        // Conditionally add access_token
         if (client.access_token.getAccess_token() != null &&
-            client.access_token.getAccess_token() != null &&
             !client.access_token.getAccess_token().isEmpty()) {
-
             urlBuilder.addQueryParameter("access_token", client.access_token.getAccess_token());
         }
 
         HttpUrl url = urlBuilder.build();
+        Request searchRequest = new Request.Builder().url(url).get().build();
 
-        Request searchRequest = new Request.Builder()
-            .url(url)
-            .get()
-            .build();
-
-
-        // Execute the request
         Response response;
         try {
-             response = client.client.newCall(searchRequest).execute();
+            response = client.client.newCall(searchRequest).execute();
         } catch (IOException e) {
             throw new ConnectionException(e);
         }
+
         try {
             SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
 
             for (Map<String, Object> tissue : result.content.Tissue) {
-                String tissueID = tissue.get(getTissueSampleDocumentField().getName()).toString();
-                //sampleCache.put(sampleId, new SoftReference<FimsSample>(sample));
-                if (tissueID == null || tissueID.trim().length() == 0) {
-                    continue;
-                }
+                Object tid = tissue.get(getTissueSampleDocumentField().getName());
+                if (tid == null) continue;
+                String tissueID = tid.toString();
+                if (tissueID.trim().isEmpty()) continue;
                 tissueIds.add(tissueID);
-
             }
 
             transformQueryResults(tissueIds, result).forEach(s ->
@@ -333,51 +359,7 @@ public class geomeFIMSConnection extends FIMSConnection {
             throw new ConnectionException(e);
         }
 
-
         return tissueIds;
-    }
-
-    private Project getProjectFromQuery(Query query) throws ConnectionException {
-        if (query instanceof AdvancedSearchQueryTerm) {
-            Project project = getProjectFromSearchTerm((AdvancedSearchQueryTerm) query);
-            if (project != null) return project;
-        }
-
-
-        if (query instanceof CompoundSearchQuery) {
-            // JBD: removing the restriction on OR queries from Geome... these DO work.
-            // However, i'm not certain why this restriction was placed here in the first place
-            //if (((CompoundSearchQuery) query).getOperator() != CompoundSearchQuery.Operator.AND) {
-            //    throw new ConnectionException("OR queries with Project unsupported");
-            //}
-            for (Query childQuery : ((CompoundSearchQuery) query).getChildren()) {
-                if (childQuery instanceof AdvancedSearchQueryTerm) {
-                    Project project = getProjectFromSearchTerm((AdvancedSearchQueryTerm) childQuery);
-                    if (project != null) return project;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private Project getProjectFromSearchTerm(AdvancedSearchQueryTerm term) throws ConnectionException {
-        if (PROJECT_FIELD.getCode().equals(term.getField().getCode())) {
-            if (term.getCondition() != Condition.CONTAINS) {
-                throw new ConnectionException("Only Project queries with Contains are supported");
-            }
-            for (Project project : projects) {
-                // query the project title
-                if (project.title.equals(term.getValues()[0])) {
-                    return project;
-                }
-
-            }
-        }
-        return null;
-        // if the project cannot be found, then return an error...
-        //throw new ConnectionException("Project '" + term.getValues()[0] +"' cannot be found or is not a LIMS-enabled project. Please check the project code or title and try again.");
-
     }
 
     private String buildQuery(Query query) {
@@ -388,18 +370,14 @@ public class geomeFIMSConnection extends FIMSConnection {
             CompoundSearchQuery.Operator operator = cquery.getOperator();
             String join = "";
             switch (operator) {
-                case OR:
-                    join = " OR ";
-                    break;
-                case AND:
-                    join = " AND ";
-                    break;
+                case OR:  join = " OR ";  break;
+                case AND: join = " AND "; break;
             }
             List<String> childQueries = new ArrayList<>();
             for (Query childQuery : cquery.getChildren()) {
                 if (childQuery instanceof AdvancedSearchQueryTerm &&
                         ((AdvancedSearchQueryTerm) childQuery).getField().getCode().equals(PROJECT_FIELD.getCode())) {
-                    continue;
+                    continue; // handled via _projects_ filter
                 }
                 childQueries.add(buildQuery(childQuery));
             }
@@ -407,15 +385,13 @@ public class geomeFIMSConnection extends FIMSConnection {
         } else if (query instanceof AdvancedSearchQueryTerm) {
             AdvancedSearchQueryTerm aQuery = (AdvancedSearchQueryTerm) query;
             if (aQuery.getField().getCode().equals(PROJECT_FIELD.getCode())) {
-                return "";
+                return ""; // project handled elsewhere
             }
             return getQueryExpression(aQuery);
         } else {
             throw new RuntimeException("Unrecognised query type: " + query.getClass());
         }
-
     }
-
 
     public static String getQueryExpression(AdvancedSearchQueryTerm query) {
         String join = "";
@@ -479,7 +455,6 @@ public class geomeFIMSConnection extends FIMSConnection {
                 beforeQuery = "NOT ";
                 break;
             case IN_RANGE:
-                //todo: this is a special case
                 return query.getField().getName() + ":[" + query.getValues()[0] + " TO " + query.getValues()[1] + "]";
         }
         return beforeQuery + query.getField().getName() + join + prepend + query.getValues()[0] + append;
@@ -496,27 +471,21 @@ public class geomeFIMSConnection extends FIMSConnection {
 
     @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback rc) throws ConnectionException {
-
         try {
-
-            // Strip out empty tissue IDs -- they will make queries to Geome fail parser check
-            ArrayList tissueIdsArrayList = new ArrayList();
+            ArrayList<String> tissueIdsArrayList = new ArrayList<>();
             for (int i = 0; i < tissueIds.size(); i++) {
-                if (!tissueIds.get(i).trim().equals("") && !(tissueIds.get(i) == null)) {
-                    tissueIdsArrayList.add(tissueIds.get(i));
+                String val = tissueIds.get(i);
+                if (val != null && !val.trim().equals("")) {
+                    tissueIdsArrayList.add(val);
                 }
             }
             Object[] trimmedTissueIds = tissueIdsArrayList.toArray();
 
-            // Build Tissue query
-            List<FimsSample> allSamples = new ArrayList<FimsSample>();
+            List<FimsSample> allSamples = new ArrayList<>();
 
-            // Here we loop queries to GEOME in chunks of 1000 records each 
-            int chunk = 1000; // chunk size to divide
+            int chunk = 1000;
             for (int cnt = 0; cnt < trimmedTissueIds.length; cnt += chunk) {
                 Object[] trimmedTissueIdsChunk = Arrays.copyOfRange(trimmedTissueIds, cnt, Math.min(trimmedTissueIds.length, cnt + chunk));
-
-                //System.out.println("Downloading " + cnt + " of " + trimmedTissueIds.length);
 
                 Query[] tissueQueries = new Query[trimmedTissueIdsChunk.length];
                 for (int i = 0; i < trimmedTissueIdsChunk.length; i++) {
@@ -526,60 +495,44 @@ public class geomeFIMSConnection extends FIMSConnection {
                 String tissueIDsToQuery = buildQuery(tissueQuery);
                 String queryString = tissueIDsToQuery + " _select_:[Tissue,Sample,Event]";
 
-                // Build the URL
                 HttpUrl.Builder urlBuilder = client.getQueryTarget()
                         .newBuilder()
                         .addPathSegment("records")
                         .addPathSegment("Tissue")
                         .addPathSegment("json")
                         .addQueryParameter("includeEmptyProperties", "false")
-                        .addQueryParameter("limit", String.valueOf(chunk)); // Convert chunk to string
+                        .addQueryParameter("limit", String.valueOf(chunk));
 
-                // Conditionally add access_token
                 if (client.access_token.getAccess_token() != null &&
-                    client.access_token.getAccess_token() != null &&
                     !client.access_token.getAccess_token().isEmpty()) {
-
                     urlBuilder.addQueryParameter("access_token", client.access_token.getAccess_token());
                 }
 
                 HttpUrl url = urlBuilder.build();
 
-                // Create the form body (equivalent to JAX-RS Form and Entity)
                 RequestBody formBody = new FormBody.Builder()
                         .add("query", queryString)
                         .add("entity", "Tissue")
                         .build();
 
-                // Build the POST request (equivalent to searchRequest.post())
                 Request searchRequest = new Request.Builder()
                         .url(url)
-                        .post(formBody)  // Specify it is a POST request with form data
-                        .header("Content-Type", "application/x-www-form-urlencoded")  // Set the form URL-encoded type
+                        .post(formBody)
+                        .header("Content-Type", "application/x-www-form-urlencoded")
                         .build();
 
-                // Measure the time for the POST request
                 long start = System.currentTimeMillis();
 
-                // Execute the POST request
                 try (Response response = client.client.newCall(searchRequest).execute()) {
-                    // Handle the response
                     System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to get GEOME searchRequest.post");
                     if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
 
-                    // Read the response body (optional)
-                    //String responseBody = response.body().string();
-                    //System.out.println(responseBody);
-
-                    
-                SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
-
-                List<FimsSample> samples = transformQueryResults(tissueIds, result);
-
-                allSamples.addAll(samples);
+                    SearchResult result = geomeFIMSClient.getRestServiceResult(SearchResult.class, response);
+                    List<FimsSample> samples = transformQueryResults(tissueIds, result);
+                    allSamples.addAll(samples);
                 } catch (IOException e) {
-                                                   e.printStackTrace();
-                                               }
+                    e.printStackTrace();
+                }
             }
 
             return allSamples;
@@ -597,6 +550,7 @@ public class geomeFIMSConnection extends FIMSConnection {
         allAttributes.put("genbankLatLng", GENBANK_LATLNG_FIELD);
         allAttributes.put("urn:expeditionCode", EXPEDITION_CODE_FIELD);
         allAttributes.put("urn:projectId",     PROJECT_ID_FIELD);
+        allAttributes.put("Project", PROJECT_FIELD);
 
         Map<String, DocumentField> attributesByName = new HashMap<>();
         allAttributes.values().forEach(f -> attributesByName.put(f.getName(), f));
@@ -609,19 +563,14 @@ public class geomeFIMSConnection extends FIMSConnection {
             Map<String, Object> valuesForTissue = mappedTissues.get(tissueId);
 
             if (valuesForTissue != null) {
-                // Need to convert map from name -> value to uri -> value because that's what Geneious expects
                 Map<String, Object> valuesByCode = new HashMap<>();
 
-
                 BiConsumer<String, Object> storeByCode = (key, value) -> {
-
                     if (value == null || value instanceof String && value.toString().trim().length() == 0) {
                         return;
                     }
-
                     DocumentField documentField = attributesByName.get(key);
                     if (documentField != null) {
-
                         Object valueToStore;
                         try {
                             if (Boolean.class == documentField.getValueType()) {
@@ -633,7 +582,6 @@ public class geomeFIMSConnection extends FIMSConnection {
                             } else {
                                 valueToStore = value.toString();
                             }
-                            // 🔗 prepend the URL for projectId
                             if ("urn:projectId".equals(documentField.getCode())) {
                                 String id = valueToStore.toString();
                                 if (!id.startsWith("http")) {
@@ -645,12 +593,8 @@ public class geomeFIMSConnection extends FIMSConnection {
                         } catch (NumberFormatException e) {
                             System.out.println("Invalid value for " + documentField.getValueType() + " was " + value);
                         }
-                    } else {
-                        // todo bring in projectId, bcid, expeditionCode from other entities
-                        //                        System.out.println("missing DocumentField for " + key);
                     }
                 };
-
 
                 valuesForTissue.forEach(storeByCode);
                 Object sampleId = valuesForTissue.get(allAttributes.get(SAMPLE_URN).getName());
@@ -664,7 +608,6 @@ public class geomeFIMSConnection extends FIMSConnection {
                     } else {
                         throw new ConnectionException("Expected to find sample " + sampleId + " but it was not returned by the server");
                     }
-
                 }
 
                 Map<String, Object> eventValues = mappedEvents.get(eventId);
@@ -691,6 +634,21 @@ public class geomeFIMSConnection extends FIMSConnection {
                     throw new ConnectionException("Expected to find event " + eventId + " but it was not returned by the server");
                 }
 
+                Object pidObj = valuesByCode.get(PROJECT_ID_FIELD.getCode());
+                if (pidObj != null) {
+                    String pid = pidObj.toString();
+                    String idOnly = pid.replaceFirst("^https?://geome-db\\.org/workbench/project-overview\\?projectId=", "");
+
+                    Project matched = null;
+                    for (Project p : projectsSafe()) {
+                        if (String.valueOf(p.id).equals(idOnly)) {
+                            matched = p; break;
+                        }
+                    }
+                    if (matched != null) {
+                        valuesByCode.put(PROJECT_FIELD.getCode(), matched.title);
+                    }
+                }
 
                 TissueDocument sample = new TissueDocument(
                         new TableFimsSample(
@@ -700,7 +658,6 @@ public class geomeFIMSConnection extends FIMSConnection {
                                 SAMPLE_URN)
                 );
                 samples.add(sample);
-
             }
         }
         return samples;
@@ -731,87 +688,46 @@ public class geomeFIMSConnection extends FIMSConnection {
         return false;
     }
 
-    /**
-     * if both lat and long are present, return a string containing the abs(decimalDegree) + Compass Direction
-     * <p>
-     * ex.
-     * <p>
-     * lat = -8, long = 140 would return "8 S 140 W"
-     */
     private String getGenbankLatLong(String latText, String lngText) {
         StringBuilder latLongSb = new StringBuilder();
 
-        if (    latText != null &&
-                lngText != null &&
-                !latText.equals("") &&
-                !lngText.equals("")) {
-
+        if (latText != null && lngText != null && !latText.equals("") && !lngText.equals("")) {
             try {
                 Double lat = Double.parseDouble(latText);
-
-                if (lat < 0) {
-                    latLongSb.append(Math.abs(lat)).append(" S");
-                } else {
-                    latLongSb.append(lat).append(" N");
-                }
-
+                if (lat < 0) latLongSb.append(Math.abs(lat)).append(" S");
+                else latLongSb.append(lat).append(" N");
                 latLongSb.append(" ");
-
                 Double lng = Double.parseDouble(lngText);
-
-                if (lng < 0) {
-                    latLongSb.append(Math.abs(lng)).append(" W");
-                } else {
-                    latLongSb.append(lng).append(" E");
-                }
+                if (lng < 0) latLongSb.append(Math.abs(lng)).append(" W");
+                else latLongSb.append(lng).append(" E");
             } catch (NumberFormatException e) {
-                latLongSb = new StringBuilder()
-                        .append(latText)
-                        .append(" ")
-                        .append(lngText);
+                latLongSb = new StringBuilder().append(latText).append(" ").append(lngText);
             }
         }
 
-        if (latLongSb.toString().equals("")) {
-            return BLANK_ATTRIBUTE;
-        } else {
-            return latLongSb.toString();
-        }
+        if (latLongSb.toString().equals("")) return BLANK_ATTRIBUTE;
+        else return latLongSb.toString();
     }
 
-    /**
-     * Format the genbank Country field
-     *
-     * @param country
-     * @param locality
-     * @return
-     */
     private String getGenbankCountryValue(String country, String locality) {
         String genbankCountryValue = "";
-        // Assign the country portion of the Genbank country field
         if (country != null) {
             genbankCountryValue = country.trim();
         }
-        // Assign the locality portion of the Genbank country field
         if (locality != null &&
                 country != null &&
                 !locality.trim().equalsIgnoreCase(country.trim()) &&
                 !locality.trim().equals("")) {
-            // In some cases, the country name has already been mapped into the locality
-            // causing an unusual cascade of country names in the genbankCountry Field.
-            // This conditional statement attempts to catch and fix this situation.
+
             if (locality.trim().startsWith(country.trim()) &&
                     !locality.trim().equalsIgnoreCase(country.trim())) {
-                // remove the country name
                 String tempLocalityField = locality.trim().replaceFirst(country.trim(), "");
-                // remove colons since they will be confusing in this context
                 tempLocalityField = tempLocalityField.replace(":", "");
                 genbankCountryValue += ":" + tempLocalityField;
             } else {
                 genbankCountryValue += ":" + locality.trim();
             }
         }
-        // Return the blank attribute if we do not have any content
         if (genbankCountryValue.equals("")) {
             return BLANK_ATTRIBUTE;
         } else {
@@ -819,22 +735,12 @@ public class geomeFIMSConnection extends FIMSConnection {
         }
     }
 
-    /**
-     * Format the genbank collection date field
-     *
-     * @param yearCollected
-     * @param monthCollected
-     * @param dayCollected
-     * @return
-     */
     private String getGenbankCollectionDate(String yearCollected, String monthCollected, String dayCollected) {
         StringBuilder collectionDate = new StringBuilder();
 
         collectionDate.append(yearCollected);
 
-
         if (monthCollected != null && !monthCollected.equals("")) {
-
             collectionDate.append("-");
             collectionDate.append(monthCollected);
 
@@ -850,5 +756,5 @@ public class geomeFIMSConnection extends FIMSConnection {
             return collectionDate.toString();
         }
     }
-
 }
+
