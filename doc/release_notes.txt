@@ -1,3 +1,7 @@
+==Biocode Plugin 3.0.26 - 11 August 2025 ==
+* add expeditionCode and projectId to output
+* fixes contains search issue for projects as well as all fields
+
 ==Biocode Plugin 3.0.25 - 14 April 2025 ==
 * Allows query of private projects properly
 

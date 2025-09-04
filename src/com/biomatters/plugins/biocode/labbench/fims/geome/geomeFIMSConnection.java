@@ -398,67 +398,82 @@ public class geomeFIMSConnection extends FIMSConnection {
         String append = "\"";
         String prepend = "\"";
         String beforeQuery = "";
+
         switch (query.getCondition()) {
             case EQUAL:
                 join = "::";
                 break;
+
             case APPROXIMATELY_EQUAL:
+                // contains-like, but uses ":" per existing behavior
                 join = ":";
-                prepend = "\"%25";
+                prepend = "\"%";
                 append = "%\"";
                 break;
+
             case BEGINS_WITH:
                 join = "::";
-                append = "%\"";
+                append = "%\"";      // field::"value%"
                 break;
+
             case ENDS_WITH:
                 join = "::";
-                prepend = "\"%25";
+                prepend = "\"%";     // field::"%value"
                 break;
+
             case CONTAINS:
                 join = "::";
+                prepend = "\"%";     // field::"%value%"
                 append = "%\"";
-                prepend = "\"%25";
                 break;
+
             case GREATER_THAN:
             case DATE_AFTER:
                 join = ">";
                 prepend = "";
                 append = "";
                 break;
+
             case GREATER_THAN_OR_EQUAL_TO:
             case DATE_AFTER_OR_ON:
                 join = ">=";
                 prepend = "";
                 append = "";
                 break;
+
             case LESS_THAN:
             case DATE_BEFORE:
                 join = "<";
                 prepend = "";
                 append = "";
                 break;
+
             case LESS_THAN_OR_EQUAL_TO:
             case DATE_BEFORE_OR_ON:
                 join = "<=";
                 prepend = "";
                 append = "";
                 break;
+
             case NOT_CONTAINS:
                 join = "::";
-                append = "%\"";
-                prepend = "\"%25";
                 beforeQuery = "NOT ";
+                prepend = "\"%";     // NOT field::"%value%"
+                append = "%\"";
                 break;
+
             case NOT_EQUAL:
                 join = "::";
                 beforeQuery = "NOT ";
                 break;
+
             case IN_RANGE:
                 return query.getField().getName() + ":[" + query.getValues()[0] + " TO " + query.getValues()[1] + "]";
         }
+
         return beforeQuery + query.getField().getName() + join + prepend + query.getValues()[0] + append;
     }
+
 
     private Map<String, Map<String, Object>> mapResults(String idField, List<Map<String, Object>> listToMap) {
         Map<String, Map<String, Object>> result = new HashMap<>();
